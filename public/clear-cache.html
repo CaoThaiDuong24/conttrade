@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Clear Cache - Admin 53 Permissions Fix</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            padding: 40px;
+            max-width: 600px;
+            width: 100%;
+        }
+        
+        h1 {
+            color: #667eea;
+            font-size: 32px;
+            margin-bottom: 10px;
+            text-align: center;
+        }
+        
+        .subtitle {
+            color: #666;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 14px;
+        }
+        
+        .status {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+        
+        .status-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        
+        .status-item:last-child {
+            border-bottom: none;
+        }
+        
+        .status-label {
+            font-weight: 500;
+            color: #333;
+        }
+        
+        .status-value {
+            font-weight: 600;
+        }
+        
+        .status-value.success {
+            color: #10b981;
+        }
+        
+        .status-value.warning {
+            color: #f59e0b;
+        }
+        
+        .status-value.error {
+            color: #ef4444;
+        }
+        
+        button {
+            width: 100%;
+            padding: 15px;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 10px;
+        }
+        
+        .btn-clear {
+            background: #ef4444;
+            color: white;
+        }
+        
+        .btn-clear:hover {
+            background: #dc2626;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(239, 68, 68, 0.4);
+        }
+        
+        .btn-login {
+            background: #667eea;
+            color: white;
+        }
+        
+        .btn-login:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn-check {
+            background: #10b981;
+            color: white;
+        }
+        
+        .btn-check:hover {
+            background: #059669;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(16, 185, 129, 0.4);
+        }
+        
+        .log {
+            background: #1e293b;
+            color: #10b981;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+            max-height: 300px;
+            overflow-y: auto;
+            display: none;
+        }
+        
+        .log.show {
+            display: block;
+        }
+        
+        .log-line {
+            margin-bottom: 5px;
+        }
+        
+        .success-icon {
+            color: #10b981;
+            font-size: 24px;
+        }
+        
+        .warning-icon {
+            color: #f59e0b;
+            font-size: 24px;
+        }
+        
+        .info {
+            background: #dbeafe;
+            border-left: 4px solid #3b82f6;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            font-size: 14px;
+        }
+        
+        .info strong {
+            color: #1e40af;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Clear Cache Tool</h1>
+        <p class="subtitle">Fix Admin 53 Permissions Issue</p>
+        
+        <div class="status">
+            <div class="status-item">
+                <span class="status-label">LocalStorage Items:</span>
+                <span class="status-value" id="localStorage-count">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">SessionStorage Items:</span>
+                <span class="status-value" id="sessionStorage-count">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Cookies:</span>
+                <span class="status-value" id="cookies-count">-</span>
+            </div>
+            <div class="status-item">
+                <span class="status-label">Current User Permissions:</span>
+                <span class="status-value" id="permissions-count">-</span>
+            </div>
+        </div>
+        
+        <button class="btn-clear" onclick="clearCache()">
+            🗑️ Clear All Cache & Cookies
+        </button>
+        
+        <button class="btn-check" onclick="checkStatus()">
+            🔍 Check Current Status
+        </button>
+        
+        <button class="btn-login" onclick="goToLogin()">
+            🔑 Go to Login Page
+        </button>
+        
+        <div class="log" id="log"></div>
+        
+        <div class="info">
+            <strong>ℹ️ What this does:</strong>
+            <ul style="margin-top: 10px; margin-left: 20px;">
+                <li>Clears all localStorage data</li>
+                <li>Clears all sessionStorage data</li>
+                <li>Removes all cookies</li>
+                <li>Forces fresh login to get 53 permissions from API</li>
+            </ul>
+        </div>
+    </div>
+    
+    <script>
+        const log = document.getElementById('log');
+        
+        function addLog(message, type = 'info') {
+            const logLine = document.createElement('div');
+            logLine.className = 'log-line';
+            
+            const icons = {
+                success: '✅',
+                warning: '⚠️',
+                error: '❌',
+                info: 'ℹ️'
+            };
+            
+            logLine.textContent = `${icons[type]} ${message}`;
+            log.appendChild(logLine);
+            log.classList.add('show');
+            log.scrollTop = log.scrollHeight;
+        }
+        
+        function updateStatus() {
+            // LocalStorage
+            const localStorageCount = localStorage.length;
+            document.getElementById('localStorage-count').textContent = localStorageCount;
+            document.getElementById('localStorage-count').className = 
+                `status-value ${localStorageCount > 0 ? 'warning' : 'success'}`;
+            
+            // SessionStorage
+            const sessionStorageCount = sessionStorage.length;
+            document.getElementById('sessionStorage-count').textContent = sessionStorageCount;
+            document.getElementById('sessionStorage-count').className = 
+                `status-value ${sessionStorageCount > 0 ? 'warning' : 'success'}`;
+            
+            // Cookies
+            const cookiesCount = document.cookie.split(';').filter(c => c.trim()).length;
+            document.getElementById('cookies-count').textContent = cookiesCount;
+            document.getElementById('cookies-count').className = 
+                `status-value ${cookiesCount > 0 ? 'warning' : 'success'}`;
+            
+            // Permissions
+            try {
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                const permCount = user.permissions?.length || 0;
+                document.getElementById('permissions-count').textContent = 
+                    permCount > 0 ? `${permCount} permissions` : 'Not logged in';
+                document.getElementById('permissions-count').className = 
+                    `status-value ${permCount === 53 ? 'success' : (permCount > 0 ? 'error' : 'warning')}`;
+            } catch (e) {
+                document.getElementById('permissions-count').textContent = 'Error';
+                document.getElementById('permissions-count').className = 'status-value error';
+            }
+        }
+        
+        function checkStatus() {
+            log.innerHTML = '';
+            addLog('Checking current status...', 'info');
+            
+            // Check localStorage
+            addLog(`localStorage: ${localStorage.length} items`, localStorage.length > 0 ? 'warning' : 'success');
+            if (localStorage.length > 0) {
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    addLog(`  - ${key}`, 'info');
+                }
+            }
+            
+            // Check sessionStorage
+            addLog(`sessionStorage: ${sessionStorage.length} items`, sessionStorage.length > 0 ? 'warning' : 'success');
+            
+            // Check cookies
+            const cookies = document.cookie.split(';').filter(c => c.trim());
+            addLog(`Cookies: ${cookies.length} items`, cookies.length > 0 ? 'warning' : 'success');
+            cookies.forEach(c => {
+                addLog(`  - ${c.trim().split('=')[0]}`, 'info');
+            });
+            
+            // Check user permissions
+            try {
+                const user = JSON.parse(localStorage.getItem('user') || '{}');
+                if (user.permissions) {
+                    const permCount = user.permissions.length;
+                    addLog(`User permissions: ${permCount}`, permCount === 53 ? 'success' : 'error');
+                    if (permCount !== 53) {
+                        addLog(`⚠️ Expected 53 permissions, found ${permCount}!`, 'warning');
+                        addLog(`Need to clear cache and login again!`, 'warning');
+                    } else {
+                        addLog(`🎉 Perfect! All 53 permissions loaded!`, 'success');
+                    }
+                } else {
+                    addLog('No user data found', 'info');
+                }
+            } catch (e) {
+                addLog('Error reading user data', 'error');
+            }
+            
+            updateStatus();
+        }
+        
+        function clearCache() {
+            log.innerHTML = '';
+            addLog('Starting cache clear...', 'info');
+            
+            // Clear localStorage
+            const localCount = localStorage.length;
+            localStorage.clear();
+            addLog(`Cleared ${localCount} localStorage items`, 'success');
+            
+            // Clear sessionStorage
+            const sessionCount = sessionStorage.length;
+            sessionStorage.clear();
+            addLog(`Cleared ${sessionCount} sessionStorage items`, 'success');
+            
+            // Clear cookies
+            const cookies = document.cookie.split(';');
+            let cookieCount = 0;
+            cookies.forEach(cookie => {
+                const eqPos = cookie.indexOf('=');
+                const name = eqPos > -1 ? cookie.substr(0, eqPos).trim() : cookie.trim();
+                if (name) {
+                    document.cookie = `${name}=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/`;
+                    cookieCount++;
+                }
+            });
+            addLog(`Cleared ${cookieCount} cookies`, 'success');
+            
+            addLog('', 'info');
+            addLog('✅ All cache cleared successfully!', 'success');
+            addLog('', 'info');
+            addLog('Next steps:', 'info');
+            addLog('1. Click "Go to Login Page" button', 'info');
+            addLog('2. Login with admin account', 'info');
+            addLog('3. Check console logs for "53 permissions"', 'info');
+            
+            updateStatus();
+            
+            // Auto redirect after 3 seconds
+            setTimeout(() => {
+                addLog('', 'info');
+                addLog('Redirecting to login page in 3 seconds...', 'warning');
+                setTimeout(() => {
+                    window.location.href = '/auth/login';
+                }, 3000);
+            }, 1000);
+        }
+        
+        function goToLogin() {
+            window.location.href = '/auth/login';
+        }
+        
+        // Initial status check
+        updateStatus();
+    </script>
+</body>
+</html>

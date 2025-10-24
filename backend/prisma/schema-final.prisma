@@ -1,0 +1,279 @@
+// Complete RBAC Schema for i-ContExchange
+// Final version with all necessary models for authentication and authorization
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  phone           String?  @unique
+  password        String
+  fullName        String?
+  displayName     String?
+  avatar          String?
+  status          UserStatus @default(ACTIVE)
+  emailVerified   Boolean  @default(false)
+  phoneVerified   Boolean  @default(false)
+  
+  // KYC/KYB Status
+  kycStatus       KYCStatus @default(UNVERIFIED)
+  kycData         Json?
+  
+  // Security
+  lastLoginAt     DateTime?
+  loginCount      Int      @default(0)
+  
+  // Tracking
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  // RBAC Relations
+  userRoles       UserRole[]
+  userPermissions UserPermission[]
+  sessions        UserSession[]
+  loginLogs       LoginLog[]
+  orgUsers        OrgUser[]
+  
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  code        String   @unique // admin, buyer, seller, depot_staff, inspector
+  name        String
+  description String?
+  level       Int      @default(0) // 0=lowest, 100=highest priority
+  isSystem    Boolean  @default(false) // System roles cannot be deleted
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  userRoles   UserRole[]
+  rolePermissions RolePermission[]
+  
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  code        String   @unique // listings.read, orders.write, admin.access
+  name        String
+  description String?
+  module      String   // listings, orders, admin, etc.
+  action      String   // read, write, delete, approve, etc.
+  resource    String?  // specific resource if needed
+  
+  isSystem    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  rolePermissions RolePermission[]
+  userPermissions UserPermission[]
+  
+  @@unique([module, action, resource])
+  @@map("permissions")
+}
+
+model UserRole {
+  id        String   @id @default(cuid())
+  userId    String
+  roleId    String
+  
+  assignedAt DateTime @default(now())
+  assignedBy String?
+  expiresAt  DateTime?
+  isActive   Boolean  @default(true)
+  
+  // Relations
+  user      User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role      Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  id           String   @id @default(cuid())
+  roleId       String
+  permissionId String
+  
+  grantedAt    DateTime @default(now())
+  grantedBy    String?
+  isActive     Boolean  @default(true)
+  
+  // Relations
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserPermission {
+  id           String   @id @default(cuid())
+  userId       String
+  permissionId String
+  
+  grantedAt    DateTime @default(now())
+  grantedBy    String?
+  expiresAt    DateTime?
+  isActive     Boolean  @default(true)
+  
+  // Relations
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, permissionId])
+  @@map("user_permissions")
+}
+
+model UserSession {
+  id           String   @id @default(cuid())
+  userId       String
+  token        String   @unique
+  refreshToken String?  @unique
+  deviceInfo   String?
+  ipAddress    String?
+  userAgent    String?
+  
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  expiresAt    DateTime
+  isActive     Boolean  @default(true)
+  
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("user_sessions")
+}
+
+model LoginLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  email     String
+  success   Boolean
+  ipAddress String?
+  userAgent String?
+  reason    String?
+  
+  createdAt DateTime @default(now())
+  
+  // Relations
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@map("login_logs")
+}
+
+// Organization model for business entities
+model Organization {
+  id           String   @id @default(cuid())
+  name         String
+  code         String   @unique
+  type         OrgType
+  status       OrgStatus @default(ACTIVE)
+  
+  // Business Info
+  taxId        String?
+  address      String?
+  phone        String?
+  email        String?
+  website      String?
+  
+  // KYB Status
+  kybStatus    KYBStatus @default(UNVERIFIED)
+  kybData      Json?
+  
+  // Tracking
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relations
+  orgUsers     OrgUser[]
+  
+  @@map("organizations")
+}
+
+model OrgUser {
+  id        String   @id @default(cuid())
+  orgId     String
+  userId    String
+  roleInOrg String   // CEO, Manager, Staff, etc.
+  
+  // Permissions in org
+  permissions  String[] // org-specific permissions
+  
+  // Status
+  status       OrgUserStatus @default(ACTIVE)
+  joinedAt     DateTime @default(now())
+  leftAt       DateTime?
+  
+  // Relations
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, orgId])
+  @@map("org_users")
+}
+
+// Enums
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  BANNED
+  PENDING_VERIFICATION
+}
+
+enum KYCStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+enum KYBStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+enum OrgType {
+  SHIPPING_LINE
+  FREIGHT_FORWARDER
+  DEPOT
+  TRADING_COMPANY
+  INSPECTION_AGENCY
+  LOGISTICS_PROVIDER
+  GOVERNMENT
+  INDIVIDUAL
+  OTHER
+}
+
+enum OrgStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+enum OrgUserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  LEFT
+}

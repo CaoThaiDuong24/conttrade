@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Notification Navigation Demo</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    
+    .header {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    
+    h1 {
+      color: #333;
+      margin-bottom: 10px;
+    }
+    
+    .subtitle {
+      color: #666;
+      font-size: 14px;
+    }
+    
+    .notification-types {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    
+    h2 {
+      color: #333;
+      margin-bottom: 15px;
+      font-size: 18px;
+    }
+    
+    .notification-item {
+      display: flex;
+      align-items: start;
+      gap: 12px;
+      padding: 12px;
+      border-radius: 8px;
+      margin-bottom: 10px;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 2px solid transparent;
+    }
+    
+    .notification-item:hover {
+      background: #f9f9f9;
+      transform: translateX(4px);
+    }
+    
+    .notification-item.unread {
+      background: #eff6ff;
+      border-color: #3b82f6;
+    }
+    
+    .icon {
+      font-size: 32px;
+      flex-shrink: 0;
+    }
+    
+    .icon.blue { color: #3b82f6; }
+    .icon.green { color: #10b981; }
+    .icon.emerald { color: #059669; }
+    .icon.red { color: #ef4444; }
+    .icon.purple { color: #8b5cf6; }
+    .icon.yellow { color: #f59e0b; }
+    
+    .content {
+      flex: 1;
+    }
+    
+    .title {
+      font-weight: 600;
+      color: #111;
+      margin-bottom: 4px;
+    }
+    
+    .message {
+      font-size: 13px;
+      color: #666;
+      margin-bottom: 4px;
+    }
+    
+    .time {
+      font-size: 12px;
+      color: #999;
+    }
+    
+    .badge {
+      width: 8px;
+      height: 8px;
+      background: #3b82f6;
+      border-radius: 50%;
+      flex-shrink: 0;
+      margin-top: 6px;
+    }
+    
+    .nav-path {
+      font-size: 12px;
+      color: #8b5cf6;
+      font-family: 'Courier New', monospace;
+      margin-top: 4px;
+    }
+    
+    .flow-diagram {
+      background: white;
+      padding: 1.5rem;
+      border-radius: 12px;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    
+    .flow-step {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px;
+      margin-bottom: 8px;
+    }
+    
+    .step-number {
+      width: 30px;
+      height: 30px;
+      background: #667eea;
+      color: white;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      flex-shrink: 0;
+    }
+    
+    .step-text {
+      color: #333;
+    }
+    
+    .arrow {
+      text-align: center;
+      color: #999;
+      font-size: 20px;
+      margin: 5px 0;
+    }
+    
+    .demo-button {
+      background: #667eea;
+      color: white;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      display: inline-block;
+      text-decoration: none;
+    }
+    
+    .demo-button:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    .info-box {
+      background: #fef3c7;
+      border-left: 4px solid #f59e0b;
+      padding: 12px;
+      border-radius: 4px;
+      margin-top: 15px;
+    }
+    
+    .info-box strong {
+      color: #92400e;
+    }
+    
+    .info-box p {
+      color: #78350f;
+      font-size: 13px;
+      margin-top: 4px;
+    }
+    
+    .console-log {
+      background: #1e1e1e;
+      color: #4af626;
+      padding: 12px;
+      border-radius: 6px;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      margin-top: 10px;
+      overflow-x: auto;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <div class="header">
+      <h1>🔔 Notification Navigation Demo</h1>
+      <p class="subtitle">Click vào notification để xem chi tiết và navigate đến trang tương ứng</p>
+    </div>
+    
+    <!-- Notification Types -->
+    <div class="notification-types">
+      <h2>📋 Các loại Notification</h2>
+      
+      <!-- RFQ Received -->
+      <div class="notification-item unread" onclick="simulateClick('rfq_received', '/vi/rfq/received/rfq-123')">
+        <div class="icon blue">📋</div>
+        <div class="content">
+          <div class="title">Yêu cầu báo giá mới</div>
+          <div class="message">Nguyễn Văn A đã gửi yêu cầu báo giá cho Container 20ft</div>
+          <div class="time">5 giờ trước</div>
+          <div class="nav-path">→ /vi/rfq/received/rfq-123</div>
+        </div>
+        <div class="badge"></div>
+      </div>
+      
+      <!-- Quote Received -->
+      <div class="notification-item unread" onclick="simulateClick('quote_received', '/vi/rfq/sent/rfq-456')">
+        <div class="icon green">💰</div>
+        <div class="content">
+          <div class="title">Báo giá mới</div>
+          <div class="message">Công ty XYZ đã gửi báo giá cho yêu cầu của bạn</div>
+          <div class="time">2 giờ trước</div>
+          <div class="nav-path">→ /vi/rfq/sent/rfq-456</div>
+        </div>
+        <div class="badge"></div>
+      </div>
+      
+      <!-- Quote Accepted -->
+      <div class="notification-item" onclick="simulateClick('quote_accepted', '/vi/orders/order-789')">
+        <div class="icon emerald">✅</div>
+        <div class="content">
+          <div class="title">Báo giá được chấp nhận</div>
+          <div class="message">Nguyễn Thị B đã chấp nhận báo giá của bạn</div>
+          <div class="time">1 ngày trước</div>
+          <div class="nav-path">→ /vi/orders/order-789</div>
+        </div>
+      </div>
+      
+      <!-- Quote Rejected -->
+      <div class="notification-item" onclick="simulateClick('quote_rejected', '/vi/quotes/quote-321')">
+        <div class="icon red">❌</div>
+        <div class="content">
+          <div class="title">Báo giá bị từ chối</div>
+          <div class="message">Trần Văn C đã từ chối báo giá của bạn</div>
+          <div class="time">3 ngày trước</div>
+          <div class="nav-path">→ /vi/quotes/quote-321</div>
+        </div>
+      </div>
+      
+      <!-- Order Created -->
+      <div class="notification-item unread" onclick="simulateClick('order_created', '/vi/orders/order-654')">
+        <div class="icon purple">📦</div>
+        <div class="content">
+          <div class="title">Đơn hàng mới</div>
+          <div class="message">Đơn hàng #ORD-654 đã được tạo thành công</div>
+          <div class="time">Vừa xong</div>
+          <div class="nav-path">→ /vi/orders/order-654</div>
+        </div>
+        <div class="badge"></div>
+      </div>
+      
+      <!-- Payment Received -->
+      <div class="notification-item" onclick="simulateClick('payment_received', '/vi/orders/order-987')">
+        <div class="icon yellow">💵</div>
+        <div class="content">
+          <div class="title">Đã nhận thanh toán</div>
+          <div class="message">Thanh toán cho đơn hàng #ORD-987 đã được xác nhận</div>
+          <div class="time">2 ngày trước</div>
+          <div class="nav-path">→ /vi/orders/order-987</div>
+        </div>
+      </div>
+      
+      <div class="info-box">
+        <strong>💡 Cách hoạt động:</strong>
+        <p>Click vào notification → Đóng dropdown → Mark as read → Navigate to detail page</p>
+      </div>
+    </div>
+    
+    <!-- Flow Diagram -->
+    <div class="flow-diagram">
+      <h2>🔄 User Flow</h2>
+      
+      <div class="flow-step">
+        <div class="step-number">1</div>
+        <div class="step-text">User click vào notification item</div>
+      </div>
+      <div class="arrow">↓</div>
+      
+      <div class="flow-step">
+        <div class="step-number">2</div>
+        <div class="step-text">Dropdown đóng lại</div>
+      </div>
+      <div class="arrow">↓</div>
+      
+      <div class="flow-step">
+        <div class="step-number">3</div>
+        <div class="step-text">Call API: POST /notifications/{id}/read</div>
+      </div>
+      <div class="arrow">↓</div>
+      
+      <div class="flow-step">
+        <div class="step-number">4</div>
+        <div class="step-text">Update local state (remove unread badge)</div>
+      </div>
+      <div class="arrow">↓</div>
+      
+      <div class="flow-step">
+        <div class="step-number">5</div>
+        <div class="step-text">Navigate to detail page (router.push)</div>
+      </div>
+      <div class="arrow">↓</div>
+      
+      <div class="flow-step">
+        <div class="step-number">6</div>
+        <div class="step-text">User xem chi tiết RFQ/Quote/Order</div>
+      </div>
+      
+      <div id="console" class="console-log" style="display: none;"></div>
+    </div>
+    
+    <!-- Back to App -->
+    <div class="flow-diagram" style="text-align: center;">
+      <h2>✅ Ready to Test</h2>
+      <p style="color: #666; margin: 10px 0;">
+        Refresh trang chính và test với notification thật
+      </p>
+      <a href="http://localhost:3000" class="demo-button">
+        🚀 Quay lại App
+      </a>
+    </div>
+  </div>
+  
+  <script>
+    function simulateClick(type, path) {
+      const consoleDiv = document.getElementById('console');
+      consoleDiv.style.display = 'block';
+      
+      const logs = [
+        `📬 Notification clicked: { type: "${type}", ... }`,
+        `❌ Closing dropdown...`,
+        `📡 POST /api/v1/notifications/xxx/read`,
+        `✅ Marked notification as read`,
+        `🔗 Navigating to: ${path}`,
+        `🎯 Page loaded successfully`
+      ];
+      
+      consoleDiv.innerHTML = '';
+      
+      logs.forEach((log, index) => {
+        setTimeout(() => {
+          const line = document.createElement('div');
+          line.textContent = log;
+          consoleDiv.appendChild(line);
+          consoleDiv.scrollTop = consoleDiv.scrollHeight;
+        }, index * 300);
+      });
+      
+      // Remove unread style
+      setTimeout(() => {
+        event.target.closest('.notification-item').classList.remove('unread');
+        const badge = event.target.closest('.notification-item').querySelector('.badge');
+        if (badge) badge.remove();
+      }, 1000);
+    }
+  </script>
+</body>
+</html>

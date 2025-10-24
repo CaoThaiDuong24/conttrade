@@ -1,0 +1,298 @@
+// Extended RBAC Schema for i-ContExchange
+// This extends the existing schema with detailed role-based access control
+
+model User {
+  id              String   @id @default(cuid())
+  email           String   @unique
+  phone           String?  @unique
+  password        String
+  fullName        String?
+  displayName     String?
+  avatar          String?
+  status          UserStatus @default(ACTIVE)
+  emailVerified   Boolean  @default(false)
+  phoneVerified   Boolean  @default(false)
+  
+  // KYC/KYB Status
+  kycStatus       KYCStatus @default(UNVERIFIED)
+  kycData         Json?
+  
+  // Security
+  lastLoginAt     DateTime?
+  loginAttempts   Int      @default(0)
+  lockedUntil     DateTime?
+  twoFactorEnabled Boolean @default(false)
+  twoFactorSecret String?
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+  
+  // Relations
+  userRoles       UserRole[]
+  userPermissions UserPermission[]
+  orgUsers        OrgUser[]
+  sessions        UserSession[]
+  loginLogs       LoginLog[]
+  
+  // Business Relations
+  listings        Listing[]
+  orders          Order[]
+  reviews         Review[]
+  rfqs            RFQ[]
+  quotes          Quote[]
+  disputes        Dispute[]
+  
+  @@map("users")
+}
+
+model Role {
+  id          String   @id @default(cuid())
+  code        String   @unique // admin, buyer, seller, depot_staff, inspector
+  name        String
+  description String?
+  level       Int      @default(0) // 0=lowest, 100=highest priority
+  isSystem    Boolean  @default(false) // System roles cannot be deleted
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  userRoles   UserRole[]
+  rolePermissions RolePermission[]
+  
+  @@map("roles")
+}
+
+model Permission {
+  id          String   @id @default(cuid())
+  code        String   @unique // listings.read, orders.write, admin.access
+  name        String
+  description String?
+  module      String   // listings, orders, admin, etc.
+  action      String   // read, write, delete, approve, etc.
+  resource    String?  // specific resource if needed
+  
+  isSystem    Boolean  @default(false)
+  isActive    Boolean  @default(true)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  rolePermissions RolePermission[]
+  userPermissions UserPermission[]
+  
+  @@unique([module, action, resource])
+  @@map("permissions")
+}
+
+model UserRole {
+  id       String @id @default(cuid())
+  userId   String
+  roleId   String
+  
+  // Optional: Role-specific data
+  metadata Json?
+  
+  // Audit
+  assignedBy String?
+  assignedAt DateTime @default(now())
+  expiresAt  DateTime?
+  isActive   Boolean  @default(true)
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, roleId])
+  @@map("user_roles")
+}
+
+model RolePermission {
+  id           String @id @default(cuid())
+  roleId       String
+  permissionId String
+  
+  // Optional: Permission constraints
+  constraints  Json? // e.g., {"depot_id": "123", "region": "north"}
+  
+  createdAt    DateTime @default(now())
+  
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  
+  @@unique([roleId, permissionId])
+  @@map("role_permissions")
+}
+
+model UserPermission {
+  id           String @id @default(cuid())
+  userId       String
+  permissionId String
+  
+  // Override specific permissions for users
+  granted      Boolean  @default(true) // true=grant, false=deny
+  constraints  Json?
+  
+  // Audit
+  grantedBy    String?
+  grantedAt    DateTime @default(now())
+  expiresAt    DateTime?
+  
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, permissionId])
+  @@map("user_permissions")
+}
+
+model UserSession {
+  id          String   @id @default(cuid())
+  userId      String
+  token       String   @unique
+  refreshToken String? @unique
+  
+  // Session metadata
+  userAgent   String?
+  ipAddress   String?
+  deviceInfo  Json?
+  
+  // Session control
+  isActive    Boolean  @default(true)
+  expiresAt   DateTime
+  lastUsedAt  DateTime @default(now())
+  
+  createdAt   DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@map("user_sessions")
+}
+
+model LoginLog {
+  id          String   @id @default(cuid())
+  userId      String?
+  email       String
+  
+  // Login attempt details
+  success     Boolean
+  failureReason String?
+  ipAddress   String?
+  userAgent   String?
+  deviceInfo  Json?
+  
+  // Security
+  suspicious  Boolean  @default(false)
+  blockedReason String?
+  
+  createdAt   DateTime @default(now())
+  
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+  
+  @@index([email, createdAt])
+  @@index([ipAddress, createdAt])
+  @@map("login_logs")
+}
+
+// Organization support for business accounts
+model Organization {
+  id              String   @id @default(cuid())
+  name            String
+  code            String?  @unique
+  type            OrgType  @default(COMPANY)
+  
+  // Business details
+  taxId           String?  @unique
+  businessLicense String?
+  website         String?
+  description     String?
+  
+  // Contact
+  email           String?
+  phone           String?
+  address         Json?
+  
+  // Status
+  status          OrgStatus @default(ACTIVE)
+  verificationStatus KYCStatus @default(UNVERIFIED)
+  verificationData Json?
+  
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+  
+  // Relations
+  orgUsers        OrgUser[]
+  depots          Depot[]
+  
+  @@map("organizations")
+}
+
+model OrgUser {
+  id           String   @id @default(cuid())
+  userId       String
+  orgId        String
+  
+  // Role in organization
+  position     String?
+  department   String?
+  isOwner      Boolean  @default(false)
+  isAdmin      Boolean  @default(false)
+  
+  // Permissions in org
+  permissions  String[] // org-specific permissions
+  
+  // Status
+  status       OrgUserStatus @default(ACTIVE)
+  joinedAt     DateTime @default(now())
+  leftAt       DateTime?
+  
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  org  Organization @relation(fields: [orgId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, orgId])
+  @@map("org_users")
+}
+
+// Enums
+enum UserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  BANNED
+  PENDING_VERIFICATION
+}
+
+enum KYCStatus {
+  UNVERIFIED
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+}
+
+enum OrgType {
+  COMPANY
+  DEPOT
+  INSPECTION_AGENCY
+  LOGISTICS_PROVIDER
+  GOVERNMENT
+  OTHER
+}
+
+enum OrgStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  PENDING_VERIFICATION
+}
+
+enum OrgUserStatus {
+  ACTIVE
+  INACTIVE
+  SUSPENDED
+  LEFT
+}

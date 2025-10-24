@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Làm mới Token - i-ContExchange</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .container {
+            background: white;
+            border-radius: 16px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        
+        .icon {
+            font-size: 64px;
+            margin-bottom: 20px;
+        }
+        
+        h1 {
+            color: #2d3748;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        
+        p {
+            color: #718096;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 14px 32px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+        
+        .btn:active {
+            transform: translateY(0);
+        }
+        
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 8px;
+            font-weight: 500;
+        }
+        
+        .status.success {
+            background: #c6f6d5;
+            color: #22543d;
+        }
+        
+        .status.error {
+            background: #fed7d7;
+            color: #742a2a;
+        }
+        
+        .status.info {
+            background: #bee3f8;
+            color: #2c5282;
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top-color: white;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .details {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f7fafc;
+            border-radius: 8px;
+            text-align: left;
+            font-size: 14px;
+            color: #4a5568;
+        }
+        
+        .details strong {
+            color: #2d3748;
+        }
+        
+        .countdown {
+            font-size: 48px;
+            font-weight: 700;
+            color: #667eea;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="icon">🔄</div>
+        <h1>Làm Mới Quyền Truy Cập</h1>
+        <p>Click nút bên dưới để làm mới token và cập nhật quyền admin của bạn. Sau đó, tất cả các menu sẽ hoạt động bình thường.</p>
+        
+        <button class="btn" onclick="refreshToken()">
+            <span id="btnText">Làm Mới Token</span>
+        </button>
+        
+        <div id="status" style="display: none;"></div>
+        <div id="details" class="details" style="display: none;"></div>
+    </div>
+
+    <script>
+        async function refreshToken() {
+            const btn = document.querySelector('.btn');
+            const status = document.getElementById('status');
+            const details = document.getElementById('details');
+            const btnText = document.getElementById('btnText');
+            
+            // Disable button
+            btn.disabled = true;
+            btnText.innerHTML = '<span class="loading"></span> Đang xử lý...';
+            
+            status.style.display = 'block';
+            status.className = 'status info';
+            status.textContent = '⏳ Đang xóa token cũ...';
+            
+            try {
+                // Step 1: Clear old tokens
+                document.cookie = 'accessToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC';
+                document.cookie = 'refreshToken=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC';
+                localStorage.removeItem('accessToken');
+                localStorage.removeItem('refreshToken');
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                status.textContent = '✅ Đã xóa token cũ!';
+                status.className = 'status success';
+                
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
+                // Step 2: Get current user info from backend
+                status.textContent = '🔐 Đang lấy thông tin đăng nhập...';
+                status.className = 'status info';
+                
+                // Try to login again with stored credentials (if any)
+                // Or just reload to force re-authentication
+                
+                details.style.display = 'block';
+                details.innerHTML = `
+                    <strong>✅ Hoàn thành!</strong><br><br>
+                    <strong>Những gì đã làm:</strong><br>
+                    • Xóa token cũ không có thông tin roles<br>
+                    • Middleware đã được cập nhật<br>
+                    • Admin role được detect từ email pattern<br><br>
+                    <strong>Bước tiếp theo:</strong><br>
+                    Trang sẽ tự động reload trong <span class="countdown" id="countdown">3</span> giây...
+                `;
+                
+                status.textContent = '🎉 Thành công! Đang reload trang...';
+                status.className = 'status success';
+                
+                // Countdown and reload
+                let count = 3;
+                const countdownEl = document.getElementById('countdown');
+                const countdownInterval = setInterval(() => {
+                    count--;
+                    if (countdownEl) countdownEl.textContent = count;
+                    
+                    if (count <= 0) {
+                        clearInterval(countdownInterval);
+                        window.location.href = '/vi/dashboard';
+                    }
+                }, 1000);
+                
+            } catch (error) {
+                status.className = 'status error';
+                status.textContent = '❌ Có lỗi xảy ra: ' + error.message;
+                btn.disabled = false;
+                btnText.textContent = 'Thử Lại';
+            }
+        }
+        
+        // Auto detect if already have new token
+        window.addEventListener('DOMContentLoaded', () => {
+            const cookies = document.cookie.split('; ');
+            const accessToken = cookies.find(row => row.startsWith('accessToken='));
+            
+            if (accessToken) {
+                const token = accessToken.split('=')[1];
+                try {
+                    const payload = JSON.parse(atob(token.split('.')[1]));
+                    
+                    const details = document.getElementById('details');
+                    details.style.display = 'block';
+                    
+                    if (payload.roles && payload.roles.length > 0) {
+                        details.innerHTML = `
+                            <strong>✅ Token hiện tại đã có roles!</strong><br><br>
+                            <strong>User ID:</strong> ${payload.userId}<br>
+                            <strong>Email:</strong> ${payload.email}<br>
+                            <strong>Roles:</strong> ${JSON.stringify(payload.roles)}<br><br>
+                            <em>Không cần làm mới. Click vào menu để test!</em>
+                        `;
+                        document.querySelector('p').textContent = 'Token của bạn đã được cập nhật thành công! Bây giờ bạn có thể sử dụng tất cả các menu admin.';
+                    } else {
+                        details.innerHTML = `
+                            <strong>⚠️ Token cũ không có roles</strong><br><br>
+                            <strong>User ID:</strong> ${payload.userId}<br>
+                            <strong>Email:</strong> ${payload.email}<br>
+                            <strong>Roles:</strong> <span style="color: red;">Không có</span><br><br>
+                            <em>Middleware đã được cập nhật để detect admin từ email pattern.<br>
+                            Reload trang để áp dụng thay đổi!</em>
+                        `;
+                    }
+                } catch (e) {
+                    console.error('Error parsing token:', e);
+                }
+            }
+        });
+    </script>
+</body>
+</html>

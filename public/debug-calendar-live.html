@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Calendar Debug Live</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 20px;
+      background: #1e1e1e;
+      color: #00ff00;
+    }
+    .log {
+      margin: 5px 0;
+      padding: 5px;
+      border-left: 3px solid #00ff00;
+    }
+    .error { color: #ff0000; border-color: #ff0000; }
+    .warning { color: #ffaa00; border-color: #ffaa00; }
+    .success { color: #00ff00; border-color: #00ff00; }
+    button {
+      background: #00ff00;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      margin: 10px 0;
+      cursor: pointer;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>🔍 Calendar Picker Debug Live</h1>
+  <button onclick="runDebug()">▶ Run Debug</button>
+  <button onclick="clearLogs()">🗑 Clear Logs</button>
+  <div id="logs"></div>
+
+  <script>
+    function log(msg, type = 'success') {
+      const div = document.createElement('div');
+      div.className = `log ${type}`;
+      div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      document.getElementById('logs').appendChild(div);
+    }
+
+    function clearLogs() {
+      document.getElementById('logs').innerHTML = '';
+    }
+
+    function runDebug() {
+      clearLogs();
+      log('🚀 Starting Calendar Debug...', 'success');
+      
+      // Check 1: Modal exists
+      const modal = document.querySelector('[class*="fixed"][class*="inset-0"][class*="z-"]');
+      if (modal) {
+        log('✅ Modal found', 'success');
+        const zIndex = window.getComputedStyle(modal).zIndex;
+        log(`   Z-Index: ${zIndex}`, 'success');
+        const pointerEvents = window.getComputedStyle(modal).pointerEvents;
+        log(`   Pointer Events: ${pointerEvents}`, pointerEvents === 'none' ? 'error' : 'success');
+      } else {
+        log('❌ Modal NOT found - Close this window and open MarkReadyForm first!', 'error');
+        return;
+      }
+
+      // Check 2: Calendar trigger buttons
+      const triggers = document.querySelectorAll('button:not([type="submit"])');
+      const calendarButtons = Array.from(triggers).filter(btn => 
+        btn.textContent.includes('Chọn ngày') || btn.textContent.includes('/')
+      );
+      
+      log(`📅 Calendar trigger buttons found: ${calendarButtons.length}`, calendarButtons.length >= 2 ? 'success' : 'error');
+      
+      calendarButtons.forEach((btn, i) => {
+        const disabled = btn.disabled;
+        const zIndex = window.getComputedStyle(btn).zIndex;
+        log(`   Button ${i+1}: disabled=${disabled}, z-index=${zIndex}`, disabled ? 'error' : 'success');
+      });
+
+      // Check 3: Popover content (if open)
+      setTimeout(() => {
+        const popovers = document.querySelectorAll('[data-slot="popover-content"]');
+        log(`🎈 Popover elements: ${popovers.length}`, 'success');
+        
+        popovers.forEach((pop, i) => {
+          const style = window.getComputedStyle(pop);
+          log(`   Popover ${i+1}:`, 'success');
+          log(`      Z-Index: ${style.zIndex}`, parseInt(style.zIndex) > 100 ? 'success' : 'error');
+          log(`      Display: ${style.display}`, 'success');
+          log(`      Pointer Events: ${style.pointerEvents}`, style.pointerEvents === 'auto' ? 'success' : 'error');
+          log(`      Visibility: ${style.visibility}`, 'success');
+          
+          // Check if it's above modal
+          const modalZ = parseInt(window.getComputedStyle(modal).zIndex);
+          const popZ = parseInt(style.zIndex);
+          if (popZ > modalZ) {
+            log(`      ✅ Popover (${popZ}) > Modal (${modalZ})`, 'success');
+          } else {
+            log(`      ❌ Popover (${popZ}) <= Modal (${modalZ}) - BLOCKED!`, 'error');
+          }
+        });
+
+        // Check 4: Calendar inside popover
+        const calendars = document.querySelectorAll('[class*="rdp"]');
+        log(`📆 Calendar (react-day-picker) elements: ${calendars.length}`, 'success');
+        
+        calendars.forEach((cal, i) => {
+          const style = window.getComputedStyle(cal);
+          log(`   Calendar ${i+1}:`, 'success');
+          log(`      Display: ${style.display}`, 'success');
+          log(`      Pointer Events: ${style.pointerEvents}`, 'success');
+          
+          // Check day buttons
+          const dayButtons = cal.querySelectorAll('button');
+          log(`      Day buttons: ${dayButtons.length}`, dayButtons.length > 0 ? 'success' : 'error');
+          
+          if (dayButtons.length > 0) {
+            const firstDay = dayButtons[0];
+            const dayStyle = window.getComputedStyle(firstDay);
+            log(`      First day button:`, 'success');
+            log(`         Disabled: ${firstDay.disabled}`, firstDay.disabled ? 'warning' : 'success');
+            log(`         Pointer Events: ${dayStyle.pointerEvents}`, 'success');
+            log(`         Cursor: ${dayStyle.cursor}`, 'success');
+          }
+        });
+
+        // Check 5: Portal rendering
+        const portals = document.querySelectorAll('[data-radix-portal]');
+        log(`🌀 Radix Portals: ${portals.length}`, 'success');
+        portals.forEach((portal, i) => {
+          log(`   Portal ${i+1}: children=${portal.children.length}`, 'success');
+        });
+
+        // Check 6: Event listeners
+        log('🎯 Testing click event...', 'warning');
+        if (calendarButtons.length > 0) {
+          log('   Click first "Chọn ngày" button to open calendar...', 'warning');
+          log('   Then click a date and watch console for "Selected FROM date" or "Selected TO date"', 'warning');
+        }
+
+      }, 500);
+
+      log('✅ Debug complete! Check above for issues.', 'success');
+    }
+
+    // Auto-run on load
+    setTimeout(() => {
+      log('👋 Open MarkReadyForm modal, then click "Run Debug" button', 'warning');
+    }, 100);
+  </script>
+</body>
+</html>

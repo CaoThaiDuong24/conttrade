@@ -1,0 +1,42 @@
+/* Navigation Active State - Enhanced Styling */
+
+/* Đảm bảo màu primary được áp dụng đúng cho navigation active state */
+[data-sidebar] [data-active="true"],
+[data-sidebar] .bg-primary\/10 {
+  --tw-bg-opacity: 1;
+  background-color: hsl(var(--primary) / 0.1);
+}
+
+[data-sidebar] .text-primary {
+  --tw-text-opacity: 1;
+  color: hsl(var(--primary));
+}
+
+[data-sidebar] .border-primary {
+  --tw-border-opacity: 1;
+  border-color: hsl(var(--primary));
+}
+
+/* Hover effects - Đảm bảo không override active state */
+[data-sidebar] [data-sidebar-menu-button]:hover:not(.bg-primary\/10) {
+  background-color: hsl(var(--sidebar-accent) / 0.5);
+}
+
+/* Active state transitions */
+[data-sidebar] [data-sidebar-menu-button] {
+  transition-property: all;
+  transition-duration: 200ms;
+  transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Icon color for active items */
+[data-sidebar] .bg-primary\/10 svg,
+[data-sidebar] .text-primary svg {
+  color: hsl(var(--primary));
+}
+
+/* Sub-menu active state */
+[data-sidebar] .bg-primary\/15 {
+  background-color: hsl(var(--primary) / 0.15);
+}
+
