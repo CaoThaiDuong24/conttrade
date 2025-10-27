@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "build": "next build",
-    "dev": "next dev",
-    "lint": "next lint",
-    "start": "next start"
+    "build": "cd frontend && next build",
+    "dev": "cd frontend && next dev",
+    "lint": "cd frontend && next lint",
+    "start": "cd frontend && next start"
   },
   "dependencies": {
     "@formatjs/intl": "^3.1.6",
