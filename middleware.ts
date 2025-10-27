@@ -93,6 +93,11 @@ const ROUTE_PERMISSIONS = {
   '/admin/audit': 'admin.audit',
   '/admin/analytics': 'admin.analytics',
   '/admin/reports': 'admin.access',
+  '/admin/rbac': 'admin.access',
+  '/admin/rbac/roles': 'admin.access',
+  '/admin/rbac/permissions': 'admin.access',
+  '/admin/rbac/matrix': 'admin.access',
+  '/admin/rbac/users': 'admin.access',
   
   // Dynamic routes (with [id] parameters)
   '/listings/[id]': 'PM-001', // VIEW_PUBLIC_LISTINGS
@@ -106,15 +111,18 @@ const ROUTE_PERMISSIONS = {
 
 } as const;
 
-// Role hierarchy for fallback access
+// Role hierarchy for fallback access (matching database levels)
 const ROLE_HIERARCHY = {
   'admin': 100,
+  'config_manager': 80,
+  'finance': 70,
+  'price_manager': 60,
+  'customer_support': 50,
   'depot_manager': 30,
   'inspector': 25,
   'depot_staff': 20,
   'seller': 10,
   'buyer': 10,
-  'guest': 0
 } as const;
 
 const intlMiddleware = createMiddleware({

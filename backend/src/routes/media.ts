@@ -5,7 +5,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { createWriteStream } from 'fs';
 import { pipeline } from 'stream/promises';
-import prisma from '../lib/prisma';
+import prisma from '../lib/prisma.js';
 
 export default async function mediaRoutes(fastify: FastifyInstance) {
   // Test endpoint without auth

@@ -4,7 +4,7 @@
  * Các hàm tiện ích để làm việc với master data
  */
 
-import prisma from './prisma';
+import prisma from './prisma.js';
 
 export class MasterDataService {
   

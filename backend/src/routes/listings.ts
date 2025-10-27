@@ -1,9 +1,9 @@
 // @ts-nocheck
 import { FastifyInstance } from 'fastify';
 import { randomUUID } from 'crypto';
-import prisma from '../lib/prisma';
-import MasterDataService from '../lib/master-data';
-import { isValidListingStatus } from '../lib/listing-status-validation';
+import prisma from '../lib/prisma.js';
+import MasterDataService from '../lib/master-data.js';
+import { isValidListingStatus } from '../lib/listing-status-validation.js';
 
 export default async function listingRoutes(fastify: FastifyInstance) {
   // B-001: POST /listings - Tạo tin đăng mới
@@ -21,6 +21,38 @@ export default async function listingRoutes(fastify: FastifyInstance) {
           // Try default jwtVerify (cookies, etc.)
           await request.jwtVerify();
         }
+
+        // ✅ FIX: Seller role tự động có quyền đăng tin (không cần permission riêng)
+        // Buyer cũng có thể đăng tin nếu được gán permission CREATE_LISTING (PM-010)
+        const userRoles = (request.user as any).roles || [];
+        const userPermissions = (request.user as any).permissions || [];
+        
+        // Allow if user is seller OR has CREATE_LISTING permission (PM-010)
+        const isSeller = userRoles.includes('seller');
+        const hasPermission = userPermissions.includes('PM-010'); // ✅ FIX: Check by permission code PM-010
+        
+        console.log('🔍 Permission check:', { 
+          userRoles, 
+          userPermissions,
+          isSeller, 
+          hasPermission,
+          userId: (request.user as any).userId 
+        });
+        
+        if (!isSeller && !hasPermission) {
+          return reply.status(403).send({
+            success: false,
+            message: 'Bạn không có quyền tạo tin đăng. Vui lòng liên hệ quản trị viên để được cấp quyền.',
+            code: 'PERMISSION_DENIED',
+            requiredPermission: 'CREATE_LISTING (PM-010) hoặc seller role'
+          });
+        }
+        
+        console.log('✅ Access granted:', { 
+          isSeller, 
+          hasPermission, 
+          userId: (request.user as any).userId 
+        });
       } catch (err) {
         console.log('JWT verification error:', err.message);
         return reply.status(401).send({ success: false, message: 'Token không hợp lệ' });

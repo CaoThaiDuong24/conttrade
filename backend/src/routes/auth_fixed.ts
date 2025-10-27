@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { FastifyInstance } from 'fastify';
 import bcrypt from 'bcryptjs';
-import prisma from '../lib/prisma';
+import prisma from '../lib/prisma.js';
 
 export default async function authRoutes(fastify: FastifyInstance) {
   // A-001: POST /auth/register - Đăng ký tài khoản

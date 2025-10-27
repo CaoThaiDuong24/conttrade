@@ -3,7 +3,7 @@
  * FAVORITES API - Lưu listings yêu thích
  */
 import type { FastifyInstance } from 'fastify';
-import prisma from '../lib/prisma';
+import prisma from '../lib/prisma.js';
 
 export async function favoritesRoutes(server: FastifyInstance) {
   // GET /favorites

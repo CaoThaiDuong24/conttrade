@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import prisma from '../lib/prisma';
+import prisma from '../lib/prisma.js';
 import { v4 as uuidv4 } from 'uuid';
-import { NotificationService } from '../lib/notifications/notification-service';
+import { NotificationService } from '../lib/notifications/notification-service.js';
 
 interface QuoteItem {
   item_type: 'CONTAINER' | 'INSPECTION' | 'REPAIR' | 'DELIVERY' | 'OTHER';

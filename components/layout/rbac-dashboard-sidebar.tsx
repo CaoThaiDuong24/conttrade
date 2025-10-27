@@ -297,6 +297,17 @@ const NAVIGATION_MENU: Record<string, any[]> = {
         { title: 'Báo cáo', url: '/admin/reports', icon: 'FileText' },
       ]
     },
+    { 
+      title: 'Phân quyền RBAC', 
+      url: '/admin/rbac', 
+      icon: 'Shield',
+      subItems: [
+        { title: 'Tổng quan', url: '/admin/rbac', icon: 'BarChart3' },
+        { title: 'Quản lý Role', url: '/admin/rbac/roles', icon: 'Shield' },
+        { title: 'Ma trận phân quyền', url: '/admin/rbac/matrix', icon: 'List' },
+        { title: 'Gán Role cho User', url: '/admin/rbac/users', icon: 'Users' },
+      ]
+    },
     { title: 'Container', url: '/listings', icon: 'Package' },
     { title: 'Đơn hàng', url: '/orders', icon: 'ShoppingCart' },
     { title: 'Tài khoản', url: '/account/profile', icon: 'User' },
@@ -331,7 +342,7 @@ const NAVIGATION_MENU: Record<string, any[]> = {
   ],
 };
 
-// Role hierarchy for determining primary role
+// Role hierarchy (matching database levels from seed-complete-rbac.mjs)
 const ROLE_HIERARCHY: Record<string, number> = {
   'admin': 100,
   'config_manager': 80,
@@ -343,7 +354,6 @@ const ROLE_HIERARCHY: Record<string, number> = {
   'depot_staff': 20,
   'seller': 10,
   'buyer': 10,
-  'guest': 0
 };
 
 export function RBACDashboardSidebar({ isAuthenticated = false, userInfo }: RBACDashboardSidebarProps) {
@@ -356,6 +366,9 @@ export function RBACDashboardSidebar({ isAuthenticated = false, userInfo }: RBAC
   
   // State để quản lý menu nào đang mở (chỉ cho phép 1 menu mở tại 1 thời điểm)
   const [openMenu, setOpenMenu] = React.useState<string | null>(null);
+  
+  // Ref để track xem có đang trong quá trình user click hay không
+  const isUserInteractionRef = React.useRef(false);
   
   React.useEffect(() => {
     setIsMounted(true);
@@ -383,21 +396,19 @@ export function RBACDashboardSidebar({ isAuthenticated = false, userInfo }: RBAC
     const hasAdminFind = userInfo.roles.find((r: any) => r === 'admin' || r.code === 'admin');
     const hasAdminString = rolesString.includes('admin');
     const permCount = userInfo.permissions?.length || 0;
-    const hasEnoughPermissions = permCount >= 50;
     
     console.log('🔍 Admin check - MULTIPLE METHODS:', {
       hasAdminIncludes,
       hasAdminFind,
       hasAdminString,
-      hasEnoughPermissions,
       rolesArray,
       permissionsCount: permCount
     });
 
-    // Try MULTIPLE conditions
+    // Try MULTIPLE conditions - REMOVED hasEnoughPermissions check (BUG FIX)
     const isAdmin = hasAdminIncludes || hasAdminFind || hasAdminString;
     
-    if (isAdmin && hasEnoughPermissions) {
+    if (isAdmin) {
       console.log('✅✅✅ ADMIN DETECTED - showing ALL menu items!');
       
       // Combine all menu items from all roles (deduplicate by URL)
@@ -417,41 +428,93 @@ export function RBACDashboardSidebar({ isAuthenticated = false, userInfo }: RBAC
       console.log('📋 Menu items:', allItems.map(i => i.title));
       return allItems;
     } else {
-      console.log('❌ NOT ADMIN or NOT ENOUGH PERMISSIONS');
+      console.log('❌ NOT ADMIN - User is not admin role');
       console.log('  isAdmin:', isAdmin);
-      console.log('  hasEnoughPermissions:', hasEnoughPermissions);
     }
 
     // Get highest priority role for non-admin users
     const userLevel = Math.max(...userInfo.roles.map(role => ROLE_HIERARCHY[role] || 0));
-    const primaryRole = userInfo.roles.find(role => ROLE_HIERARCHY[role] === userLevel) || 'guest';
+    const primaryRole = userInfo.roles.find(role => ROLE_HIERARCHY[role] === userLevel) || 'buyer';
     
-    return NAVIGATION_MENU[primaryRole] || NAVIGATION_MENU.guest;
+    console.log(`📋 Primary role detected: ${primaryRole} (level: ${userLevel})`);
+    
+    // Get base menu for primary role
+    let baseMenu = NAVIGATION_MENU[primaryRole] || NAVIGATION_MENU.buyer;
+    
+    // ✅ FIX: Seller role luôn có menu "Đăng tin mới" (không cần permission)
+    // Buyer chỉ có menu này nếu được gán CREATE_LISTING permission (PM-010)
+    const isSeller = userInfo.roles.includes('seller');
+    const userPermissions = userInfo.permissions || [];
+    const hasCreateListingPermission = userPermissions.includes('PM-010'); // ✅ FIX: Check by code PM-010
+    
+    console.log('🔍 Access check:', {
+      primaryRole,
+      isSeller,
+      userPermissions, // Show all permissions for debugging
+      hasCreateListingPermission,
+      totalPermissions: userPermissions.length
+    });
+    
+    // If user is seller OR has CREATE_LISTING permission, ensure menu exists
+    if (isSeller || hasCreateListingPermission) {
+      const hasSellingMenu = baseMenu.some((item: any) => 
+        item.url === '/sell/new' || 
+        item.subItems?.some((sub: any) => sub.url === '/sell/new')
+      );
+      
+      console.log('🔍 Has selling menu:', hasSellingMenu);
+      
+      if (!hasSellingMenu) {
+        console.log('✅ Adding "Đăng tin mới" menu (seller role or has permission)');
+        
+        // Add selling menu after Dashboard and Container
+        baseMenu = [
+          ...baseMenu.slice(0, 2), // Keep Dashboard and Container
+          { 
+            title: 'Bán hàng', 
+            url: '/sell/new', 
+            icon: 'Store',
+            subItems: [
+              { title: 'Đăng tin mới', url: '/sell/new', icon: 'Plus' },
+              { title: 'Tin đăng của tôi', url: '/sell/my-listings', icon: 'List' },
+            ]
+          },
+          ...baseMenu.slice(2) // Keep rest of menu
+        ];
+      } else {
+        console.log('✅ Selling menu already exists');
+      }
+    } else {
+      console.log('❌ User cannot create listings (not seller and no CREATE_LISTING permission)');
+    }
+    
+    return baseMenu;
   };
 
   // Only get navigation items after component is mounted (client-side only)
-  const navigationItems = isMounted ? getUserNavigationMenu() : NAVIGATION_MENU.guest;
+  const navigationItems = isMounted ? getUserNavigationMenu() : [];
 
-  // Tự động mở menu nếu có submenu active
+  // Tự động mở menu nếu có submenu active (chỉ khi không có user interaction)
   React.useEffect(() => {
-    if (!isMounted) return;
+    if (!isMounted || isUserInteractionRef.current) return;
     
     // Tìm menu có submenu đang active
+    const cleanPathname = pathname.replace(/^\/(en|vi)/, '').replace(/\/$/, '');
+    
     const activeMenuItem = navigationItems.find(item => {
       if (!item.subItems || item.subItems.length === 0) return false;
       
-      const cleanPathname = pathname.replace(/^\/(en|vi)/, '');
-      
       return item.subItems.some((subItem: any) => {
-        const subUrl = subItem.url;
-        return cleanPathname === subUrl || (subUrl !== '/' && cleanPathname.startsWith(subUrl + '/'));
+        const normalizedSubUrl = subItem.url.replace(/\/$/, '');
+        // Exact match
+        return cleanPathname === normalizedSubUrl;
       });
     });
     
     if (activeMenuItem && openMenu !== activeMenuItem.url) {
       setOpenMenu(activeMenuItem.url);
     }
-  }, [pathname, isMounted, navigationItems]);
+  }, [pathname, isMounted, navigationItems, openMenu]);
 
   const handleLogout = async () => {
     try {
@@ -488,45 +551,44 @@ export function RBACDashboardSidebar({ isAuthenticated = false, userInfo }: RBAC
     // Check if any sub-item is active
     const hasSubItems = item.subItems && item.subItems.length > 0;
     
-    // Kiểm tra submenu active - exact match hoặc starts with
-    const isSubMenuActive = (subUrl: string) => {
-      // Exact match
-      if (cleanPathname === subUrl) return true;
-      
-      // Starts with (cho nested routes)
-      if (subUrl !== '/' && cleanPathname.startsWith(subUrl + '/')) return true;
-      
-      return false;
-    };
+    // Normalize: remove trailing slash
+    const normalizedPathname = cleanPathname.replace(/\/$/, '');
+    const normalizedItemUrl = cleanItemUrl.replace(/\/$/, '');
     
     // Kiểm tra xem có submenu nào đang active không
-    const hasActiveSubItem = hasSubItems && item.subItems?.some((subItem: any) => 
-      isSubMenuActive(subItem.url)
-    );
+    const hasActiveSubItem = hasSubItems && item.subItems?.some((subItem: any) => {
+      const normalizedSubUrl = subItem.url.replace(/\/$/, '');
+      // Exact match cho submenu
+      const isMatch = normalizedPathname === normalizedSubUrl;
+      
+      // Debug log
+      if (item.title.includes('RBAC') || item.title.includes('Quản trị')) {
+        console.log(`🔍 Checking submenu: ${subItem.title}`);
+        console.log(`  Current: "${normalizedPathname}"`);
+        console.log(`  SubURL:  "${normalizedSubUrl}"`);
+        console.log(`  Match: ${isMatch}`);
+      }
+      
+      return isMatch;
+    });
     
-    // Menu cấp 1 CHỈ active khi:
-    // - Có submenu: CHỈ khi có submenu item của CHÍNH NÓ đang active
-    // - Không có submenu: exact match hoặc starts with (nhưng không phải submenu của menu khác)
+    // Logic đơn giản cho isMenuActive:
     let isMenuActive = false;
     
     if (hasSubItems) {
-      // Menu có submenu: CHỈ active khi submenu của nó đang active
+      // Menu có submenu: active khi có submenu đang active
       isMenuActive = hasActiveSubItem;
-    } else {
-      // Menu không có submenu
-      if (cleanPathname === cleanItemUrl) {
-        // Exact match
-        isMenuActive = true;
-      } else if (cleanItemUrl !== '/' && cleanPathname.startsWith(cleanItemUrl + '/')) {
-        // Starts with: nhưng phải đảm bảo không phải là submenu của menu khác
-        const isSubmenuOfOtherMenu = navigationItems.some(navItem => 
-          navItem.url !== cleanItemUrl && // Không phải chính nó
-          navItem.subItems?.some((sub: any) => 
-            cleanPathname === sub.url || cleanPathname.startsWith(sub.url + '/')
-          )
-        );
-        isMenuActive = !isSubmenuOfOtherMenu;
+      
+      // Debug log
+      if (item.title.includes('RBAC') || item.title.includes('Quản trị')) {
+        console.log(`\n🎯 Menu "${item.title}":`);
+        console.log(`  Has submenu: true`);
+        console.log(`  Has active sub: ${hasActiveSubItem}`);
+        console.log(`  Is menu active: ${isMenuActive}\n`);
       }
+    } else {
+      // Menu không có submenu: exact match
+      isMenuActive = normalizedPathname === normalizedItemUrl;
     }
 
     if (hasSubItems) {
@@ -537,9 +599,21 @@ export function RBACDashboardSidebar({ isAuthenticated = false, userInfo }: RBAC
           key={item.url} 
           open={isOpen}
           onOpenChange={(open) => {
-            // Nếu đang mở menu này, cho phép đóng
-            // Nếu đang mở menu khác, chuyển sang menu này
-            setOpenMenu(open ? item.url : null);
+            // Đánh dấu là user đang tương tác
+            isUserInteractionRef.current = true;
+            
+            if (open) {
+              // Mở menu này và đóng tất cả menu khác
+              setOpenMenu(item.url);
+            } else {
+              // Đóng menu này
+              setOpenMenu(null);
+            }
+            
+            // Reset flag sau một khoảng ngắn
+            setTimeout(() => {
+              isUserInteractionRef.current = false;
+            }, 100);
           }}
         >
           <SidebarMenuItem>
@@ -616,8 +690,12 @@ export function RBACDashboardSidebar({ isAuthenticated = false, userInfo }: RBAC
             href={item.url} 
             className="flex items-center gap-3"
             onClick={() => {
-              // Đóng tất cả menu khi click vào menu không có submenu
+              // Đánh dấu user interaction và đóng tất cả menu khi click vào menu không có submenu
+              isUserInteractionRef.current = true;
               setOpenMenu(null);
+              setTimeout(() => {
+                isUserInteractionRef.current = false;
+              }, 100);
             }}
           >
             {renderIcon(item.icon)}
@@ -633,8 +711,12 @@ export function RBACDashboardSidebar({ isAuthenticated = false, userInfo }: RBAC
   const getRoleBadgeColor = (role: string) => {
     switch (role) {
       case 'admin': return 'bg-red-500';
-      case 'depot_manager': return 'bg-purple-500';
-      case 'inspector': return 'bg-blue-500';
+      case 'config_manager': return 'bg-purple-500';
+      case 'finance': return 'bg-blue-500';
+      case 'price_manager': return 'bg-indigo-500';
+      case 'customer_support': return 'bg-pink-500';
+      case 'depot_manager': return 'bg-yellow-500';
+      case 'inspector': return 'bg-teal-500';
       case 'depot_staff': return 'bg-green-500';
       case 'seller': return 'bg-orange-500';
       case 'buyer': return 'bg-cyan-500';
@@ -643,22 +725,25 @@ export function RBACDashboardSidebar({ isAuthenticated = false, userInfo }: RBAC
   };
 
   const getPrimaryRoleName = () => {
-    if (!userInfo?.roles?.length) return 'Guest';
+    if (!userInfo?.roles?.length) return 'User';
     
     const userLevel = Math.max(...userInfo.roles.map(role => ROLE_HIERARCHY[role] || 0));
-    const primaryRole = userInfo.roles.find(role => ROLE_HIERARCHY[role] === userLevel) || 'guest';
+    const primaryRole = userInfo.roles.find(role => ROLE_HIERARCHY[role] === userLevel) || 'buyer';
     
-    const roleNames = {
+    const roleNames: Record<string, string> = {
       admin: 'Quản trị viên',
+      config_manager: 'Quản lý cấu hình',
+      finance: 'Kế toán',
+      price_manager: 'Quản lý giá',
+      customer_support: 'Hỗ trợ KH',
       depot_manager: 'Quản lý kho',
       inspector: 'Giám định viên',
       depot_staff: 'Nhân viên kho',
       seller: 'Người bán',
       buyer: 'Người mua',
-      guest: 'Khách'
     };
     
-    return roleNames[primaryRole as keyof typeof roleNames] || 'User';
+    return roleNames[primaryRole] || 'User';
   };
 
   // Group navigation items by category

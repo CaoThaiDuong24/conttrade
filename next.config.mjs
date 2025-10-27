@@ -4,9 +4,13 @@ const withNextIntl = createNextIntlPlugin();
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Enable standalone output for Docker/production
+  output: 'standalone',
+  
   images: {
     domains: ['localhost'],
   },
+  
   // Re-enable rewrites to use real backend API
   async rewrites() {
     return [

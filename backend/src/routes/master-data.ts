@@ -5,7 +5,7 @@
  */
 
 import { FastifyInstance } from 'fastify';
-import prisma from '../lib/prisma';
+import prisma from '../lib/prisma.js';
 
 export default async function masterDataRoutes(fastify: FastifyInstance) {
   

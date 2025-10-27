@@ -1,8 +1,8 @@
 // @ts-nocheck
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import prisma from '../lib/prisma';
+import prisma from '../lib/prisma.js';
 import { randomUUID } from 'crypto';
-import { NotificationService } from '../lib/notifications/notification-service';
+import { NotificationService } from '../lib/notifications/notification-service.js';
 
 interface CreateRFQBody {
   listing_id: string;

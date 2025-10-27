@@ -18,16 +18,14 @@ export function RoleTestPanel() {
   }
 
   const roles: { value: Role; label: string }[] = [
-    { value: 'guest', label: 'Khách vãng lai' },
     { value: 'buyer', label: 'Người mua' },
     { value: 'seller', label: 'Người bán' },
-    { value: 'org_owner', label: 'Chủ tổ chức' },
     { value: 'depot_staff', label: 'Nhân viên Depot' },
+    { value: 'inspector', label: 'Giám định viên' },
     { value: 'depot_manager', label: 'Quản lý Depot' },
-    { value: 'moderator', label: 'Kiểm duyệt viên' },
-    { value: 'finance', label: 'Kế toán/Đối soát' },
     { value: 'customer_support', label: 'Hỗ trợ khách hàng' },
     { value: 'price_manager', label: 'Quản lý giá' },
+    { value: 'finance', label: 'Kế toán/Đối soát' },
     { value: 'config_manager', label: 'Quản lý cấu hình' },
     { value: 'admin', label: 'Quản trị hệ thống' },
   ];

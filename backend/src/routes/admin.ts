@@ -1,9 +1,10 @@
 // @ts-nocheck
 import { FastifyInstance } from 'fastify';
 import { randomUUID } from 'crypto';
-import prisma from '../lib/prisma';
-import adminUserRoutes from './admin/users';
-import { ListingNotificationService } from '../lib/notifications/listing-notifications';
+import prisma from '../lib/prisma.js';
+import adminUserRoutes from './admin/users.js';
+import adminRBACRoutes from './admin/rbac.js';
+import { ListingNotificationService } from '../lib/notifications/listing-notifications.js';
 import { runAllCronJobs } from '../services/cron-jobs.js';
 
 export default async function adminRoutes(fastify: FastifyInstance) {
@@ -19,6 +20,9 @@ export default async function adminRoutes(fastify: FastifyInstance) {
 
   // Register admin user management routes
   await fastify.register(adminUserRoutes, { prefix: '/users' });
+  
+  // Register admin RBAC management routes
+  await fastify.register(adminRBACRoutes, { prefix: '/rbac' });
   // Admin authentication middleware with proper role checking
   const adminAuth = async (request: any, reply: any) => {
     try {

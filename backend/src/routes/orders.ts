@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import { randomUUID } from 'crypto';
-import prisma from '../lib/prisma';
+import prisma from '../lib/prisma.js';
 
 interface OrderQueryParams {
   status?: string;

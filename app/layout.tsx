@@ -9,6 +9,7 @@ import { getMessages } from 'next-intl/server';
 import "./globals.css"
 import "../styles/navigation.css"
 import { Providers } from "@/components/providers"
+import { PermissionWatcher } from "@/hooks/use-permission-watcher"
 
 const inter = Inter({
   subsets: ["latin", "vietnamese"],
@@ -35,6 +36,7 @@ export default async function RootLayout({
               <NextIntlClientProvider messages={messages}>
                 <Providers>
                   <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
+                    <PermissionWatcher />
                     {children}
                   </ThemeProvider>
                 </Providers>

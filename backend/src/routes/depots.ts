@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { FastifyInstance } from 'fastify';
-import prisma from '../lib/prisma';
+import prisma from '../lib/prisma.js';
 
 export default async function depotRoutes(fastify: FastifyInstance) {
   // GET /depots - Lấy danh sách depots

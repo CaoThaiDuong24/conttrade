@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { FastifyInstance } from 'fastify';
 import bcrypt from 'bcryptjs';
-import prisma from '../lib/prisma';
+import prisma from '../lib/prisma.js';
 
 export default async function authRoutes(fastify: FastifyInstance) {
   // A-001: POST /auth/register - Đăng ký tài khoản
@@ -126,16 +126,21 @@ export default async function authRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // Lấy danh sách roles của user
+      // Lấy danh sách roles của user với role_version
       const roles = user.user_roles_user_roles_user_idTousers.map(ur => ur.roles.code);
-      console.log('🔐 User roles on login:', roles);
+      const roleVersions: Record<string, number> = {};
+      user.user_roles_user_roles_user_idTousers.forEach(ur => {
+        roleVersions[ur.roles.code] = ur.roles.role_version || 1;
+      });
+      console.log('🔐 User roles on login:', roles, 'Versions:', roleVersions);
 
-      // Tạo JWT token với roles
+      // Tạo JWT token với roles và roleVersions (for real-time permission tracking)
       const token = fastify.jwt.sign(
         { 
           userId: user.id, 
           email: user.email,
-          roles: roles
+          roles: roles,
+          roleVersions: roleVersions // Track version for real-time permission updates
         },
         { expiresIn: '7d' }
       );
@@ -181,7 +186,17 @@ export default async function authRoutes(fastify: FastifyInstance) {
       // Kiểm tra refresh token
       const tokenRecord = await prisma.refresh_tokens.findUnique({
         where: { token: refreshToken },
-        include: { users: true }
+        include: { 
+          users: {
+            include: {
+              user_roles_user_roles_user_idTousers: {
+                include: {
+                  roles: true
+                }
+              }
+            }
+          }
+        }
       });
 
       if (!tokenRecord || tokenRecord.revokedAt) {
@@ -191,9 +206,21 @@ export default async function authRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // Tạo token mới
+      // Lấy roles và roleVersions mới nhất
+      const roles = tokenRecord.users.user_roles_user_roles_user_idTousers.map(ur => ur.roles.code);
+      const roleVersions: Record<string, number> = {};
+      tokenRecord.users.user_roles_user_roles_user_idTousers.forEach(ur => {
+        roleVersions[ur.roles.code] = ur.roles.role_version || 1;
+      });
+
+      // Tạo token mới với roleVersions mới nhất
       const newToken = fastify.jwt.sign(
-        { userId: tokenRecord.userId, email: tokenRecord.users.email },
+        { 
+          userId: tokenRecord.userId, 
+          email: tokenRecord.users.email,
+          roles: roles,
+          roleVersions: roleVersions
+        },
         { expiresIn: '7d' }
       );
 
@@ -206,6 +233,71 @@ export default async function authRoutes(fastify: FastifyInstance) {
       return reply.status(500).send({ 
         success: false, 
         message: 'Lỗi hệ thống' 
+      });
+    }
+  });
+
+  // A-003.1: GET /auth/check-version - Kiểm tra version của permissions (Real-time Permission Check)
+  fastify.get('/check-version', async (request, reply) => {
+    try {
+      // Verify JWT token
+      await request.jwtVerify();
+      const { userId, roleVersions: tokenRoleVersions } = request.user as any;
+
+      // Lấy version hiện tại từ database
+      const userWithRoles = await prisma.users.findUnique({
+        where: { id: userId },
+        include: {
+          user_roles_user_roles_user_idTousers: {
+            include: {
+              roles: true
+            }
+          }
+        }
+      });
+
+      if (!userWithRoles) {
+        return reply.status(404).send({
+          success: false,
+          message: 'User not found'
+        });
+      }
+
+      // So sánh version
+      const currentRoleVersions: Record<string, number> = {};
+      userWithRoles.user_roles_user_roles_user_idTousers.forEach(ur => {
+        currentRoleVersions[ur.roles.code] = ur.roles.role_version || 1;
+      });
+
+      let hasChanges = false;
+      const changedRoles: string[] = [];
+
+      // Kiểm tra version có thay đổi không
+      if (tokenRoleVersions) {
+        for (const [roleCode, tokenVersion] of Object.entries(tokenRoleVersions)) {
+          const dbVersion = currentRoleVersions[roleCode];
+          if (dbVersion && dbVersion > tokenVersion) {
+            hasChanges = true;
+            changedRoles.push(roleCode);
+          }
+        }
+      }
+
+      return reply.send({
+        success: true,
+        data: {
+          hasChanges,
+          changedRoles,
+          currentVersions: currentRoleVersions,
+          tokenVersions: tokenRoleVersions || {},
+          requireReauth: hasChanges // Client should logout and re-login
+        }
+      });
+    } catch (error) {
+      fastify.log.error('Check version error:', error);
+      return reply.status(500).send({
+        success: false,
+        message: 'Lỗi hệ thống'
       });
     }
   });

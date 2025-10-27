@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { FastifyInstance } from 'fastify';
 import { randomUUID } from 'crypto';
-import prisma from '../lib/prisma';
+import prisma from '../lib/prisma.js';
 
 export default async function deliveryRoutes(fastify: FastifyInstance) {
   // GET /deliveries - Get all deliveries for current user

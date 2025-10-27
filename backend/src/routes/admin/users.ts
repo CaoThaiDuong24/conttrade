@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
-import prisma from '../../lib/prisma';
+import prisma from '../../lib/prisma.js';
 
 interface CreateUserBody {
   email: string;

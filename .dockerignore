@@ -1,0 +1,33 @@
+# Add .dockerignore file for better Docker builds
+node_modules
+npm-debug.log
+.next
+.git
+.gitignore
+README.md
+.env.local
+.env*.local
+.DS_Store
+*.log
+.history
+.vscode
+.idea
+
+# Backend specific
+backend/node_modules
+backend/dist
+backend/logs
+backend/uploads
+backend/.env
+
+# Build outputs
+dist
+build
+out
+
+# Test files
+**/*.test.ts
+**/*.test.tsx
+**/*.spec.ts
+**/*.spec.tsx
+__tests__

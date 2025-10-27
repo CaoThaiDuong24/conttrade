@@ -3,7 +3,7 @@
  * MESSAGING API - Buyer và Seller chat trực tiếp
  */
 import type { FastifyInstance } from 'fastify';
-import prisma from '../lib/prisma';
+import prisma from '../lib/prisma.js';
 
 export async function messagesRoutes(server: FastifyInstance) {
   // GET /conversations

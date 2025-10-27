@@ -57,11 +57,6 @@ function determineUserRoles(email: string, userId: string): Role[] {
     return ['price_manager'];
   }
   
-  // Org owner detection
-  if (emailLower.includes('org') || emailLower.includes('owner') || userId.includes('org')) {
-    return ['org_owner'];
-  }
-  
   // Customer support detection
   if (emailLower.includes('support') || emailLower.includes('cs') || userId.includes('support')) {
     return ['customer_support'];

@@ -127,8 +127,17 @@ interface Order {
     id: string;
     status: string;
     created_at: string;
-  }>;
-  documents?: Array<{
+    delivery_method?: string;
+    tracking_number?: string;
+    estimated_arrival?: string;
+    actual_arrival?: string;
+    pickup_location?: string;
+    delivery_location?: string;
+    delivery_address?: string;
+    carrier_name?: string;
+    carrier_contact?: string;
+    notes?: string;
+  }>;  documents?: Array<{
     id: string;
     docType: string;
     number: string;
@@ -1259,9 +1268,7 @@ export default function OrderDetailPage() {
                         {/* Download Invoice Button */}
                         {(order.status === 'completed' || order.status === 'COMPLETED') && (
                           <>
-                            {(isBuyer && (order.status === 'in_transit' || order.status === 'IN_TRANSIT' || order.status === 'delivering' || order.status === 'DELIVERING')) && (
-                              <Separator className="my-2" />
-                            )}
+                            <Separator className="my-2" />
                             <Button 
                               variant="outline" 
                               className="w-full h-11 hover:bg-gray-50 hover:text-gray-700 hover:border-gray-700 transition-all"

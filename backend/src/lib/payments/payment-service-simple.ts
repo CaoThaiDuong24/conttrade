@@ -1,5 +1,5 @@
 // @ts-nocheck
-import prisma from '../prisma';
+import prisma from '../prisma.js';
 
 export class PaymentService {
   async processEscrowPayment(orderId: string, method: string, amount?: number) {

@@ -19,24 +19,24 @@ import fastifyStatic from '@fastify/static'
 import { z } from 'zod'
 import bcrypt from 'bcryptjs'
 import { nanoid } from 'nanoid'
-import prisma from './lib/prisma'
-import authRoutes from './routes/auth'
-import listingRoutes from './routes/listings'
-import adminRoutes from './routes/admin'
-import depotRoutes from './routes/depots'
-import masterDataRoutes from './routes/master-data-simple'
-import rfqRoutes from './routes/rfqs'
-import quoteRoutes from './routes/quotes'
-import orderRoutes from './routes/orders'
-import deliveryRoutes from './routes/deliveries'
-import disputesRoutes from './routes/disputes'
-import notificationRoutes from './routes/notifications'
-import mediaRoutes from './routes/media'
+import prisma from './lib/prisma.js'
+import authRoutes from './routes/auth.js'
+import listingRoutes from './routes/listings.js'
+import adminRoutes from './routes/admin.js'
+import depotRoutes from './routes/depots.js'
+import masterDataRoutes from './routes/master-data-simple.js'
+import rfqRoutes from './routes/rfqs.js'
+import quoteRoutes from './routes/quotes.js'
+import orderRoutes from './routes/orders.js'
+import deliveryRoutes from './routes/deliveries.js'
+import disputesRoutes from './routes/disputes.js'
+import notificationRoutes from './routes/notifications.js'
+import mediaRoutes from './routes/media.js'
 import { messagesRoutes } from './routes/messages.js'
 import { favoritesRoutes } from './routes/favorites.js'
 import { reviewsRoutes } from './routes/reviews.js'
-import paymentRoutes from './routes/payments'
-import dashboardRoutes from './routes/dashboard'
+import paymentRoutes from './routes/payments.js'
+import dashboardRoutes from './routes/dashboard.js'
 import { initializeCronJobs } from './services/cron-jobs.js'
 
 const app = Fastify({ logger: true })
@@ -160,8 +160,30 @@ app.setErrorHandler((error, request, reply) => {
 app.decorate('authenticate', async (req: any, res: any) => {
 	try {
 		await req.jwtVerify()
+		
+		// Check if user's permissions were updated after token was issued
+		const tokenIssuedAt = req.user.iat ? new Date(req.user.iat * 1000) : null
+		const userId = req.user.userId
+		
+		if (userId && tokenIssuedAt) {
+			const user = await prisma.users.findUnique({
+				where: { id: userId },
+				select: { permissions_updated_at: true }
+			})
+			
+			if (user?.permissions_updated_at && tokenIssuedAt < user.permissions_updated_at) {
+				return res.status(401).send({
+					success: false,
+					message: 'Token expired - Permissions have been updated. Please login again.',
+					code: 'PERMISSIONS_UPDATED'
+				})
+			}
+		}
 	} catch (err) {
-		return res.unauthorized()
+		return res.status(401).send({
+			success: false,
+			message: 'Unauthorized - Invalid or missing token'
+		})
 	}
 })
 

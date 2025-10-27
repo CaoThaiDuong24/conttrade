@@ -1,6 +1,6 @@
 // @ts-nocheck
 import { FastifyInstance } from 'fastify';
-import { paymentService } from '../lib/payments/payment-service-simple';
+import { paymentService } from '../lib/payments/payment-service-simple.js';
 
 export default async function paymentRoutes(fastify: FastifyInstance) {
   // GET /payments/status - Get general payment status 

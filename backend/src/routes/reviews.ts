@@ -3,7 +3,7 @@
  * REVIEWS API - Đánh giá sau giao dịch
  */
 import type { FastifyInstance } from 'fastify';
-import prisma from '../lib/prisma';
+import prisma from '../lib/prisma.js';
 import { randomUUID } from 'crypto';
 
 export async function reviewsRoutes(server: FastifyInstance) {

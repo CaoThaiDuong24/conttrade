@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { FastifyInstance } from 'fastify';
 import bcrypt from 'bcryptjs';
-import prisma from '../lib/prisma';
+import prisma from '../lib/prisma.js';
 
 export default async function simpleAuthRoutes(fastify: FastifyInstance) {
   // Handle OPTIONS requests for CORS

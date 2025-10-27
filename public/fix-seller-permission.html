@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Fix Seller Permission - Force Token Refresh</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 900px; margin: 0 auto; }
+        .section { background: #f5f5f5; padding: 15px; margin: 15px 0; border-radius: 5px; }
+        .info { background: #e3f2fd; }
+        .error { background: #ffebee; }
+        .success { background: #e8f5e9; }
+        .warning { background: #fff3e0; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; font-size: 14px; }
+        .btn-primary { background: #2196F3; color: white; border: none; }
+        .btn-danger { background: #f44336; color: white; border: none; }
+        .btn-success { background: #4CAF50; color: white; border: none; }
+        pre { background: white; padding: 10px; overflow-x: auto; font-size: 12px; }
+        h3 { margin-top: 0; }
+    </style>
+</head>
+<body>
+    <h1>🔧 Fix Seller Permission Issue</h1>
+    
+    <div class="section warning">
+        <h3>⚠️ Vấn đề hiện tại:</h3>
+        <p>Seller đã được gán <code>CREATE_LISTING</code> permission nhưng vẫn bị lỗi 403 khi đăng tin.</p>
+        <p><strong>Nguyên nhân:</strong> Token cũ không có permission mới → Cần logout/login lại để lấy token mới.</p>
+    </div>
+
+    <div class="section info">
+        <h3>🔍 Bước 1: Kiểm tra Token Hiện Tại</h3>
+        <button class="btn-primary" onclick="checkCurrentToken()">Check Token</button>
+        <div id="tokenInfo"></div>
+    </div>
+
+    <div class="section warning">
+        <h3>🔄 Bước 2: Force Logout & Clear Token</h3>
+        <button class="btn-danger" onclick="forceLogout()">Force Logout (Clear All Tokens)</button>
+        <div id="logoutInfo"></div>
+    </div>
+
+    <div class="section success">
+        <h3>✅ Bước 3: Login Lại</h3>
+        <p>Sau khi logout, hãy:</p>
+        <ol>
+            <li>Vào trang login: <a href="http://localhost:3000/vi/auth/login" target="_blank">http://localhost:3000/vi/auth/login</a></li>
+            <li>Đăng nhập lại với tài khoản seller</li>
+            <li>Quay lại đây và click "Check Token" để xác nhận token mới có CREATE_LISTING</li>
+        </ol>
+    </div>
+
+    <div class="section info">
+        <h3>🧪 Bước 4: Test Tạo Listing</h3>
+        <button class="btn-success" onclick="testCreateListing()">Test Create Listing</button>
+        <div id="testResult"></div>
+    </div>
+
+    <script>
+        function checkCurrentToken() {
+            const output = document.getElementById('tokenInfo');
+            output.innerHTML = '<p>⏳ Checking...</p>';
+            
+            try {
+                const token = localStorage.getItem('access_token');
+                
+                if (!token) {
+                    output.innerHTML = '<div class="error"><strong>❌ No Token Found</strong><p>Bạn chưa login hoặc đã logout.</p></div>';
+                    return;
+                }
+                
+                // Decode JWT
+                const parts = token.split('.');
+                const payload = JSON.parse(atob(parts[1]));
+                
+                const permissions = payload.permissions || [];
+                const hasCreateListing = permissions.includes('CREATE_LISTING');
+                
+                const iat = new Date(payload.iat * 1000);
+                const exp = new Date(payload.exp * 1000);
+                const now = new Date();
+                
+                let html = '<div class="' + (hasCreateListing ? 'success' : 'error') + '">';
+                html += '<h4>📋 Token Info:</h4>';
+                html += '<pre>';
+                html += 'Email: ' + payload.email + '\\n';
+                html += 'User ID: ' + payload.userId + '\\n';
+                html += 'Roles: ' + (payload.roles || []).join(', ') + '\\n';
+                html += 'Total Permissions: ' + permissions.length + '\\n';
+                html += 'Has CREATE_LISTING: ' + (hasCreateListing ? '✅ YES' : '❌ NO') + '\\n';
+                html += '\\nToken Issued: ' + iat.toLocaleString() + '\\n';
+                html += 'Token Expires: ' + exp.toLocaleString() + '\\n';
+                html += 'Is Expired: ' + (now > exp ? '❌ YES' : '✅ NO');
+                html += '</pre>';
+                
+                if (!hasCreateListing) {
+                    html += '<p><strong>⚠️ Token KHÔNG có CREATE_LISTING permission!</strong></p>';
+                    html += '<p>Bạn cần logout và login lại để lấy token mới.</p>';
+                }
+                
+                if (permissions.length > 0) {
+                    html += '<details><summary>📝 All Permissions (' + permissions.length + ')</summary><pre>';
+                    html += permissions.sort().join('\\n');
+                    html += '</pre></details>';
+                }
+                
+                html += '</div>';
+                output.innerHTML = html;
+                
+            } catch (error) {
+                output.innerHTML = '<div class="error"><strong>❌ Error:</strong> ' + error.message + '</div>';
+            }
+        }
+        
+        function forceLogout() {
+            const output = document.getElementById('logoutInfo');
+            
+            // Clear all auth tokens
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('user');
+            localStorage.removeItem('userInfo');
+            
+            // Clear cookies
+            document.cookie.split(";").forEach(c => {
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/");
+            });
+            
+            output.innerHTML = '<div class="success"><strong>✅ Đã xóa tất cả tokens!</strong><p>Bây giờ hãy <a href="http://localhost:3000/vi/auth/login">login lại</a>.</p></div>';
+        }
+        
+        async function testCreateListing() {
+            const output = document.getElementById('testResult');
+            output.innerHTML = '<p>⏳ Testing API call...</p>';
+            
+            try {
+                const token = localStorage.getItem('access_token');
+                
+                if (!token) {
+                    output.innerHTML = '<div class="error"><strong>❌ No token found!</strong><p>Please login first.</p></div>';
+                    return;
+                }
+                
+                // Test minimal listing creation
+                const testData = {
+                    dealType: 'SALE',
+                    title: 'Test Listing - ' + new Date().toLocaleString(),
+                    description: 'Test listing created by debug tool',
+                    priceAmount: 1000,
+                    priceCurrency: 'VND',
+                    locationDepotId: 1,
+                    facets: {}
+                };
+                
+                const response = await fetch('http://localhost:3006/api/v1/listings', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const result = await response.json();
+                
+                let html = '<div class="' + (response.ok ? 'success' : 'error') + '">';
+                html += '<h4>📡 API Response:</h4>';
+                html += '<p><strong>Status:</strong> ' + response.status + ' ' + response.statusText + '</p>';
+                html += '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+                
+                if (!response.ok) {
+                    if (response.status === 403) {
+                        html += '<p><strong>⚠️ Still 403 Error!</strong></p>';
+                        html += '<p>Token vẫn chưa có CREATE_LISTING permission. Hãy:</p>';
+                        html += '<ol><li>Logout (click nút "Force Logout" ở trên)</li>';
+                        html += '<li>Login lại</li>';
+                        html += '<li>Quay lại test lại</li></ol>';
+                    }
+                }
+                
+                html += '</div>';
+                output.innerHTML = html;
+                
+            } catch (error) {
+                output.innerHTML = '<div class="error"><strong>❌ Network Error:</strong><pre>' + error.message + '</pre></div>';
+            }
+        }
+        
+        // Auto check on load
+        window.addEventListener('load', checkCurrentToken);
+    </script>
+</body>
+</html>

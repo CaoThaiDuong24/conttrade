@@ -1,5 +1,5 @@
-import prisma from '../prisma';
-import { NotificationService } from './notification-service';
+import prisma from '../prisma.js';
+import { NotificationService } from './notification-service.js';
 
 /**
  * Listing Notification Service
