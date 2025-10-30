@@ -229,6 +229,36 @@ i-contexchange/
 
 ## 🚀 Production Deployment
 
+### 🎯 Quick Deploy to Ubuntu Server
+
+**3 bước đơn giản:**
+
+1. **Push code từ Windows:**
+   ```powershell
+   .\push-to-github.ps1
+   ```
+
+2. **Deploy trên Ubuntu:**
+   ```bash
+   wget https://raw.githubusercontent.com/CaoThaiDuong24/conttrade/master/scripts/deployment/ubuntu-deploy.sh
+   chmod +x ubuntu-deploy.sh
+   sudo ./ubuntu-deploy.sh
+   ```
+
+3. **Truy cập:** `http://your-server-ip`
+
+⏱️ **Thời gian:** 15-20 phút (tự động)
+
+### 📚 Deployment Guides
+
+| Guide | Description | Use Case |
+|-------|-------------|----------|
+| [DEPLOY-UBUNTU.md](./DEPLOY-UBUNTU.md) | 3 bước siêu đơn giản | Khuyến nghị cho người mới |
+| [QUICK-DEPLOY.md](./QUICK-DEPLOY.md) | Deploy nhanh 5 phút | Production deploy nhanh |
+| [DEPLOY-STEPS.md](./DEPLOY-STEPS.md) | Chi tiết từng bước | Hiểu rõ từng bước |
+| [BUILD-AND-DEPLOY.md](./BUILD-AND-DEPLOY.md) | Đầy đủ 3 phương án | DevOps, advanced users |
+| [DEPLOYMENT-GUIDE.md](./DEPLOYMENT-GUIDE.md) | Hướng dẫn gốc chi tiết | Tham khảo đầy đủ |
+
 ### Environment Setup
 ```env
 # Database
@@ -244,6 +274,12 @@ PORT="3005"
 CORS_ORIGIN="https://yourdomain.com"
 ```
 
+### Deployment Options
+
+1. **Automatic (Recommended):** Script tự động cài đặt tất cả
+2. **Docker Compose:** Containerized deployment
+3. **Manual Build:** Build local và upload
+
 ### Security Checklist
 - [ ] Change all default passwords
 - [ ] Use strong JWT secrets (256-bit)
@@ -252,6 +288,8 @@ CORS_ORIGIN="https://yourdomain.com"
 - [ ] Set up database SSL
 - [ ] Enable audit logging
 - [ ] Configure rate limiting
+- [ ] Setup firewall (UFW)
+- [ ] Configure auto-backup
 
 ## 📞 Support
 
