@@ -65,7 +65,8 @@ export default function AdminDisputesPage() {
         setIsLoading(true);
         const token = localStorage.getItem('accessToken');
         if (!token) {
-          console.error('No access token found');
+          console.error('❌ No access token found in localStorage');
+          alert('Bạn chưa đăng nhập. Vui lòng đăng nhập lại.');
           setIsLoading(false);
           return;
         }
@@ -74,21 +75,36 @@ export default function AdminDisputesPage() {
         if (statusFilter !== 'all') params.append('status', statusFilter.toUpperCase());
         if (priorityFilter !== 'all') params.append('priority', priorityFilter.toUpperCase());
         
-        const response = await fetch(`http://localhost:3006/api/v1/admin/disputes?${params.toString()}`, {
+        const url = `http://localhost:3006/api/v1/admin/disputes?${params.toString()}`;
+        console.log('🔍 Fetching disputes from:', url);
+        console.log('🔑 Using token:', token.substring(0, 30) + '...');
+        
+        const response = await fetch(url, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
         
+        console.log('📡 Response status:', response.status, response.statusText);
+        
         if (response.ok) {
           const data = await response.json();
+          console.log('✅ Data received:', data);
+          console.log('📊 Total disputes:', data.data?.disputes?.length || 0);
           setDisputes(data.data.disputes || []);
+          
+          if (!data.data.disputes || data.data.disputes.length === 0) {
+            console.warn('⚠️ No disputes found in database');
+          }
         } else {
-          console.error('Failed to fetch disputes');
+          const errorData = await response.json().catch(() => ({ message: response.statusText }));
+          console.error('❌ Failed to fetch disputes:', response.status, errorData);
+          alert(`Lỗi: ${errorData.message || 'Không thể tải dữ liệu tranh chấp'}`);
         }
       } catch (error) {
-        console.error('Error fetching disputes:', error);
+        console.error('❌ Error fetching disputes:', error);
+        alert('Lỗi kết nối đến server. Vui lòng kiểm tra xem backend có đang chạy không.');
       } finally {
         setIsLoading(false);
       }

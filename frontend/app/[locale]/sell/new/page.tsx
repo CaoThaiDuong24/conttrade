@@ -12,6 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Separator } from '@/components/ui/separator';
+import { Switch } from '@/components/ui/switch';
 import {
   Package,
   Camera,
@@ -28,7 +29,10 @@ import {
   Upload,
   X,
   Image as ImageIcon,
-  Send
+  Send,
+  Clock,
+  Calendar,
+  RefreshCw
 } from 'lucide-react';
 import { useListingFormData } from '@/hooks/useMasterData';
 import MasterDataAPI from '@/lib/api/master-data';
@@ -37,8 +41,9 @@ import { getConditionDisplayName } from '@/lib/utils/condition';
 import { generateListingTitle, generateListingDescription } from '@/lib/utils/listingTitle';
 import { fetchDepots } from '@/lib/api/depot';
 import { uploadMedia, addMediaToListing } from '@/lib/api/media';
+import { TourHelpButton } from '@/components/tour/tour-button';
 
-type Step = 'specs' | 'media' | 'pricing' | 'depot' | 'review';
+type Step = 'specs' | 'media' | 'pricing' | 'rental' | 'depot' | 'review';
 
 export default function NewListingPage() {
   const router = useRouter();
@@ -47,17 +52,6 @@ export default function NewListingPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submitProgress, setSubmitProgress] = useState<'validating' | 'creating' | 'uploading' | 'done'>('validating');
   const [error, setError] = useState('');
-
-  const steps = [
-    { key: 'specs', label: 'Thông số', icon: Package, description: 'Thông tin cơ bản về container' },
-    { key: 'media', label: 'Hình ảnh', icon: Camera, description: 'Upload ảnh và video' },
-    { key: 'pricing', label: 'Giá cả', icon: DollarSign, description: 'Thiết lập giá bán/thuê' },
-    { key: 'depot', label: 'Vị trí', icon: MapPin, description: 'Chọn depot lưu trữ' },
-    { key: 'review', label: 'Xem lại', icon: Eye, description: 'Kiểm tra thông tin cuối cùng' }
-  ];
-
-  const currentStepIndex = steps.findIndex(s => s.key === step);
-  const progress = ((currentStepIndex + 1) / steps.length) * 100;
 
   // Load master data
   const {
@@ -96,6 +90,48 @@ export default function NewListingPage() {
   const [uploadingMedia, setUploadingMedia] = useState<boolean>(false);
   const [rentalUnit, setRentalUnit] = useState('');
 
+  // ============ 🆕 RENTAL MANAGEMENT STATE ============
+  const [totalQuantity, setTotalQuantity] = useState<number>(1);
+  const [availableQuantity, setAvailableQuantity] = useState<number>(1);
+  const [maintenanceQuantity, setMaintenanceQuantity] = useState<number>(0);
+  const [rentedQuantity] = useState<number>(0); // Always 0 for new listings
+  const [minRentalDuration, setMinRentalDuration] = useState<number | ''>('');
+  const [maxRentalDuration, setMaxRentalDuration] = useState<number | ''>('');
+  const [depositRequired, setDepositRequired] = useState<boolean>(false);
+  const [depositAmount, setDepositAmount] = useState<number | ''>('');
+  const [depositCurrency, setDepositCurrency] = useState<string>('');
+  const [lateReturnFeeAmount, setLateReturnFeeAmount] = useState<number | ''>('');
+  const [lateReturnFeeUnit, setLateReturnFeeUnit] = useState<string>('PER_DAY');
+  const [earliestAvailableDate, setEarliestAvailableDate] = useState<string>('');
+  const [latestReturnDate, setLatestReturnDate] = useState<string>('');
+  const [autoRenewalEnabled, setAutoRenewalEnabled] = useState<boolean>(false);
+  const [renewalNoticeDays, setRenewalNoticeDays] = useState<number>(7);
+  const [renewalPriceAdjustment, setRenewalPriceAdjustment] = useState<number | ''>(0);
+
+  // ✅ Dynamic steps: Chỉ thêm 'rental' step khi chọn RENTAL/LEASE
+  const steps = React.useMemo(() => {
+    const baseSteps = [
+      { key: 'specs' as Step, label: 'Thông số', icon: Package, description: 'Thông tin cơ bản về container' },
+      { key: 'media' as Step, label: 'Hình ảnh', icon: Camera, description: 'Upload ảnh và video' },
+      { key: 'pricing' as Step, label: 'Giá cả', icon: DollarSign, description: 'Thiết lập giá bán/thuê' },
+    ];
+
+    // Chỉ thêm 'rental' step khi chọn RENTAL/LEASE
+    if (isRentalType(dealType)) {
+      baseSteps.push({ key: 'rental' as Step, label: 'Quản lý', icon: Container, description: 'Quản lý container cho thuê' });
+    }
+
+    baseSteps.push(
+      { key: 'depot' as Step, label: 'Vị trí', icon: MapPin, description: 'Chọn depot lưu trữ' },
+      { key: 'review' as Step, label: 'Xem lại', icon: Eye, description: 'Kiểm tra thông tin cuối cùng' }
+    );
+
+    return baseSteps;
+  }, [dealType]);
+
+  const currentStepIndex = steps.findIndex(s => s.key === step);
+  const progress = ((currentStepIndex + 1) / steps.length) * 100;
+
   // Validation function for each step
   const validateStep = (stepKey: Step): boolean => {
     switch (stepKey) {
@@ -108,12 +144,32 @@ export default function NewListingPage() {
         const hasPriceCurrency = !!priceCurrency;
         const hasRentalUnit = !isRentalType(dealType) || !!rentalUnit;
         return !!(hasPriceAmount && hasPriceCurrency && hasRentalUnit);
+      case 'rental':
+        // Only validate for RENTAL/LEASE types
+        if (!isRentalType(dealType)) return true; // Skip validation for non-rental
+        
+        // Quantity validation
+        if (!totalQuantity || totalQuantity < 1) return false;
+        if (availableQuantity < 0) return false;
+        if (maintenanceQuantity < 0) return false;
+        
+        // Validation: Tổng phải cân bằng chính xác
+        const totalAccounted = availableQuantity + rentedQuantity + maintenanceQuantity;
+        if (totalAccounted !== totalQuantity) return false;
+        
+        // Deposit validation - chỉ validate khi user bật depositRequired
+        if (depositRequired) {
+          if (!depositAmount || depositAmount <= 0) return false;
+          if (!depositCurrency) return false;
+        }
+        
+        return true;
       case 'depot':
         // Validate depot has available slots > 0
         const selectedDepot = depots.find(d => d.id.toString() === depotId);
         return !!(depotId && selectedDepot && (selectedDepot.availableSlots || 0) > 0);
       case 'review':
-        return validateStep('specs') && validateStep('media') && validateStep('pricing') && validateStep('depot');
+        return validateStep('specs') && validateStep('media') && validateStep('pricing') && validateStep('rental') && validateStep('depot');
       default:
         return false;
     }
@@ -189,6 +245,13 @@ export default function NewListingPage() {
       setRentalUnit(rentalUnits.data[0].code);
     }
   }, [dealTypes.data, containerSizes.data, containerTypes.data, qualityStandards.data, currencies.data, rentalUnits.data]);
+
+  // Auto-set deposit currency when deposit is enabled
+  useEffect(() => {
+    if (depositRequired && !depositCurrency && priceCurrency) {
+      setDepositCurrency(priceCurrency);
+    }
+  }, [depositRequired, priceCurrency]);
 
   // Image upload handlers with real upload
   const handleImageUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -564,7 +627,26 @@ export default function NewListingPage() {
           type: ctype,
           standard,
           condition
-        }
+        },
+        
+        // ✅ NEW: Rental management fields (chỉ gửi khi là RENTAL/LEASE)
+        ...(isRentalType(dealType) && {
+          totalQuantity,
+          availableQuantity,
+          maintenanceQuantity,
+          minRentalDuration: minRentalDuration || undefined,
+          maxRentalDuration: maxRentalDuration || undefined,
+          depositRequired,
+          depositAmount: depositAmount || undefined,
+          depositCurrency: depositCurrency || undefined,
+          lateReturnFeeAmount: lateReturnFeeAmount || undefined,
+          lateReturnFeeUnit: lateReturnFeeUnit || undefined,
+          earliestAvailableDate: earliestAvailableDate || undefined,
+          latestReturnDate: latestReturnDate || undefined,
+          autoRenewalEnabled,
+          renewalNoticeDays,
+          renewalPriceAdjustment: renewalPriceAdjustment || 0
+        })
       };
 
       console.log('=== SUBMITTING LISTING DATA ===');
@@ -690,11 +772,18 @@ export default function NewListingPage() {
 
   return (
     <div className="min-h-screen bg-gray-50/50">
+      {/* Tour Help Button - Fixed position */}
+      <div className="fixed bottom-6 right-6 z-50">
+        <TourHelpButton tourName="sellNew" />
+      </div>
+      
       <div className="container mx-auto px-4 py-8">
         {/* Header */}
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2">Đăng tin bán container</h1>
-          <p className="text-gray-600">Tạo tin đăng chuyên nghiệp trong 5 bước đơn giản</p>
+          <p className="text-gray-600">
+            Tạo tin đăng chuyên nghiệp trong {isRentalType(dealType) ? '6' : '5'} bước đơn giản
+          </p>
         </div>
 
         {/* Progress Bar */}
@@ -708,7 +797,7 @@ export default function NewListingPage() {
           <Progress value={progress} className="h-2 mb-6" />
 
           {/* Step Indicators */}
-          <div className="flex items-center justify-between">
+          <div id="progress-steps-indicator" className="flex items-center justify-between">
             {steps.map((stepItem, index) => {
               const StepIcon = stepItem.icon;
               const isActive = stepItem.key === step;
@@ -761,7 +850,7 @@ export default function NewListingPage() {
                   {step === 'specs' && (
                     <div className="space-y-6">
                       {/* Deal Type Selection */}
-                      <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                      <div id="deal-type-section" className="bg-gray-50 rounded-lg p-6 border border-gray-200">
                         <Label className="text-base font-semibold text-gray-900 mb-4 block">
                           Loại giao dịch *
                         </Label>
@@ -804,7 +893,7 @@ export default function NewListingPage() {
                             }} 
                             required
                           >
-                            <SelectTrigger className={`h-10 w-full ${!size ? 'border-red-300' : 'border-gray-300'}`}>
+                            <SelectTrigger id="container-size-select" className={`h-10 w-full ${!size ? 'border-red-300' : 'border-gray-300'}`}>
                               <SelectValue placeholder="Chọn" />
                             </SelectTrigger>
                             <SelectContent>
@@ -830,7 +919,7 @@ export default function NewListingPage() {
                             }} 
                             required
                           >
-                            <SelectTrigger className={`h-10 w-full ${!ctype ? 'border-red-300' : 'border-gray-300'}`}>
+                            <SelectTrigger id="container-type-select" className={`h-10 w-full ${!ctype ? 'border-red-300' : 'border-gray-300'}`}>
                               <SelectValue placeholder="Chọn" />
                             </SelectTrigger>
                             <SelectContent>
@@ -855,7 +944,7 @@ export default function NewListingPage() {
                               setStandard(val);
                             }}
                           >
-                            <SelectTrigger className="h-10 w-full border-gray-300">
+                            <SelectTrigger id="quality-standard-select" className="h-10 w-full border-gray-300">
                               <SelectValue placeholder="Chọn" />
                             </SelectTrigger>
                             <SelectContent>
@@ -880,7 +969,7 @@ export default function NewListingPage() {
                               setCondition(v as any);
                             }}
                           >
-                            <SelectTrigger className="h-10 w-full border-gray-300">
+                            <SelectTrigger id="condition-select" className="h-10 w-full border-gray-300">
                               <SelectValue placeholder="Chọn" />
                             </SelectTrigger>
                             <SelectContent>
@@ -916,7 +1005,7 @@ export default function NewListingPage() {
                       <Separator />
 
                       {/* Title and Description - Separate Rows */}
-                      <div className="space-y-6">
+                      <div id="title-description-section" className="space-y-6">
                         <div className="space-y-2">
                           <Label className="text-sm font-medium text-gray-900">Tiêu đề tin đăng</Label>
                           <Input
@@ -952,6 +1041,7 @@ export default function NewListingPage() {
                     <div className="space-y-6">
                       {/* Upload Area */}
                       <div 
+                        id="media-upload-section"
                         className="border-2 border-dashed border-gray-300 rounded-lg bg-gray-50 transition-colors hover:border-blue-400 hover:bg-blue-50"
                         onDragOver={handleDragOver}
                         onDrop={handleDrop}
@@ -1149,7 +1239,7 @@ export default function NewListingPage() {
                   {/* Step: Pricing */}
                   {step === 'pricing' && (
                     <div className="space-y-6">
-                      <div className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                      <div id="pricing-section" className="bg-gray-50 rounded-lg p-6 border border-gray-200">
                         <div className="flex items-center space-x-2 mb-4">
                           <DollarSign className="w-5 h-5 text-blue-600" />
                           <h3 className="font-semibold text-gray-900">Thiết lập giá {isRentalType(dealType) ? 'thuê' : 'bán'}</h3>
@@ -1231,6 +1321,390 @@ export default function NewListingPage() {
                     </div>
                   )}
 
+                  {/* ============ 🆕 Step: Rental Management (Chỉ cho RENTAL/LEASE) ============ */}
+                  {step === 'rental' && isRentalType(dealType) && (
+                    <div id="rental-management-section" className="space-y-6">
+                      {/* A. Inventory Management */}
+                      <div id="quantity-inventory-section" className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                        <div className="flex items-center space-x-2 mb-4">
+                          <Package className="w-5 h-5 text-blue-600" />
+                          <h3 className="font-semibold text-gray-900">Quản lý số lượng container</h3>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-6">
+                          {/* Total Quantity */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-900">
+                              Tổng số container có sẵn *
+                            </Label>
+                            <Input
+                              type="number"
+                              min="1"
+                              value={totalQuantity}
+                              onChange={(e) => {
+                                const val = Number(e.target.value);
+                                setTotalQuantity(val);
+                                // Auto-adjust available quantity to maintain balance
+                                const newAvailable = Math.max(0, val - maintenanceQuantity - rentedQuantity);
+                                setAvailableQuantity(newAvailable);
+                              }}
+                              placeholder="VD: 10"
+                              className="h-10"
+                              required
+                            />
+                            <p className="text-xs text-gray-500">
+                              Tổng số container bạn có thể cho thuê đồng thời
+                            </p>
+                          </div>
+
+                          {/* Available Quantity */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-900">
+                              Số lượng hiện có sẵn *
+                            </Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              max={totalQuantity - maintenanceQuantity - rentedQuantity}
+                              value={availableQuantity}
+                              onChange={(e) => {
+                                const val = Number(e.target.value);
+                                const maxAvailable = totalQuantity - maintenanceQuantity - rentedQuantity;
+                                setAvailableQuantity(Math.min(val, maxAvailable));
+                              }}
+                              placeholder="VD: 8"
+                              className="h-10"
+                              required
+                            />
+                            <p className="text-xs text-gray-500">
+                              Số container đang sẵn sàng cho thuê ngay
+                            </p>
+                          </div>
+
+                          {/* In Maintenance */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-900">
+                              Đang bảo trì
+                            </Label>
+                            <Input
+                              type="number"
+                              min="0"
+                              max={totalQuantity - availableQuantity - rentedQuantity}
+                              value={maintenanceQuantity}
+                              onChange={(e) => {
+                                const val = Number(e.target.value);
+                                const maxMaintenance = totalQuantity - availableQuantity - rentedQuantity;
+                                setMaintenanceQuantity(Math.min(val, maxMaintenance));
+                              }}
+                              placeholder="VD: 2"
+                              className="h-10"
+                            />
+                            <p className="text-xs text-gray-500">
+                              Số container đang trong quá trình bảo trì/sửa chữa
+                            </p>
+                          </div>
+
+                          {/* Summary Display */}
+                          <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                            <h4 className="font-medium text-green-900 mb-3">Tổng quan</h4>
+                            <div className="space-y-2 text-sm">
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Tổng số:</span>
+                                <span className="font-semibold">{totalQuantity}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Có sẵn:</span>
+                                <span className="font-semibold text-green-600">{availableQuantity}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Đang thuê:</span>
+                                <span className="font-semibold">{rentedQuantity}</span>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-gray-600">Bảo trì:</span>
+                                <span className="font-semibold text-yellow-600">{maintenanceQuantity}</span>
+                              </div>
+                              {(availableQuantity + rentedQuantity + maintenanceQuantity !== totalQuantity) && (
+                                <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded">
+                                  <p className="text-xs text-red-700">
+                                    ⚠️ Tổng không khớp! Cần: {totalQuantity}, Có: {availableQuantity + rentedQuantity + maintenanceQuantity}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* B. Rental Duration Constraints */}
+                      <div id="rental-duration-section" className="bg-gray-50 rounded-lg p-6 border border-gray-200">
+                        <div className="flex items-center space-x-2 mb-4">
+                          <Clock className="w-5 h-5 text-blue-600" />
+                          <h3 className="font-semibold text-gray-900">Thời gian thuê</h3>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-6">
+                          {/* Min Duration */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-900">
+                              Thời gian thuê tối thiểu
+                            </Label>
+                            <div className="flex space-x-2">
+                              <Input
+                                type="number"
+                                min="1"
+                                value={minRentalDuration}
+                                onChange={(e) => setMinRentalDuration(e.target.value === '' ? '' : Number(e.target.value))}
+                                placeholder="VD: 3"
+                                className="h-10 flex-1"
+                              />
+                              <div className="h-10 min-w-[120px] flex items-center justify-center bg-gray-100 rounded-md text-sm text-gray-600 px-3">
+                                {rentalUnits.data?.find(ru => ru.code === rentalUnit)?.name || rentalUnit || 'Chọn đơn vị'}
+                              </div>
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              VD: Tối thiểu 3 tháng
+                            </p>
+                          </div>
+
+                          {/* Max Duration */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-900">
+                              Thời gian thuê tối đa
+                            </Label>
+                            <div className="flex space-x-2">
+                              <Input
+                                type="number"
+                                min={minRentalDuration || 1}
+                                value={maxRentalDuration}
+                                onChange={(e) => setMaxRentalDuration(e.target.value === '' ? '' : Number(e.target.value))}
+                                placeholder="VD: 12"
+                                className="h-10 flex-1"
+                              />
+                              <div className="h-10 min-w-[120px] flex items-center justify-center bg-gray-100 rounded-md text-sm text-gray-600 px-3">
+                                {rentalUnits.data?.find(ru => ru.code === rentalUnit)?.name || rentalUnit || 'Chọn đơn vị'}
+                              </div>
+                            </div>
+                            <p className="text-xs text-gray-500">
+                              VD: Tối đa 12 tháng (để trống = không giới hạn)
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* C. Deposit & Fee Policy */}
+                      <div id="deposit-policy-section" className="bg-yellow-50 rounded-lg p-6 border border-yellow-200">
+                        <div className="flex items-center space-x-2 mb-4">
+                          <DollarSign className="w-5 h-5 text-yellow-600" />
+                          <h3 className="font-semibold text-gray-900">Chính sách đặt cọc & phí</h3>
+                        </div>
+                        
+                        {/* Deposit Required Toggle */}
+                        <div className="flex items-center justify-between mb-4 p-3 bg-white rounded-lg">
+                          <div>
+                            <Label className="text-sm font-medium text-gray-900">
+                              Yêu cầu đặt cọc
+                            </Label>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Khách hàng phải đặt cọc trước khi thuê
+                            </p>
+                          </div>
+                          <Switch
+                            checked={depositRequired}
+                            onCheckedChange={setDepositRequired}
+                          />
+                        </div>
+
+                        {depositRequired && (
+                          <div className="grid grid-cols-2 gap-6 mt-4">
+                            {/* Deposit Amount */}
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-gray-900">
+                                Số tiền đặt cọc *
+                              </Label>
+                              <div className="flex space-x-2">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={depositAmount}
+                                  onChange={(e) => setDepositAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                                  placeholder="VD: 5000000"
+                                  className="h-10 flex-1"
+                                  required={depositRequired}
+                                />
+                                <Select 
+                                  value={depositCurrency || priceCurrency} 
+                                  onValueChange={setDepositCurrency}
+                                >
+                                  <SelectTrigger className="h-10 w-24">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {currencies.data?.map((cur: any) => (
+                                      <SelectItem key={cur.code} value={cur.code}>
+                                        {cur.code}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <p className="text-xs text-gray-500">
+                                Thường bằng 20-50% giá thuê 1 kỳ
+                              </p>
+                            </div>
+
+                            {/* Late Return Fee */}
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-gray-900">
+                                Phí trả muộn (tùy chọn)
+                              </Label>
+                              <div className="flex space-x-2">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  value={lateReturnFeeAmount}
+                                  onChange={(e) => setLateReturnFeeAmount(e.target.value === '' ? '' : Number(e.target.value))}
+                                  placeholder="VD: 100000"
+                                  className="h-10 flex-1"
+                                />
+                                <Select 
+                                  value={lateReturnFeeUnit} 
+                                  onValueChange={setLateReturnFeeUnit}
+                                >
+                                  <SelectTrigger className="h-10 w-32">
+                                    <SelectValue placeholder="Đơn vị" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="PER_DAY">/ Ngày</SelectItem>
+                                    <SelectItem value="PER_WEEK">/ Tuần</SelectItem>
+                                    <SelectItem value="PERCENTAGE">% Giá thuê</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+                              <p className="text-xs text-gray-500">
+                                Phí phạt khi khách hàng trả container muộn hạn
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* D. Availability Dates */}
+                      <div className="bg-green-50 rounded-lg p-6 border border-green-200">
+                        <div className="flex items-center space-x-2 mb-4">
+                          <Calendar className="w-5 h-5 text-green-600" />
+                          <h3 className="font-semibold text-gray-900">Ngày có thể thuê</h3>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-6">
+                          {/* Earliest Available Date */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-900">
+                              Sớm nhất có thể giao (tùy chọn)
+                            </Label>
+                            <Input
+                              type="date"
+                              value={earliestAvailableDate}
+                              onChange={(e) => setEarliestAvailableDate(e.target.value)}
+                              min={new Date().toISOString().split('T')[0]}
+                              className="h-10"
+                            />
+                            <p className="text-xs text-gray-500">
+                              Ngày sớm nhất khách có thể nhận container
+                            </p>
+                          </div>
+
+                          {/* Latest Return Date */}
+                          <div className="space-y-2">
+                            <Label className="text-sm font-medium text-gray-900">
+                              Muộn nhất phải trả (tùy chọn)
+                            </Label>
+                            <Input
+                              type="date"
+                              value={latestReturnDate}
+                              onChange={(e) => setLatestReturnDate(e.target.value)}
+                              min={earliestAvailableDate || new Date().toISOString().split('T')[0]}
+                              className="h-10"
+                            />
+                            <p className="text-xs text-gray-500">
+                              Chỉ dùng cho thuê ngắn hạn có thời hạn cố định
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* E. Renewal Policy */}
+                      <div id="renewal-policy-section" className="bg-purple-50 rounded-lg p-6 border border-purple-200">
+                        <div className="flex items-center space-x-2 mb-4">
+                          <RefreshCw className="w-5 h-5 text-purple-600" />
+                          <h3 className="font-semibold text-gray-900">Chính sách gia hạn</h3>
+                        </div>
+                        
+                        {/* Auto Renewal Toggle */}
+                        <div className="flex items-center justify-between mb-4 p-3 bg-white rounded-lg">
+                          <div>
+                            <Label className="text-sm font-medium text-gray-900">
+                              Cho phép gia hạn tự động
+                            </Label>
+                            <p className="text-xs text-gray-500 mt-1">
+                              Khách hàng có thể gia hạn hợp đồng thuê
+                            </p>
+                          </div>
+                          <Switch
+                            checked={autoRenewalEnabled}
+                            onCheckedChange={setAutoRenewalEnabled}
+                          />
+                        </div>
+
+                        {autoRenewalEnabled && (
+                          <div className="grid grid-cols-2 gap-6 mt-4">
+                            {/* Notice Days */}
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-gray-900">
+                                Thông báo trước (ngày)
+                              </Label>
+                              <Input
+                                type="number"
+                                min="1"
+                                max="30"
+                                value={renewalNoticeDays}
+                                onChange={(e) => setRenewalNoticeDays(Number(e.target.value))}
+                                placeholder="VD: 7"
+                                className="h-10"
+                              />
+                              <p className="text-xs text-gray-500">
+                                Thông báo khách hàng trước X ngày hết hạn
+                              </p>
+                            </div>
+
+                            {/* Price Adjustment */}
+                            <div className="space-y-2">
+                              <Label className="text-sm font-medium text-gray-900">
+                                Điều chỉnh giá khi gia hạn (%)
+                              </Label>
+                              <div className="flex space-x-2">
+                                <Input
+                                  type="number"
+                                  step="0.1"
+                                  value={renewalPriceAdjustment}
+                                  onChange={(e) => setRenewalPriceAdjustment(e.target.value === '' ? '' : Number(e.target.value))}
+                                  placeholder="VD: 5"
+                                  className="h-10 flex-1"
+                                />
+                                <div className="h-10 w-16 flex items-center justify-center bg-gray-100 rounded-md text-sm text-gray-600">
+                                  %
+                                </div>
+                              </div>
+                              <p className="text-xs text-gray-500">
+                                (+) tăng giá, (-) giảm giá, (0) giữ nguyên
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Step: Depot */}
                   {step === 'depot' && (
                     <div className="space-y-6">
@@ -1251,7 +1725,7 @@ export default function NewListingPage() {
                         </Label>
                         <div className="space-y-3">
                           <Select value={depotId} onValueChange={setDepotId} required disabled={depotsLoading}>
-                            <SelectTrigger className={`h-12 w-full ${!depotId ? 'border-red-300' : 'border-gray-300'}`}>
+                            <SelectTrigger id="depot-select" className={`h-12 w-full ${!depotId ? 'border-red-300' : 'border-gray-300'}`}>
                               <SelectValue placeholder={depotsLoading ? "Đang tải depot..." : "Chọn depot lưu trữ"} />
                             </SelectTrigger>
                             <SelectContent className="max-h-[300px]">
@@ -1320,6 +1794,7 @@ export default function NewListingPage() {
                         </Label>
                         <div className="space-y-3">
                           <Textarea
+                            id="location-notes-textarea"
                             value={locationNotes}
                             onChange={(e) => setLocationNotes(e.target.value)}
                             placeholder="Nhập ghi chú thêm về vị trí container, hướng dẫn đến depot, điều kiện đặc biệt..."
@@ -1343,7 +1818,7 @@ export default function NewListingPage() {
 
                   {/* Step: Review */}
                   {step === 'review' && (
-                    <div className="space-y-6">
+                    <div id="review-section" className="space-y-6">
                       <div className="bg-green-50 border border-green-200 rounded-lg p-4">
                         <div className="flex items-center space-x-2 mb-2">
                           <CheckCircle2 className="w-5 h-5 text-green-600" />
@@ -1592,6 +2067,7 @@ export default function NewListingPage() {
                         </Button>
                       ) : (
                         <Button 
+                          id="submit-listing-button"
                           type="submit" 
                           disabled={submitting} 
                           className="flex items-center space-x-2"

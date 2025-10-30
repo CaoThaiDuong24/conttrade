@@ -4,6 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useAuth } from '@/components/providers/auth-context';
+import { useToast } from '@/hooks/use-toast';
+import { useSearchParams } from 'next/navigation';
 import { 
   Package, 
   FileText, 
@@ -20,7 +22,8 @@ import {
   AlertTriangle,
   ArrowRight,
   BarChart3,
-  Activity
+  Activity,
+  XCircle
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -76,8 +79,48 @@ export default function DashboardPage() {
   const t = useTranslations();
   const { user, token } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const { toast } = useToast();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Check for permission denied error
+  useEffect(() => {
+    const error = searchParams.get('error');
+    const required = searchParams.get('required');
+    const path = searchParams.get('path');
+
+    if (error === 'permission_denied') {
+      const permissionNames: Record<string, string> = {
+        'PM-010': 'Tạo tin đăng bán',
+        'PM-011': 'Sửa tin đăng',
+        'PM-070': 'Duyệt tin đăng (Admin)',
+        'admin.access': 'Truy cập trang quản trị',
+        'admin.users': 'Quản lý người dùng',
+        'depot.read': 'Xem thông tin depot',
+        'depot.write': 'Quản lý depot',
+        'inspection.write': 'Tạo báo cáo kiểm định',
+        'billing.read': 'Xem thông tin thanh toán',
+      };
+
+      const permissionName = required ? permissionNames[required] || required : 'không xác định';
+      const pathName = path || 'trang này';
+
+      toast({
+        title: "Không có quyền truy cập",
+        description: `Bạn không có quyền "${permissionName}" để truy cập ${pathName}. Vui lòng liên hệ quản trị viên để được cấp quyền.`,
+        variant: "destructive",
+        duration: 8000,
+      });
+
+      // Clean URL
+      const cleanUrl = new URL(window.location.href);
+      cleanUrl.searchParams.delete('error');
+      cleanUrl.searchParams.delete('required');
+      cleanUrl.searchParams.delete('path');
+      window.history.replaceState({}, '', cleanUrl.toString());
+    }
+  }, [searchParams, toast]);
 
   useEffect(() => {
     const fetchDashboardStats = async () => {

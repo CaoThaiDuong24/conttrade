@@ -1,6 +1,9 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 
+/* Driver.js Custom Styles */
+@import "../styles/driver-custom.css";
+
 @custom-variant dark (&:is(.dark *));
 
 :root {

@@ -578,13 +578,61 @@ export default async function adminRBACRoutes(fastify: FastifyInstance) {
           }
         })
 
+        // Step 4: 🔥 CRITICAL FIX - Increment role_version to trigger JWT invalidation
+        await tx.$executeRawUnsafe(
+          `UPDATE roles 
+           SET role_version = role_version + 1, updated_at = CURRENT_TIMESTAMP 
+           WHERE id = $1`,
+          roleId
+        )
+
+        // Step 5: 🔥 Update permissions_updated_at for users with this role
+        // EXCEPT the current admin performing the action (to avoid logging them out)
+        // This will invalidate other users' old JWT tokens and force them to re-login
+        const currentUserId = (request.user as any)?.userId
+        
+        if (currentUserId) {
+          await tx.$executeRawUnsafe(
+            `UPDATE users 
+             SET permissions_updated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP 
+             WHERE id IN (
+               SELECT user_id FROM user_roles WHERE role_id = $1
+             )
+             AND id != $2`,
+            roleId,
+            currentUserId
+          )
+        } else {
+          // Fallback: update all users if can't determine current user
+          await tx.$executeRawUnsafe(
+            `UPDATE users 
+             SET permissions_updated_at = CURRENT_TIMESTAMP, updated_at = CURRENT_TIMESTAMP 
+             WHERE id IN (
+               SELECT user_id FROM user_roles WHERE role_id = $1
+             )`,
+            roleId
+          )
+        }
+
         return newAssignments
+      })
+
+      // Get count of affected users
+      const affectedUsers = await prisma.user_roles.count({
+        where: { role_id: roleId }
+      })
+
+      const updatedRole = await prisma.roles.findUnique({
+        where: { id: roleId },
+        select: { code: true, name: true, role_version: true }
       })
 
       reply.send({
         success: true,
-        message: `Đã gán ${result.length} permissions cho role`,
-        data: result
+        message: `✅ Đã cập nhật ${result.length} permissions cho role "${updatedRole?.name}" (version ${updatedRole?.role_version}). ${affectedUsers} người dùng cần đăng nhập lại để áp dụng quyền mới.`,
+        data: result,
+        affectedUsers: affectedUsers,
+        roleVersion: updatedRole?.role_version
       })
     } catch (error) {
       fastify.log.error('Assign role permissions error:', error)
@@ -752,13 +800,20 @@ export default async function adminRBACRoutes(fastify: FastifyInstance) {
         )
 
         // CRITICAL: Update permissions_updated_at to invalidate old tokens
-        await tx.users.update({
-          where: { id: userId },
-          data: {
-            permissions_updated_at: new Date(),
-            updated_at: new Date()
-          }
-        })
+        // BUT: Don't logout the current admin who is performing this action!
+        const currentUserId = (request.user as any)?.userId
+        
+        if (userId !== currentUserId) {
+          // Only update if it's NOT the current admin
+          await tx.users.update({
+            where: { id: userId },
+            data: {
+              permissions_updated_at: new Date(),
+              updated_at: new Date()
+            }
+          })
+        }
+        // If admin is updating their own roles, don't force logout
 
         return assignments
       })

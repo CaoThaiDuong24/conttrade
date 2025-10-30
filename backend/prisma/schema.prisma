@@ -362,6 +362,38 @@ model listings {
   rejection_reason  String?
   admin_reviewed_by String?          @db.VarChar(255)
   admin_reviewed_at DateTime?        @db.Timestamp(6)
+  
+  // ============ RENTAL QUANTITY MANAGEMENT ============
+  total_quantity            Int      @default(1)      // Tổng số container
+  available_quantity        Int      @default(1)      // Số lượng có sẵn cho thuê
+  rented_quantity           Int      @default(0)      // Số lượng đang được thuê
+  reserved_quantity         Int      @default(0)      // Số lượng đã đặt trước
+  maintenance_quantity      Int      @default(0)      // Số lượng đang bảo trì
+  
+  // ============ RENTAL DURATION CONSTRAINTS ============
+  min_rental_duration       Int?                      // Thời gian thuê tối thiểu
+  max_rental_duration       Int?                      // Thời gian thuê tối đa
+  
+  // ============ DEPOSIT & FEE POLICY ============
+  deposit_required          Boolean  @default(false)  // Yêu cầu đặt cọc
+  deposit_amount            Decimal?                  // Số tiền đặt cọc
+  deposit_currency          String?                   // Tiền tệ đặt cọc
+  late_return_fee_amount    Decimal?                  // Phí trả muộn
+  late_return_fee_unit      String?                   // PER_DAY, PER_WEEK, PERCENTAGE
+  
+  // ============ AVAILABILITY DATES ============
+  earliest_available_date   DateTime?                 // Ngày sớm nhất có thể thuê
+  latest_return_date        DateTime?                 // Ngày phải trả lại muộn nhất
+  
+  // ============ RENEWAL POLICY ============
+  auto_renewal_enabled      Boolean  @default(false)  // Cho phép gia hạn tự động
+  renewal_notice_days       Int      @default(7)      // Thông báo trước X ngày
+  renewal_price_adjustment  Decimal? @default(0.00)   // % điều chỉnh giá
+  
+  // ============ RENTAL TRACKING ============
+  last_rented_at            DateTime?                 // Lần thuê gần nhất
+  total_rental_count        Int      @default(0)      // Tổng số lần được thuê
+  
   inspections       inspections[]
   listing_facets    listing_facets[]
   listing_media     listing_media[]
@@ -1120,9 +1152,9 @@ model roles {
   description      String?
   level            Int                @default(0)
   is_system_role   Boolean            @default(false)
-  role_version     Int                @default(1)
   created_at       DateTime           @default(now())
   updated_at       DateTime
+  role_version     Int                @default(1)
   role_permissions role_permissions[]
   user_roles       user_roles[]
 
@@ -1189,10 +1221,10 @@ model users {
   last_login_at                               DateTime?
   email_verified_at                           DateTime?
   phone_verified_at                           DateTime?
-  permissions_updated_at                      DateTime?
   created_at                                  DateTime             @default(now())
   updated_at                                  DateTime
   deleted_at                                  DateTime?
+  permissions_updated_at                      DateTime?
   audit_logs                                  audit_logs[]
   depot_users                                 depot_users[]
   dispute_audit_logs                          dispute_audit_logs[]

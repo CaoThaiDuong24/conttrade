@@ -94,12 +94,35 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         timestamp: new Date().toISOString()
       });
       
+      // Decode JWT to extract permissions if not in userData
+      let enrichedUserData = userData;
+      if (!userData.permissions && accessToken) {
+        try {
+          const payloadBase64 = accessToken.split('.')[1];
+          const decodedPayload = JSON.parse(atob(payloadBase64));
+          console.log('🔓 Decoded JWT on login:', {
+            hasPermissions: !!decodedPayload.permissions,
+            permissionsCount: decodedPayload.permissions?.length,
+            roles: decodedPayload.roles
+          });
+          
+          enrichedUserData = {
+            ...userData,
+            permissions: decodedPayload.permissions || [],
+            roles: userData.roles || decodedPayload.roles || []
+          };
+        } catch (decodeError) {
+          console.error('Failed to decode JWT on login:', decodeError);
+        }
+      }
+      
       // Set user data immediately without delay
-      setUser(userData);
+      setUser(enrichedUserData);
       console.log('👤 USER STATE UPDATED:', {
-        userId: userData?.id,
-        userEmail: userData?.email,
-        userRole: userData?.role,
+        userId: enrichedUserData?.id,
+        userEmail: enrichedUserData?.email,
+        userRoles: enrichedUserData?.roles,
+        permissionsCount: enrichedUserData?.permissions?.length,
         timestamp: new Date().toISOString()
       });
 
@@ -159,7 +182,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchUserData = async (): Promise<void> => {
     try {
-      const token = localStorage.getItem('accessToken');
+      // Try localStorage first, then fallback to cookie 'accessToken' if present
+      let token = localStorage.getItem('accessToken');
+      if (!token && typeof document !== 'undefined') {
+        const match = document.cookie.match('(?:^|; )accessToken=([^;]+)');
+        if (match) {
+          token = decodeURIComponent(match[1]);
+          console.log('🔍 Found accessToken in cookie, using it to fetch user data');
+        }
+      }
       if (!token) {
         setLoading(false);
         return;
@@ -173,7 +204,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
       if (response.ok) {
         const data = await response.json();
-        setUser(data.data.user);
+        let userData = data.data.user;
+        
+        // If user data doesn't have permissions, decode from JWT token
+        if (!userData.permissions && token) {
+          try {
+            const payloadBase64 = token.split('.')[1];
+            const decodedPayload = JSON.parse(atob(payloadBase64));
+            console.log('🔓 Decoded JWT payload:', {
+              hasPermissions: !!decodedPayload.permissions,
+              permissionsCount: decodedPayload.permissions?.length
+            });
+            
+            // Merge JWT permissions into user data
+            userData = {
+              ...userData,
+              permissions: decodedPayload.permissions || [],
+              roles: userData.roles || decodedPayload.roles || []
+            };
+          } catch (decodeError) {
+            console.error('Failed to decode JWT:', decodeError);
+          }
+        }
+        
+        setUser(userData);
       } else if (response.status === 401) {
         // Try to refresh token
         try {

@@ -61,12 +61,14 @@ export default async function adminUserRoutes(fastify: FastifyInstance) {
           kycStatus: true,
           createdAt: true,
           lastLogin: true,
-          user_permissions: {
+          user_roles_user_roles_user_idTousers: {
             include: {
-              permissions: {
+              roles: {
                 select: {
+                  id: true,
                   code: true,
-                  name: true
+                  name: true,
+                  level: true
                 }
               }
             }
@@ -91,10 +93,15 @@ export default async function adminUserRoutes(fastify: FastifyInstance) {
         id: user.id,
         email: user.email,
         phone: user.phone,
-        fullName: user.displayName,
+        display_name: user.displayName,
         status: user.status,
         kycStatus: user.kycStatus,
-        roles: user.user_permissions.map(up => up.permissions.name),
+        roles: user.user_roles_user_roles_user_idTousers.map(ur => ({
+          id: ur.roles.id,
+          code: ur.roles.code,
+          name: ur.roles.name,
+          level: ur.roles.level
+        })),
         createdAt: user.createdAt.toISOString().split('T')[0],
         lastLogin: user.lastLogin ? user.lastLogin.toISOString().split('T')[0] : null,
         organization: user.orgUsers[0]?.org?.name || null
@@ -102,10 +109,8 @@ export default async function adminUserRoutes(fastify: FastifyInstance) {
 
       return reply.send({
         success: true,
-        data: {
-          users: transformedUsers,
-          total: transformedUsers.length
-        }
+        data: transformedUsers,
+        total: transformedUsers.length
       });
       
     } catch (error) {
@@ -153,6 +158,19 @@ export default async function adminUserRoutes(fastify: FastifyInstance) {
       const user = await prisma.users.findUnique({
         where: { id },
         include: {
+          user_roles_user_roles_user_idTousers: {
+            include: {
+              roles: {
+                include: {
+                  role_permissions: {
+                    include: {
+                      permissions: true
+                    }
+                  }
+                }
+              }
+            }
+          },
           user_permissions: {
             include: {
               permissions: true
@@ -206,7 +224,18 @@ export default async function adminUserRoutes(fastify: FastifyInstance) {
         kycStatus: user.kycStatus,
         createdAt: user.createdAt,
         lastLogin: user.lastLogin,
-        permissions: user.user_permissions.map(up => ({
+        roles: user.user_roles_user_roles_user_idTousers.map(ur => ({
+          id: ur.roles.id,
+          code: ur.roles.code,
+          name: ur.roles.name,
+          level: ur.roles.level,
+          assignedAt: ur.assigned_at,
+          permissions: ur.roles.role_permissions.map(rp => ({
+            code: rp.permissions.code,
+            name: rp.permissions.name
+          }))
+        })),
+        directPermissions: user.user_permissions.map(up => ({
           code: up.permissions.code,
           name: up.permissions.name
         })),
@@ -291,29 +320,36 @@ export default async function adminUserRoutes(fastify: FastifyInstance) {
           displayName: fullName,
           phone,
           passwordHash: hashedPassword,
-          status: 'active',
-          kycStatus: 'unverified',
-          emailVerified: false,
-          createdAt: new Date()
+          status: 'ACTIVE',
+          kycStatus: 'UNVERIFIED',
+          createdAt: new Date(),
+          updatedAt: new Date()
         }
       });
 
-      // Assign roles/permissions
+      // Assign roles if provided
       if (roles && roles.length > 0) {
-        const permissions = await prisma.permissions.findMany({
+        // roles array contains role IDs
+        const roleRecords = await prisma.roles.findMany({
           where: {
-            name: { in: roles }
+            id: { in: roles }
           }
         });
         
-        const userPermissions = permissions.map(perm => ({
-          userId: newUser.id,
-          permissionId: perm.id
-        }));
-        
-        await prisma.user_permissions.createMany({
-          data: userPermissions
-        });
+        if (roleRecords.length > 0) {
+          const userRoles = roleRecords.map(role => ({
+            id: `ur_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+            user_id: newUser.id,
+            role_id: role.id,
+            assigned_by: (request.user as any)?.userId,
+            assigned_at: new Date(),
+            created_at: new Date()
+          }));
+          
+          await prisma.user_roles.createMany({
+            data: userRoles
+          });
+        }
       }
 
       return reply.status(201).send({
@@ -370,39 +406,47 @@ export default async function adminUserRoutes(fastify: FastifyInstance) {
     
     try {
       // Update user basic info
-      const updateData: any = {};
-      if (fullName) updateData.displayName = fullName;
-      if (phone) updateData.phone = phone;
-      if (status) updateData.status = status;
-      if (kycStatus) updateData.kycStatus = kycStatus;
+      const updateData: any = { updatedAt: new Date() };
+      if (fullName !== undefined) updateData.displayName = fullName;
+      if (phone !== undefined) updateData.phone = phone;
+      if (status !== undefined) updateData.status = status;
+      if (kycStatus !== undefined) updateData.kycStatus = kycStatus;
       
       const updatedUser = await prisma.users.update({
         where: { id },
         data: updateData
       });
 
-      // Update roles if provided
-      if (roles && roles.length > 0) {
-        // Remove existing permissions
-        await prisma.user_permissions.deleteMany({
-          where: { userId: id }
+      // Update roles if provided (roles array contains role IDs)
+      if (roles !== undefined) {
+        // Remove existing roles
+        await prisma.user_roles.deleteMany({
+          where: { user_id: id }
         });
         
-        // Add new permissions
-        const permissions = await prisma.permissions.findMany({
-          where: {
-            name: { in: roles }
+        // Add new roles if any
+        if (roles.length > 0) {
+          const roleRecords = await prisma.roles.findMany({
+            where: {
+              id: { in: roles }
+            }
+          });
+          
+          if (roleRecords.length > 0) {
+            const userRoles = roleRecords.map(role => ({
+              id: `ur_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+              user_id: id,
+              role_id: role.id,
+              assigned_by: (request.user as any)?.userId,
+              assigned_at: new Date(),
+              created_at: new Date()
+            }));
+            
+            await prisma.user_roles.createMany({
+              data: userRoles
+            });
           }
-        });
-        
-        const userPermissions = permissions.map(perm => ({
-          userId: id,
-          permissionId: perm.id
-        }));
-        
-        await prisma.user_permissions.createMany({
-          data: userPermissions
-        });
+        }
       }
 
       return reply.send({

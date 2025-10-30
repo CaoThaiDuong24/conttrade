@@ -109,7 +109,220 @@ const ICON_MAP = {
   User,
 } as const;
 
-// Navigation menu structure based on roles
+// ✅ PERMISSION-BASED MENU ITEMS
+// Mỗi menu item có requiredPermission để tự động hiển thị dựa trên quyền
+const ALL_MENU_ITEMS = [
+  // Common items (no permission required or minimal permission)
+  { 
+    title: 'Dashboard', 
+    url: '/dashboard', 
+    icon: 'BarChart3',
+    requiredPermission: 'PM-001', // VIEW_PUBLIC_LISTINGS
+    order: 1
+  },
+  { 
+    title: 'Container', 
+    url: '/listings', 
+    icon: 'Package',
+    requiredPermission: 'PM-001', // VIEW_PUBLIC_LISTINGS
+    order: 2
+  },
+  
+  // Seller - Listing Management
+  { 
+    title: 'Bán hàng', 
+    url: '/sell/new', 
+    icon: 'Store',
+    requiredPermission: 'PM-010', // CREATE_LISTING
+    order: 3,
+    subItems: [
+      { title: 'Đăng tin mới', url: '/sell/new', icon: 'Plus' },
+      { title: 'Tin đăng của tôi', url: '/sell/my-listings', icon: 'List' },
+    ]
+  },
+  
+  // Buyer - RFQ (Tạo yêu cầu báo giá)
+  { 
+    title: 'Yêu cầu báo giá', 
+    url: '/rfq/buyer', 
+    icon: 'FileText',
+    requiredPermission: 'PM-020', // CREATE_RFQ
+    order: 4,
+    subItems: [
+      { title: 'Tạo RFQ', url: '/rfq/create', icon: 'Plus' },
+      { title: 'RFQ đã gửi', url: '/rfq/sent', icon: 'Send' },
+    ]
+  },
+  
+  // Seller - RFQ & Quotes (Trả lời RFQ và tạo báo giá)
+  { 
+    title: 'RFQ & Báo giá', 
+    url: '/rfq/seller', 
+    icon: 'Receipt',
+    requiredPermission: 'PM-021', // ISSUE_QUOTE
+    order: 5,
+    subItems: [
+      { title: 'RFQ nhận được', url: '/rfq/received', icon: 'Inbox' },
+      { title: 'Tạo báo giá', url: '/quotes/create', icon: 'Plus' },
+      { title: 'Quản lý báo giá', url: '/quotes/management', icon: 'List' },
+    ]
+  },
+  
+  // Orders (both buyer and seller)
+  { 
+    title: 'Đơn hàng', 
+    url: '/orders', 
+    icon: 'ShoppingCart',
+    requiredPermission: 'PM-040', // CREATE_ORDER
+    order: 6,
+    subItems: [
+      { title: 'Tất cả đơn hàng', url: '/orders', icon: 'List' },
+      { title: 'Thanh toán', url: '/orders/checkout', icon: 'CreditCard' },
+      { title: 'Theo dõi', url: '/orders/tracking', icon: 'Truck' },
+    ]
+  },
+  
+  // Payments (requires PAY_ESCROW permission)
+  { 
+    title: 'Thanh toán', 
+    url: '/payments/escrow', 
+    icon: 'DollarSign',
+    requiredPermission: 'PM-041', // PAY_ESCROW
+    order: 7,
+    subItems: [
+      { title: 'Ví escrow', url: '/payments/escrow', icon: 'Shield' },
+      { title: 'Phương thức', url: '/payments/methods', icon: 'CreditCard' },
+      { title: 'Lịch sử', url: '/payments/history', icon: 'History' },
+    ]
+  },
+  
+  // Inspection (buyer)
+  { 
+    title: 'Giám định', 
+    url: '/inspection/new', 
+    icon: 'Search',
+    requiredPermission: 'PM-030', // REQUEST_INSPECTION
+    order: 8
+  },
+  
+  // Delivery
+  { 
+    title: 'Vận chuyển', 
+    url: '/delivery', 
+    icon: 'Truck',
+    requiredPermission: 'PM-042', // REQUEST_DELIVERY
+    order: 8
+  },
+  
+  // Reviews
+  { 
+    title: 'Đánh giá', 
+    url: '/reviews', 
+    icon: 'Star',
+    requiredPermission: 'PM-050', // RATE_AND_REVIEW
+    order: 9,
+    subItems: [
+      { title: 'Tạo đánh giá', url: '/reviews/new', icon: 'Plus' },
+    ]
+  },
+  
+  // Disputes
+  { 
+    title: 'Khiếu nại', 
+    url: '/disputes', 
+    icon: 'AlertTriangle',
+    requiredPermission: 'PM-060', // FILE_DISPUTE
+    order: 10,
+    subItems: [
+      { title: 'Tạo khiếu nại', url: '/disputes/new', icon: 'Plus' },
+    ]
+  },
+  
+  // Depot Management
+  { 
+    title: 'Kho bãi', 
+    url: '/depot/stock', 
+    icon: 'Warehouse',
+    requiredPermission: 'PM-083', // DEPOT_VIEW_STOCK
+    order: 11,
+    subItems: [
+      { title: 'Tồn kho', url: '/depot/stock', icon: 'Package' },
+      { title: 'Di chuyển', url: '/depot/movements', icon: 'ArrowRightLeft' },
+      { title: 'Chuyển kho', url: '/depot/transfers', icon: 'Truck' },
+      { title: 'Điều chỉnh', url: '/depot/adjustments', icon: 'Edit' },
+      { title: 'Sửa chữa', url: '/depot/repairs', icon: 'Wrench' },
+    ]
+  },
+  
+  // Billing & Finance
+  { 
+    title: 'Hóa đơn', 
+    url: '/billing', 
+    icon: 'Receipt',
+    requiredPermission: 'PM-090', // FINANCE_RECONCILE
+    order: 12
+  },
+  
+  // Finance Reconcile
+  { 
+    title: 'Đối soát', 
+    url: '/finance/reconcile', 
+    icon: 'Receipt',
+    requiredPermission: 'PM-090', // FINANCE_RECONCILE
+    order: 13
+  },
+  
+  // Admin Section
+  { 
+    title: 'Quản trị', 
+    url: '/admin', 
+    icon: 'Settings',
+    requiredPermission: 'PM-072', // ADMIN_VIEW_DASHBOARD
+    order: 90,
+    subItems: [
+      { title: 'Tổng quan', url: '/admin', icon: 'BarChart3' },
+      { title: 'Người dùng', url: '/admin/users', icon: 'Users' },
+      { title: 'Xét duyệt KYC', url: '/admin/users/kyc', icon: 'Shield' },
+      { title: 'Duyệt tin đăng', url: '/admin/listings', icon: 'Package' },
+      { title: 'Tranh chấp', url: '/admin/disputes', icon: 'AlertTriangle' },
+      { title: 'Cấu hình', url: '/admin/config', icon: 'Settings' },
+      { title: 'Mẫu thông báo', url: '/admin/templates', icon: 'FileText' },
+      { title: 'Nhật ký', url: '/admin/audit', icon: 'Shield' },
+      { title: 'Thống kê', url: '/admin/analytics', icon: 'TrendingUp' },
+      { title: 'Báo cáo', url: '/admin/reports', icon: 'FileText' },
+    ]
+  },
+  
+  // RBAC Management
+  { 
+    title: 'Phân quyền RBAC', 
+    url: '/admin/rbac', 
+    icon: 'Shield',
+    requiredPermission: 'PM-072', // ADMIN_VIEW_DASHBOARD
+    order: 91,
+    subItems: [
+      { title: 'Tổng quan', url: '/admin/rbac', icon: 'BarChart3' },
+      { title: 'Quản lý Role', url: '/admin/rbac/roles', icon: 'Shield' },
+      { title: 'Ma trận phân quyền', url: '/admin/rbac/matrix', icon: 'List' },
+      { title: 'Gán Role cho User', url: '/admin/rbac/users', icon: 'Users' },
+    ]
+  },
+  
+  // Account (all authenticated users)
+  { 
+    title: 'Tài khoản', 
+    url: '/account/profile', 
+    icon: 'User',
+    requiredPermission: 'PM-001', // Basic permission
+    order: 100,
+    subItems: [
+      { title: 'Hồ sơ', url: '/account/profile', icon: 'User' },
+      { title: 'Cài đặt', url: '/account/settings', icon: 'Settings' },
+    ]
+  },
+];
+
+// Legacy: Navigation menu structure based on roles (for fallback)
 const NAVIGATION_MENU: Record<string, any[]> = {
   guest: [
     { title: 'Trang chủ', url: '/', icon: 'Home' },
@@ -374,121 +587,45 @@ export function RBACDashboardSidebar({ isAuthenticated = false, userInfo }: RBAC
     setIsMounted(true);
   }, []);
 
-  // Determine user's primary role and navigation menu
+  // ✅ PERMISSION-BASED MENU - Auto-generate menu based on user's actual permissions
   const getUserNavigationMenu = () => {
     if (!isAuthenticated || !userInfo?.roles?.length) {
       console.log('⚠️ Not authenticated or no roles - showing guest menu');
       return NAVIGATION_MENU.guest;
     }
 
-    // Debug: Log ALL data received by sidebar
-    console.log('🔍 Sidebar - Full userInfo:', userInfo);
-    console.log('🔍 Sidebar - User permissions:', userInfo.permissions?.length || 0);
+    // Debug logs
+    console.log('🔍 Sidebar - User roles:', userInfo.roles);
+    console.log('🔍 Sidebar - User permissions:', userInfo.permissions?.length || 0, 'total');
     console.log('📋 Sidebar - Permission codes:', userInfo.permissions);
-    console.log('👤 Sidebar - User roles:', userInfo.roles);
-    console.log('👤 Sidebar - Roles type:', Array.isArray(userInfo.roles) ? 'Array' : typeof userInfo.roles);
-    console.log('👤 Sidebar - First role:', userInfo.roles[0], 'type:', typeof userInfo.roles[0]);
 
-    // Check admin in MULTIPLE ways to debug
-    const rolesArray = Array.isArray(userInfo.roles) ? userInfo.roles : [userInfo.roles];
-    const rolesString = JSON.stringify(userInfo.roles);
-    const hasAdminIncludes = userInfo.roles.includes('admin');
-    const hasAdminFind = userInfo.roles.find((r: any) => r === 'admin' || r.code === 'admin');
-    const hasAdminString = rolesString.includes('admin');
-    const permCount = userInfo.permissions?.length || 0;
-    
-    console.log('🔍 Admin check - MULTIPLE METHODS:', {
-      hasAdminIncludes,
-      hasAdminFind,
-      hasAdminString,
-      rolesArray,
-      permissionsCount: permCount
-    });
-
-    // Try MULTIPLE conditions - REMOVED hasEnoughPermissions check (BUG FIX)
-    const isAdmin = hasAdminIncludes || hasAdminFind || hasAdminString;
-    
-    if (isAdmin) {
-      console.log('✅✅✅ ADMIN DETECTED - showing ALL menu items!');
-      
-      // Combine all menu items from all roles (deduplicate by URL)
-      const allItems: any[] = [];
-      const seenUrls = new Set<string>();
-      
-      Object.values(NAVIGATION_MENU).forEach(roleMenu => {
-        roleMenu.forEach((item: any) => {
-          if (!seenUrls.has(item.url)) {
-            seenUrls.add(item.url);
-            allItems.push(item);
-          }
-        });
-      });
-      
-      console.log('📋 Total menu items for admin:', allItems.length);
-      console.log('📋 Menu items:', allItems.map(i => i.title));
-      return allItems;
-    } else {
-      console.log('❌ NOT ADMIN - User is not admin role');
-      console.log('  isAdmin:', isAdmin);
-    }
-
-    // Get highest priority role for non-admin users
-    const userLevel = Math.max(...userInfo.roles.map(role => ROLE_HIERARCHY[role] || 0));
-    const primaryRole = userInfo.roles.find(role => ROLE_HIERARCHY[role] === userLevel) || 'buyer';
-    
-    console.log(`📋 Primary role detected: ${primaryRole} (level: ${userLevel})`);
-    
-    // Get base menu for primary role
-    let baseMenu = NAVIGATION_MENU[primaryRole] || NAVIGATION_MENU.buyer;
-    
-    // ✅ FIX: Seller role luôn có menu "Đăng tin mới" (không cần permission)
-    // Buyer chỉ có menu này nếu được gán CREATE_LISTING permission (PM-010)
-    const isSeller = userInfo.roles.includes('seller');
     const userPermissions = userInfo.permissions || [];
-    const hasCreateListingPermission = userPermissions.includes('PM-010'); // ✅ FIX: Check by code PM-010
+    const userRoles = userInfo.roles || [];
+    const isAdmin = userRoles.includes('admin');
+
+    // ✅ ALWAYS USE PERMISSION-BASED MENU - even for admin
+    // This ensures menu only shows items user has permissions for
+    console.log('🎯 Using PERMISSION-BASED MENU system for ALL users');
     
-    console.log('🔍 Access check:', {
-      primaryRole,
-      isSeller,
-      userPermissions, // Show all permissions for debugging
-      hasCreateListingPermission,
-      totalPermissions: userPermissions.length
-    });
-    
-    // If user is seller OR has CREATE_LISTING permission, ensure menu exists
-    if (isSeller || hasCreateListingPermission) {
-      const hasSellingMenu = baseMenu.some((item: any) => 
-        item.url === '/sell/new' || 
-        item.subItems?.some((sub: any) => sub.url === '/sell/new')
-      );
+    const menuItems = ALL_MENU_ITEMS.filter(item => {
+      // ✅ PURE PERMISSION-BASED FILTERING
+      // Menu CHỈ hiển thị nếu user CÓ permission
+      const hasPermission = !item.requiredPermission || 
+                           userPermissions.includes(item.requiredPermission);
       
-      console.log('🔍 Has selling menu:', hasSellingMenu);
-      
-      if (!hasSellingMenu) {
-        console.log('✅ Adding "Đăng tin mới" menu (seller role or has permission)');
-        
-        // Add selling menu after Dashboard and Container
-        baseMenu = [
-          ...baseMenu.slice(0, 2), // Keep Dashboard and Container
-          { 
-            title: 'Bán hàng', 
-            url: '/sell/new', 
-            icon: 'Store',
-            subItems: [
-              { title: 'Đăng tin mới', url: '/sell/new', icon: 'Plus' },
-              { title: 'Tin đăng của tôi', url: '/sell/my-listings', icon: 'List' },
-            ]
-          },
-          ...baseMenu.slice(2) // Keep rest of menu
-        ];
+      if (hasPermission) {
+        console.log(`✅ Menu "${item.title}": permission ${item.requiredPermission || 'none'} granted`);
       } else {
-        console.log('✅ Selling menu already exists');
+        console.log(`❌ Menu "${item.title}": missing permission ${item.requiredPermission}`);
       }
-    } else {
-      console.log('❌ User cannot create listings (not seller and no CREATE_LISTING permission)');
-    }
+      
+      return hasPermission;
+    }).sort((a, b) => a.order - b.order); // Sort by order
+
+    console.log(`📋 Final menu items count: ${menuItems.length}`);
+    console.log(`📋 Menu items:`, menuItems.map(i => i.title));
     
-    return baseMenu;
+    return menuItems;
   };
 
   // Only get navigation items after component is mounted (client-side only)
@@ -518,22 +655,29 @@ export function RBACDashboardSidebar({ isAuthenticated = false, userInfo }: RBAC
 
   const handleLogout = async () => {
     try {
+      // ✅ FIX: Only access localStorage on client-side to prevent hydration error
+      const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
+      
       await fetch('/api/v1/auth/logout', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+          'Authorization': `Bearer ${token}`,
         },
       });
       
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+      }
       
       router.push('/auth/login');
     } catch (error) {
       console.error('Logout error:', error);
       // Force logout on error
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+      }
       router.push('/auth/login');
     }
   };
@@ -772,8 +916,8 @@ export function RBACDashboardSidebar({ isAuthenticated = false, userInfo }: RBAC
   const { mainItems, agentsItems, appearanceItems } = groupNavigationItems();
 
   return (
-    <Sidebar collapsible="icon">
-      <SidebarHeader>
+    <Sidebar collapsible="icon" className="flex flex-col h-screen">
+      <SidebarHeader className="flex-shrink-0">
         <div className="flex items-center gap-3 px-4 py-5">
           <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center group-data-[collapsible=icon]:h-8 group-data-[collapsible=icon]:w-8 transition-all">
             <Package className="h-4 w-4 text-primary-foreground group-data-[collapsible=icon]:h-4 group-data-[collapsible=icon]:w-4" />
@@ -786,7 +930,7 @@ export function RBACDashboardSidebar({ isAuthenticated = false, userInfo }: RBAC
         </div>
       </SidebarHeader>
 
-      <SidebarContent className="px-3">
+      <SidebarContent className="px-3 flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {/* MENU Section */}
         <SidebarGroup>
           <SidebarGroupLabel className="text-[11px] font-semibold text-sidebar-foreground/40 uppercase tracking-wider px-3 mb-2">
@@ -828,7 +972,7 @@ export function RBACDashboardSidebar({ isAuthenticated = false, userInfo }: RBAC
         )}
       </SidebarContent>
 
-      <SidebarFooter className="border-t border-sidebar-border px-3 py-4">
+      <SidebarFooter className="flex-shrink-0 border-t border-sidebar-border px-3 py-4">
         {isAuthenticated && userInfo ? (
           <div className="space-y-2">
             {/* User Info */}

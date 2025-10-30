@@ -34,34 +34,31 @@ export default async function authRBACRoutes(fastify: FastifyInstance) {
       const { email, password, rememberMe = false } = request.body;
 
       // Find user with roles and permissions
-      const user = await prisma.user.findUnique({
+      const user = await prisma.users.findUnique({
         where: { email },
         include: {
-          userRoles: {
+          user_roles_user_roles_user_idTousers: {
             include: {
-              role: {
+              roles: {
                 include: {
-                  rolePermissions: {
+                  role_permissions: {
                     include: {
-                      permission: true
+                      permissions: true
                     }
                   }
                 }
               }
             }
           },
-          userPermissions: {
+          org_users: {
             include: {
-              permission: true
-            }
-          },
-          orgUsers: {
-            include: {
-              org: true
+              orgs: true
             }
           }
         }
       });
+      
+      console.log('🔍🔍🔍 FULL USER DATA:', JSON.stringify(user, null, 2).substring(0, 2000));
 
       if (!user) {
         return reply.status(401).send({
@@ -71,7 +68,7 @@ export default async function authRBACRoutes(fastify: FastifyInstance) {
       }
 
       // Check password
-      const isValidPassword = await bcrypt.compare(password, user.password);
+      const isValidPassword = await bcrypt.compare(password, user.password_hash);
       if (!isValidPassword) {
         return reply.status(401).send({
           success: false,
@@ -90,23 +87,27 @@ export default async function authRBACRoutes(fastify: FastifyInstance) {
       // Collect permissions
       const permissions = new Set<string>();
       
+      console.log('🔍 Debug user data:', {
+        email: user.email,
+        hasRoles: user.user_roles_user_roles_user_idTousers?.length > 0,
+        rolesCount: user.user_roles_user_roles_user_idTousers?.length
+      });
+      
       // Add role-based permissions
-      user.userRoles.forEach((userRole: any) => {
-        userRole.role.rolePermissions.forEach((rolePermission: any) => {
-          permissions.add(rolePermission.permission.code);
+      user.user_roles_user_roles_user_idTousers.forEach((userRole: any) => {
+        console.log('🔍 Processing role:', userRole.roles.code);
+        console.log('   Permissions in role:', userRole.roles.role_permissions?.length);
+        
+        userRole.roles.role_permissions.forEach((rolePermission: any) => {
+          console.log('   Adding permission:', rolePermission.permissions.code);
+          permissions.add(rolePermission.permissions.code);
         });
       });
 
-      // Add/remove user-specific permissions
-      user.userPermissions.forEach((userPermission: any) => {
-        if (userPermission.granted) {
-          permissions.add(userPermission.permission.code);
-        } else {
-          permissions.delete(userPermission.permission.code);
-        }
-      });
-
-      const roles = user.userRoles.map((userRole: any) => userRole.role.code);
+      const roles = user.user_roles_user_roles_user_idTousers.map((userRole: any) => userRole.roles.code);
+      
+      console.log('✅ Final permissions:', Array.from(permissions));
+      console.log('✅ Final roles:', roles);
 
       // Generate tokens
       const tokenExpiry = rememberMe ? '30d' : '24h';
@@ -127,36 +128,11 @@ export default async function authRBACRoutes(fastify: FastifyInstance) {
         { expiresIn: '90d' }
       );
 
-      // Save session
-      await prisma.userSession.create({
-        data: {
-          userId: user.id,
-          token: accessToken,
-          refreshToken,
-          userAgent: request.headers['user-agent'],
-          ipAddress: request.ip,
-          expiresAt: new Date(Date.now() + (rememberMe ? 30 * 24 * 60 * 60 * 1000 : 24 * 60 * 60 * 1000))
-        }
-      });
-
-      // Log successful login
-      await prisma.loginLog.create({
-        data: {
-          userId: user.id,
-          email: user.email,
-          success: true,
-          ipAddress: request.ip,
-          userAgent: request.headers['user-agent']
-        }
-      });
-
       // Update last login
-      await prisma.user.update({
+      await prisma.users.update({
         where: { id: user.id },
         data: { 
-          lastLoginAt: new Date(),
-          loginAttempts: 0,
-          lockedUntil: null
+          last_login_at: new Date()
         }
       });
 
@@ -164,20 +140,20 @@ export default async function authRBACRoutes(fastify: FastifyInstance) {
       const userData: UserData = {
         id: user.id,
         email: user.email,
-        fullName: user.fullName || '',
-        displayName: user.displayName || '',
-        avatar: user.avatar,
+        fullName: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+        displayName: user.display_name || user.email || '',
+        avatar: user.avatar_url,
         roles,
         permissions: Array.from(permissions),
-        orgUsers: user.orgUsers.map((orgUser: any) => ({
+        orgUsers: user.org_users.map((orgUser: any) => ({
           org: {
-            id: orgUser.org.id,
-            name: orgUser.org.name,
-            type: orgUser.org.type
+            id: orgUser.orgs.id,
+            name: orgUser.orgs.name,
+            type: orgUser.orgs.type
           },
           position: orgUser.position,
-          isOwner: orgUser.isOwner,
-          isAdmin: orgUser.isAdmin
+          isOwner: orgUser.is_owner,
+          isAdmin: orgUser.is_admin
         }))
       };
 
@@ -207,30 +183,25 @@ export default async function authRBACRoutes(fastify: FastifyInstance) {
     try {
       const userId = (request as any).user.userId;
 
-      const user = await prisma.user.findUnique({
+      const user = await prisma.users.findUnique({
         where: { id: userId },
         include: {
-          userRoles: {
+          user_roles_user_roles_user_idTousers: {
             include: {
-              role: {
+              roles: {
                 include: {
-                  rolePermissions: {
+                  role_permissions: {
                     include: {
-                      permission: true
+                      permissions: true
                     }
                   }
                 }
               }
             }
           },
-          userPermissions: {
+          org_users: {
             include: {
-              permission: true
-            }
-          },
-          orgUsers: {
-            include: {
-              org: true
+              orgs: true
             }
           }
         }
@@ -246,39 +217,31 @@ export default async function authRBACRoutes(fastify: FastifyInstance) {
       // Collect permissions
       const permissions = new Set<string>();
       
-      user.userRoles.forEach((userRole: any) => {
-        userRole.role.rolePermissions.forEach((rolePermission: any) => {
-          permissions.add(rolePermission.permission.code);
+      user.user_roles_user_roles_user_idTousers.forEach((userRole: any) => {
+        userRole.roles.role_permissions.forEach((rolePermission: any) => {
+          permissions.add(rolePermission.permissions.code);
         });
       });
 
-      user.userPermissions.forEach((userPermission: any) => {
-        if (userPermission.granted) {
-          permissions.add(userPermission.permission.code);
-        } else {
-          permissions.delete(userPermission.permission.code);
-        }
-      });
-
-      const roles = user.userRoles.map((userRole: any) => userRole.role.code);
+      const roles = user.user_roles_user_roles_user_idTousers.map((userRole: any) => userRole.roles.code);
 
       const userData: UserData = {
         id: user.id,
         email: user.email,
-        fullName: user.fullName || '',
-        displayName: user.displayName || '',
-        avatar: user.avatar,
+        fullName: `${user.first_name || ''} ${user.last_name || ''}`.trim(),
+        displayName: user.display_name || user.email || '',
+        avatar: user.avatar_url,
         roles,
         permissions: Array.from(permissions),
-        orgUsers: user.orgUsers.map((orgUser: any) => ({
+        orgUsers: user.org_users.map((orgUser: any) => ({
           org: {
-            id: orgUser.org.id,
-            name: orgUser.org.name,
-            type: orgUser.org.type
+            id: orgUser.orgs.id,
+            name: orgUser.orgs.name,
+            type: orgUser.orgs.type
           },
           position: orgUser.position,
-          isOwner: orgUser.isOwner,
-          isAdmin: orgUser.isAdmin
+          isOwner: orgUser.is_owner,
+          isAdmin: orgUser.is_admin
         }))
       };
 
@@ -304,25 +267,20 @@ export default async function authRBACRoutes(fastify: FastifyInstance) {
       const userId = (request as any).user.userId;
       const { permission } = request.body as { permission: string };
 
-      const user = await prisma.user.findUnique({
+      const user = await prisma.users.findUnique({
         where: { id: userId },
         include: {
-          userRoles: {
+          user_roles_user_roles_user_idTousers: {
             include: {
-              role: {
+              roles: {
                 include: {
-                  rolePermissions: {
+                  role_permissions: {
                     include: {
-                      permission: true
+                      permissions: true
                     }
                   }
                 }
               }
-            }
-          },
-          userPermissions: {
-            include: {
-              permission: true
             }
           }
         }
@@ -338,18 +296,10 @@ export default async function authRBACRoutes(fastify: FastifyInstance) {
       // Check permissions
       const permissions = new Set<string>();
       
-      user.userRoles.forEach((userRole: any) => {
-        userRole.role.rolePermissions.forEach((rolePermission: any) => {
-          permissions.add(rolePermission.permission.code);
+      user.user_roles_user_roles_user_idTousers.forEach((userRole: any) => {
+        userRole.roles.role_permissions.forEach((rolePermission: any) => {
+          permissions.add(rolePermission.permissions.code);
         });
-      });
-
-      user.userPermissions.forEach((userPermission: any) => {
-        if (userPermission.granted) {
-          permissions.add(userPermission.permission.code);
-        } else {
-          permissions.delete(userPermission.permission.code);
-        }
       });
 
       const hasPermission = permissions.has(permission);
@@ -373,16 +323,6 @@ export default async function authRBACRoutes(fastify: FastifyInstance) {
     preHandler: [fastify.authenticate]
   }, async (request, reply) => {
     try {
-      const token = request.headers.authorization?.replace('Bearer ', '');
-      
-      if (token) {
-        // Deactivate session
-        await prisma.userSession.updateMany({
-          where: { token },
-          data: { isActive: false }
-        });
-      }
-
       reply.send({
         success: true,
         message: 'Đăng xuất thành công'
@@ -402,86 +342,10 @@ export default async function authRBACRoutes(fastify: FastifyInstance) {
     try {
       const { refreshToken } = request.body as { refreshToken: string };
 
-      const session = await prisma.userSession.findUnique({
-        where: { refreshToken },
-        include: {
-          user: {
-            include: {
-              userRoles: {
-                include: {
-                  role: {
-                    include: {
-                      rolePermissions: {
-                        include: {
-                          permission: true
-                        }
-                      }
-                    }
-                  }
-                }
-              },
-              userPermissions: {
-                include: {
-                  permission: true
-                }
-              }
-            }
-          }
-        }
-      });
-
-      if (!session || !session.isActive || session.expiresAt < new Date()) {
-        return reply.status(401).send({
-          success: false,
-          message: 'Refresh token không hợp lệ'
-        });
-      }
-
-      const user = session.user;
-
-      // Collect permissions
-      const permissions = new Set<string>();
-      
-      user.userRoles.forEach((userRole: any) => {
-        userRole.role.rolePermissions.forEach((rolePermission: any) => {
-          permissions.add(rolePermission.permission.code);
-        });
-      });
-
-      user.userPermissions.forEach((userPermission: any) => {
-        if (userPermission.granted) {
-          permissions.add(userPermission.permission.code);
-        } else {
-          permissions.delete(userPermission.permission.code);
-        }
-      });
-
-      const roles = user.userRoles.map((userRole: any) => userRole.role.code);
-
-      // Generate new access token
-      const newAccessToken = jwt.sign(
-        { 
-          userId: user.id,
-          email: user.email,
-          roles,
-          permissions: Array.from(permissions)
-        },
-        process.env.JWT_SECRET || 'your-secret-key',
-        { expiresIn: '24h' }
-      );
-
-      // Update session
-      await prisma.userSession.update({
-        where: { id: session.id },
-        data: { 
-          token: newAccessToken,
-          lastUsedAt: new Date()
-        }
-      });
-
-      reply.send({
-        success: true,
-        data: { accessToken: newAccessToken }
+      // For now, just return unauthorized - session table doesn't exist
+      return reply.status(401).send({
+        success: false,
+        message: 'Refresh token không được hỗ trợ. Vui lòng đăng nhập lại.'
       });
 
     } catch (error) {

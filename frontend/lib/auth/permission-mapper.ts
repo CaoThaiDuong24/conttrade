@@ -12,48 +12,75 @@ export const PERMISSION_MAPPING: Record<string, string | string[]> = {
   'listings.approve': 'PM-070',        // ADMIN_REVIEW_LISTING
   'listings.moderate': 'PM-070',       // ADMIN_REVIEW_LISTING
   
+  // RFQ mappings
+  'rfq.read': 'PM-020',                // RFQ_CREATE (view own RFQs)
+  'rfq.write': 'PM-020',               // RFQ_CREATE
+  'rfq.respond': 'PM-022',             // RFQ_RESPOND
+  
+  // Order mappings
+  'orders.read': 'PM-030',             // ORDERS_MANAGE
+  'orders.write': 'PM-030',            // ORDERS_MANAGE
+  'orders.process': 'PM-030',          // ORDERS_MANAGE
+  
+  // Payment mappings
+  'payments.view': 'PM-040',           // PAYMENTS_PROCESS
+  'payments.process': 'PM-040',        // PAYMENTS_PROCESS
+  'payments.escrow': 'PM-041',         // ESCROW_MANAGE
+  
+  // Review mappings
+  'reviews.read': 'PM-060',            // REVIEWS_MANAGE
+  'reviews.write': 'PM-060',           // REVIEWS_MANAGE
+  'reviews.moderate': 'PM-060',        // REVIEWS_MANAGE
+  
+  // Dispute mappings
+  'disputes.read': 'PM-050',           // DISPUTES_MANAGE
+  'disputes.write': 'PM-050',          // DISPUTES_MANAGE
+  'disputes.resolve': 'PM-050',        // DISPUTES_MANAGE
+  
+  // Account mappings
+  'account.read': 'dashboard.view',    // Everyone can access their account
+  'account.write': 'dashboard.view',   // Everyone can edit their account
+  'account.verify': 'dashboard.view',  // Everyone can verify
+  
   // Keep new format as-is
   'PM-001': 'PM-001',
   'PM-002': 'PM-002',
+  'PM-003': 'PM-003',
   'PM-010': 'PM-010',
   'PM-011': 'PM-011',
   'PM-012': 'PM-012',
   'PM-013': 'PM-013',
   'PM-014': 'PM-014',
+  'PM-020': 'PM-020',
+  'PM-022': 'PM-022',
+  'PM-030': 'PM-030',
+  'PM-040': 'PM-040',
+  'PM-041': 'PM-041',
+  'PM-042': 'PM-042',
+  'PM-043': 'PM-043',
+  'PM-050': 'PM-050',
+  'PM-060': 'PM-060',
   'PM-070': 'PM-070',
   
-  // Other permissions (keep as-is for now)
+  // Other permissions (map to existing PM codes for buyer/seller access)
   'dashboard.view': 'dashboard.view',
-  'account.read': 'account.read',
-  'account.write': 'account.write',
-  'account.verify': 'account.verify',
-  'rfq.read': 'rfq.read',
-  'rfq.write': 'rfq.write',
-  'rfq.respond': 'rfq.respond',
-  'orders.read': 'orders.read',
-  'orders.write': 'orders.write',
-  'orders.process': 'orders.process',
-  'payments.view': 'payments.view',
-  'payments.escrow': 'payments.escrow',
-  'payments.process': 'payments.process',
-  'delivery.read': 'delivery.read',
+  
+  // Inspection & Delivery are part of order process → PM-030
+  'inspection.read': 'PM-030',         // Part of ORDERS_MANAGE
+  'inspection.schedule': 'PM-030',     // Part of ORDERS_MANAGE
+  'delivery.read': 'PM-030',           // Part of ORDERS_MANAGE
+  'delivery.track': 'PM-030',          // Part of ORDERS_MANAGE
+  'delivery.request': 'PM-030',        // Part of ORDERS_MANAGE
+  
+  // Keep inspector/depot staff permissions as-is (for those specific roles)
+  'inspection.write': 'inspection.write',
   'delivery.write': 'delivery.write',
-  'delivery.track': 'delivery.track',
   'delivery.schedule': 'delivery.schedule',
   'depot.read': 'depot.read',
   'depot.write': 'depot.write',
   'depot.inventory': 'depot.inventory',
   'depot.inspect': 'depot.inspect',
   'depot.repair': 'depot.repair',
-  'inspection.read': 'inspection.read',
-  'inspection.write': 'inspection.write',
-  'inspection.schedule': 'inspection.schedule',
-  'reviews.read': 'reviews.read',
-  'reviews.write': 'reviews.write',
-  'reviews.moderate': 'reviews.moderate',
-  'disputes.read': 'disputes.read',
-  'disputes.write': 'disputes.write',
-  'disputes.resolve': 'disputes.resolve',
   'billing.read': 'billing.read',
   'billing.write': 'billing.write',
   'admin.access': 'admin.access',

@@ -274,6 +274,15 @@ export default async function quoteRoutes(fastify: FastifyInstance) {
         });
       }
 
+      // SECURITY CHECK 1: Người tạo RFQ (buyer) không được tạo báo giá cho RFQ của chính họ
+      if (rfq.buyer_user_id === userId) {
+        return reply.status(403).send({
+          success: false,
+          message: 'Cannot create quote for your own RFQ'
+        });
+      }
+
+      // SECURITY CHECK 2: Chỉ seller của listing mới được tạo báo giá
       if (rfq.listings.seller_user_id !== userId) {
         return reply.status(403).send({
           success: false,

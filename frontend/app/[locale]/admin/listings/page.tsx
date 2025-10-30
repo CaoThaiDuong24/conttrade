@@ -71,7 +71,9 @@ export default function AdminListingsPage() {
   
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [itemsPerPage, setItemsPerPage] = useState(50); // Default 50 items per page for admin
+  const [totalCount, setTotalCount] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
 
   // Fetch real data from API
   useEffect(() => {
@@ -81,19 +83,42 @@ export default function AdminListingsPage() {
         
         // Use admin endpoint to get all listings
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
-        const response = await fetch(`${apiUrl}/api/v1/admin/listings`, {
+        
+        // Get token from cookie
+        const getCookie = (name: string) => {
+          const value = `; ${document.cookie}`;
+          const parts = value.split(`; ${name}=`);
+          if (parts.length === 2) return parts.pop()?.split(';').shift();
+          return null;
+        };
+        
+        const token = getCookie('accessToken') || localStorage.getItem('accessToken');
+        console.log('🔑 Using token from:', token ? (getCookie('accessToken') ? 'cookie' : 'localStorage') : 'none');
+        
+        // Fetch với phân trang - truyền page và limit
+        const response = await fetch(`${apiUrl}/api/v1/admin/listings?page=${currentPage}&limit=${itemsPerPage}`, {
+          method: 'GET',
+          credentials: 'include', // Important: send cookies
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
         
         if (response.ok) {
           const data = await response.json();
-          console.log('Admin all listings:', data.data?.listings?.length || 0);
+          console.log('✅ Response received:', data);
+          console.log('✅ Admin listings count:', data.data?.listings?.length || 0);
+          console.log('📊 Pagination info:', data.data?.pagination);
+          
+          // Update pagination info from backend
+          if (data.data?.pagination) {
+            setTotalCount(data.data.pagination.total);
+            setTotalPages(data.data.pagination.totalPages);
+          }
           
           // Map backend data format to frontend format
-          const mappedListings = (data.data.listings || []).map((listing: any) => {
+          const mappedListings = (data.data?.listings || []).map((listing: any) => {
             // Parse facets correctly - backend trả về array of {key, value}
             const facets = listing.listing_facets || [];
             const size = facets.find((f: any) => f.key === 'size')?.value || '';
@@ -148,7 +173,7 @@ export default function AdminListingsPage() {
     };
 
     fetchListings();
-  }, []);
+  }, [currentPage, itemsPerPage]); // Re-fetch khi page hoặc itemsPerPage thay đổi
 
   const filteredListings = listings.filter(listing => {
     // Tab filter
@@ -168,15 +193,18 @@ export default function AdminListingsPage() {
     return matchesTab && matchesSearch && matchesStatus && matchesDealType;
   });
 
-  // Pagination logic
-  const totalPages = Math.ceil(filteredListings.length / itemsPerPage);
+  // Server-side pagination - không cần slice vì backend đã trả về đúng page
+  const currentListings = filteredListings;
+  
+  // Calculate display range for pagination info
   const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentListings = filteredListings.slice(startIndex, endIndex);
+  const endIndex = startIndex + currentListings.length;
 
-  // Reset to page 1 when filters change
+  // Reset to page 1 when filters change (not when pagination changes)
   useEffect(() => {
-    setCurrentPage(1);
+    if (currentPage !== 1) {
+      setCurrentPage(1);
+    }
   }, [searchTerm, selectedTab, statusFilter, dealTypeFilter]);
 
   const getStatusBadge = (status: string) => {
@@ -228,7 +256,16 @@ export default function AdminListingsPage() {
   const handleApprove = async (listingId: string) => {
     try {
       setIsLoading(true);
-      const token = localStorage.getItem('accessToken');
+      
+      // Get token from cookie first, then localStorage
+      const getCookie = (name: string) => {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop()?.split(';').shift();
+        return null;
+      };
+      
+      const token = getCookie('accessToken') || localStorage.getItem('accessToken');
       
       if (!token) {
         toast.error('Lỗi xác thực', {
@@ -288,7 +325,16 @@ export default function AdminListingsPage() {
     
     try {
       setIsLoading(true);
-      const token = localStorage.getItem('accessToken');
+      
+      // Get token from cookie first, then localStorage
+      const getCookie = (name: string) => {
+        const value = `; ${document.cookie}`;
+        const parts = value.split(`; ${name}=`);
+        if (parts.length === 2) return parts.pop()?.split(';').shift();
+        return null;
+      };
+      
+      const token = getCookie('accessToken') || localStorage.getItem('accessToken');
       
       if (!token) {
         toast.error('Lỗi xác thực', {
@@ -520,10 +566,10 @@ export default function AdminListingsPage() {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="10">10 mục</SelectItem>
                       <SelectItem value="20">20 mục</SelectItem>
                       <SelectItem value="50">50 mục</SelectItem>
                       <SelectItem value="100">100 mục</SelectItem>
+                      <SelectItem value="200">200 mục</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -743,7 +789,7 @@ export default function AdminListingsPage() {
               <CardContent className="border-t bg-gradient-to-r from-slate-50 via-white to-slate-50 px-6 py-4">
                 <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
                   <p className="text-sm text-muted-foreground">
-                    Hiển thị <span className="font-semibold text-foreground">{startIndex + 1}</span> - <span className="font-semibold text-foreground">{Math.min(endIndex, filteredListings.length)}</span> trong tổng số <span className="font-semibold text-foreground">{filteredListings.length}</span> tin đăng
+                    Hiển thị <span className="font-semibold text-foreground">{startIndex + 1}</span> - <span className="font-semibold text-foreground">{endIndex}</span> trong tổng số <span className="font-semibold text-foreground">{totalCount}</span> tin đăng
                   </p>
                   <div className="flex items-center gap-2">
                     <Button

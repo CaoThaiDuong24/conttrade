@@ -22,8 +22,11 @@ export async function POST(request: Request) {
     // Create response with httpOnly cookie
     const res = NextResponse.json(data)
     
+    // Backend returns data.data.token (not accessToken)
+    const accessToken = data.data.token || data.data.accessToken;
+    
     // Set httpOnly cookie for middleware
-    res.cookies.set('accessToken', data.data.accessToken, {
+    res.cookies.set('accessToken', accessToken, {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
@@ -40,6 +43,9 @@ export async function POST(request: Request) {
         path: '/',
       })
     }
+    
+    // Also normalize the response to include 'accessToken' for client-side code
+    data.data.accessToken = accessToken;
 
     return res
   } catch (error) {

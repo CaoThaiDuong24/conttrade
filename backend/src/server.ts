@@ -14,6 +14,7 @@ import Fastify from 'fastify'
 import cors from '@fastify/cors'
 import sensible from '@fastify/sensible'
 import jwt from '@fastify/jwt'
+import cookie from '@fastify/cookie'
 import multipart from '@fastify/multipart'
 import fastifyStatic from '@fastify/static'
 import { z } from 'zod'
@@ -22,7 +23,8 @@ import { nanoid } from 'nanoid'
 import prisma from './lib/prisma.js'
 import authRoutes from './routes/auth.js'
 import listingRoutes from './routes/listings.js'
-import adminRoutes from './routes/admin.js'
+import adminRoutes from './routes/admin/index.js'
+// import adminRbacRoutes from './routes/admin-rbac.js' // KHÔNG dùng nữa, dùng admin/rbac.ts
 import depotRoutes from './routes/depots.js'
 import masterDataRoutes from './routes/master-data-simple.js'
 import rfqRoutes from './routes/rfqs.js'
@@ -64,9 +66,16 @@ await app.register(cors, {
 console.log('Registering sensible plugin...')
 // await app.register(sensible) // Commented out - causing issues
 
+console.log('Registering cookie plugin...')
+await app.register(cookie)
+
 console.log('Registering JWT plugin...')
 await app.register(jwt, { 
-  secret: JWT_SECRET
+  secret: JWT_SECRET,
+  cookie: {
+    cookieName: 'accessToken',
+    signed: false
+  }
 })
 
 console.log('Registering multipart plugin...')
@@ -171,12 +180,18 @@ app.decorate('authenticate', async (req: any, res: any) => {
 				select: { permissions_updated_at: true }
 			})
 			
-			if (user?.permissions_updated_at && tokenIssuedAt < user.permissions_updated_at) {
-				return res.status(401).send({
-					success: false,
-					message: 'Token expired - Permissions have been updated. Please login again.',
-					code: 'PERMISSIONS_UPDATED'
-				})
+			// ✅ FIX: Compare timestamps as milliseconds to avoid timezone issues
+			if (user?.permissions_updated_at) {
+				const permsUpdatedMs = new Date(user.permissions_updated_at).getTime()
+				const tokenIssuedMs = tokenIssuedAt.getTime()
+				
+				if (tokenIssuedMs < permsUpdatedMs) {
+					return res.status(401).send({
+						success: false,
+						message: 'Token expired - Permissions have been updated. Please login again.',
+						code: 'PERMISSIONS_UPDATED'
+					})
+				}
 			}
 		}
 	} catch (err) {
@@ -198,6 +213,11 @@ try {
   
   await app.register(adminRoutes, { prefix: '/api/v1/admin' })
   console.log('✅ Admin routes registered')
+  
+  // NOTE: RBAC routes đã được register qua adminRoutes > rbac.ts
+  // KHÔNG register adminRbacRoutes ở đây để tránh duplicate routes
+  // await app.register(adminRbacRoutes, { prefix: '/api/v1/admin/rbac' })
+  // console.log('✅ Admin RBAC routes registered')
   
   await app.register(depotRoutes, { prefix: '/api/v1/depots' })
   console.log('✅ Depot routes registered')

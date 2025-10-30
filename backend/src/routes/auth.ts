@@ -92,7 +92,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
     try {
       const { email, phone, password } = request.body as any;
 
-      // Tìm user theo email hoặc phone với roles
+      // Tìm user theo email hoặc phone với roles và permissions
       const user = await prisma.users.findFirst({
         where: {
           OR: [
@@ -104,7 +104,15 @@ export default async function authRoutes(fastify: FastifyInstance) {
         include: {
           user_roles_user_roles_user_idTousers: {
             include: {
-              roles: true
+              roles: {
+                include: {
+                  role_permissions: {
+                    include: {
+                      permissions: true
+                    }
+                  }
+                }
+              }
             }
           }
         }
@@ -126,29 +134,42 @@ export default async function authRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // Lấy danh sách roles của user với role_version
+      // Lấy danh sách roles và permissions của user
       const roles = user.user_roles_user_roles_user_idTousers.map(ur => ur.roles.code);
       const roleVersions: Record<string, number> = {};
+      const permissions = new Set<string>();
+      
       user.user_roles_user_roles_user_idTousers.forEach(ur => {
         roleVersions[ur.roles.code] = ur.roles.role_version || 1;
+        // Collect all permissions from this role
+        ur.roles.role_permissions.forEach(rp => {
+          permissions.add(rp.permissions.code);
+        });
       });
+      
       console.log('🔐 User roles on login:', roles, 'Versions:', roleVersions);
+      console.log('🔑 User permissions:', Array.from(permissions));
 
-      // Tạo JWT token với roles và roleVersions (for real-time permission tracking)
+      // Tạo JWT token với roles, permissions và roleVersions
       const token = fastify.jwt.sign(
         { 
           userId: user.id, 
           email: user.email,
           roles: roles,
+          permissions: Array.from(permissions),
           roleVersions: roleVersions // Track version for real-time permission updates
         },
         { expiresIn: '7d' }
       );
 
-      // Cập nhật last_login_at
+      // Cập nhật last_login_at và reset permissions_updated_at
+      // Reset permissions_updated_at vì user đã nhận permissions mới qua JWT
       await prisma.users.update({
         where: { id: user.id },
-        data: { last_login_at: new Date() }
+        data: { 
+          last_login_at: new Date(),
+          permissions_updated_at: null // Reset để token không bị reject ngay
+        }
       });
 
       return reply.send({
@@ -561,6 +582,102 @@ export default async function authRoutes(fastify: FastifyInstance) {
       return reply.status(500).send({ 
         success: false, 
         message: 'Lỗi hệ thống' 
+      });
+    }
+  });
+
+  // A-010: POST /auth/refresh-permissions - Làm mới permissions trong JWT
+  // Dùng khi admin thay đổi quyền của user, user gọi endpoint này để lấy token mới
+  fastify.post('/refresh-permissions', {
+    preHandler: async (request, reply) => {
+      try {
+        await request.jwtVerify();
+      } catch (err) {
+        reply.status(401).send({ success: false, message: 'Token không hợp lệ' });
+      }
+    }
+  }, async (request, reply) => {
+    try {
+      const { userId } = request.user as any;
+
+      // Lấy lại roles và permissions mới nhất từ database
+      const user = await prisma.users.findUnique({
+        where: { id: userId },
+        include: {
+          user_roles_user_roles_user_idTousers: {
+            include: {
+              roles: {
+                include: {
+                  role_permissions: {
+                    include: {
+                      permissions: true
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (!user) {
+        return reply.status(404).send({
+          success: false,
+          message: 'Không tìm thấy tài khoản'
+        });
+      }
+
+      // Lấy danh sách roles và permissions mới nhất
+      const roles = user.user_roles_user_roles_user_idTousers.map(ur => ur.roles.code);
+      const roleVersions: Record<string, number> = {};
+      const permissions = new Set<string>();
+      
+      user.user_roles_user_roles_user_idTousers.forEach(ur => {
+        roleVersions[ur.roles.code] = ur.roles.role_version || 1;
+        ur.roles.role_permissions.forEach(rp => {
+          permissions.add(rp.permissions.code);
+        });
+      });
+
+      console.log('🔄 Refreshing permissions for user:', userId);
+      console.log('   New roles:', roles);
+      console.log('   New permissions:', Array.from(permissions));
+
+      // Reset permissions_updated_at vì user đã nhận permissions mới
+      await prisma.users.update({
+        where: { id: userId },
+        data: { 
+          permissions_updated_at: null,
+          updated_at: new Date()
+        }
+      });
+
+      // Tạo JWT token mới với permissions cập nhật
+      const newToken = fastify.jwt.sign(
+        { 
+          userId: user.id, 
+          email: user.email,
+          roles: roles,
+          permissions: Array.from(permissions),
+          roleVersions: roleVersions
+        },
+        { expiresIn: '7d' }
+      );
+
+      return reply.send({
+        success: true,
+        message: 'Quyền đã được cập nhật',
+        data: {
+          token: newToken,
+          roles: roles,
+          permissions: Array.from(permissions)
+        }
+      });
+    } catch (error) {
+      fastify.log.error('Refresh permissions error:', error);
+      return reply.status(500).send({
+        success: false,
+        message: 'Lỗi hệ thống'
       });
     }
   });

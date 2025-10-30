@@ -60,8 +60,14 @@ export default async function adminRoutes(fastify: FastifyInstance) {
         console.log('User roles:', user.user_roles_user_roles_user_idTousers);
       }
       
-      if (!user || !user.user_roles_user_roles_user_idTousers.some((ur: any) => ur.roles.code === 'admin')) {
-        console.log('Access denied - not admin');
+      // Check for admin role (case-insensitive: admin, ADMIN, or Admin)
+      const hasAdminRole = user?.user_roles_user_roles_user_idTousers.some((ur: any) => 
+        ur.roles.code?.toLowerCase() === 'admin' || 
+        ur.roles.name?.toLowerCase().includes('admin')
+      );
+      
+      if (!user || !hasAdminRole) {
+        console.log('Access denied - not admin. User roles:', user?.user_roles_user_roles_user_idTousers.map((ur: any) => ur.roles.code));
         return reply.status(403).send({ success: false, message: 'Access denied - Admin role required' });
       }
       
@@ -191,8 +197,12 @@ export default async function adminRoutes(fastify: FastifyInstance) {
   // Admin Listings Management
   fastify.get('/listings', { preHandler: [adminAuth] }, async (request, reply) => {
     try {
-      const { page = 1, limit = 20, status, search, sellerId } = request.query as any;
-      const offset = (page - 1) * limit;
+      const { page = 1, limit, status, search, sellerId } = request.query as any;
+      
+      // Admin không giới hạn số lượng - lấy tất cả listings
+      // Nếu muốn phân trang, truyền limit vào query
+      const parsedLimit = limit ? parseInt(limit) : undefined;
+      const offset = parsedLimit ? (page - 1) * parsedLimit : 0;
 
       let where: any = {};
       if (status) where.status = status;
@@ -204,23 +214,29 @@ export default async function adminRoutes(fastify: FastifyInstance) {
         ];
       }
 
-      const [listings, totalCount] = await Promise.all([
-        prisma.listings.findMany({
-          where,
-          skip: offset,
-          take: limit,
-          include: {
-            users: {
-              select: { id: true, email: true, display_name: true }
-            },
-            depots: {
-              select: { id: true, name: true, province: true }
-            },
-            listing_facets: true,
-            listing_media: true
+      const queryOptions: any = {
+        where,
+        include: {
+          users: {
+            select: { id: true, email: true, display_name: true }
           },
-          orderBy: { created_at: 'desc' }
-        }),
+          depots: {
+            select: { id: true, name: true, province: true }
+          },
+          listing_facets: true,
+          listing_media: true
+        },
+        orderBy: { created_at: 'desc' }
+      };
+
+      // Chỉ thêm skip/take nếu có limit
+      if (parsedLimit) {
+        queryOptions.skip = offset;
+        queryOptions.take = parsedLimit;
+      }
+
+      const [listings, totalCount] = await Promise.all([
+        prisma.listings.findMany(queryOptions),
         prisma.listings.count({ where })
       ]);
 
@@ -253,9 +269,9 @@ export default async function adminRoutes(fastify: FastifyInstance) {
           listings: listingsWithStatusNames,
           pagination: {
             page: Number(page),
-            limit: Number(limit),
+            limit: parsedLimit || totalCount, // Nếu không có limit, trả về tổng số
             total: totalCount,
-            totalPages: Math.ceil(totalCount / limit)
+            totalPages: parsedLimit ? Math.ceil(totalCount / parsedLimit) : 1
           }
         }
       });

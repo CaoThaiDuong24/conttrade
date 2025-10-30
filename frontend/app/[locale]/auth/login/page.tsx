@@ -8,10 +8,13 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { Eye, EyeOff, Mail, Lock, ArrowLeft, Shield, Sparkles } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, ArrowLeft, Shield, Sparkles, HelpCircle } from 'lucide-react';
 import { useNotificationContext } from '@/components/providers/notification-provider';
 import { useAuth } from '@/components/providers/auth-context';
 import { useState } from 'react';
+import { TourHelpButton } from '@/components/tour/tour-button';
+import { AutoTour } from '@/components/tour/auto-tour';
+import { SimpleTourTest } from '@/components/tour/simple-tour-test';
 
 export default function LoginPage() {
   const t = useTranslations();
@@ -61,6 +64,17 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 p-4 lg:p-8">
+      {/* Simple Tour Test Component */}
+      <SimpleTourTest />
+      
+      {/* Auto-start tour on first visit (disabled by default) */}
+      <AutoTour tourName="login" delay={2000} enabled={false} />
+      
+      {/* Tour Help Button - Fixed position */}
+      <div className="fixed bottom-6 right-6 z-50">
+        <TourHelpButton tourName="login" />
+      </div>
+      
       <div className="flex min-h-[calc(100vh-2rem)] lg:min-h-[calc(100vh-4rem)] rounded-3xl overflow-hidden shadow-2xl bg-white/95 dark:bg-gray-900/95 backdrop-blur-xl border border-white/30 dark:border-gray-600/40 transform transition-all duration-700 ease-out">
         {/* Left Panel - Welcome Section */}
         <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden rounded-r-3xl shadow-2xl">
@@ -189,13 +203,18 @@ export default function LoginPage() {
                         {t('auth.rememberMe')}
                       </Label>
                     </div>
-                    <Link href="/auth/forgot-password" className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium hover:underline">
+                    <Link 
+                      id="forgot-password-link"
+                      href="/auth/forgot-password" 
+                      className="text-sm text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 font-medium hover:underline"
+                    >
                       {t('auth.forgotPassword')}
                     </Link>
                   </div>
 
                   {/* Login Button */}
                   <Button 
+                    id="login-submit-button"
                     type="submit" 
                     className="w-full h-12 bg-blue-600 hover:bg-blue-700 text-white font-medium transition-all duration-200 shadow-lg"
                     disabled={isLoading}
@@ -212,7 +231,7 @@ export default function LoginPage() {
                 </form>
 
                 {/* Quick Login Buttons */}
-                <div className="mt-6 space-y-4">
+                <div id="quick-login-section" className="mt-6 space-y-4">
                   <div className="text-center">
                     <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">
                       🚀 Đăng nhập nhanh - 10 Tài khoản Demo
@@ -225,7 +244,7 @@ export default function LoginPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="h-8 text-xs bg-red-50 hover:bg-red-100 border-red-200 text-red-700 hover:shadow-md transition-all duration-200"
+                      className="quick-login-admin h-8 text-xs bg-red-50 hover:bg-red-100 border-red-200 text-red-700 hover:shadow-md transition-all duration-200"
                       onClick={() => {
                         setFormData({ email: 'admin@i-contexchange.vn', password: 'admin123' });
                         showInfo('⚡ Admin - Quản trị viên', 1500);
@@ -238,7 +257,7 @@ export default function LoginPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="h-8 text-xs bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700 hover:shadow-md transition-all duration-200"
+                      className="quick-login-buyer h-8 text-xs bg-blue-50 hover:bg-blue-100 border-blue-200 text-blue-700 hover:shadow-md transition-all duration-200"
                       onClick={() => {
                         setFormData({ email: 'buyer@example.com', password: 'buyer123' });
                         showInfo('🛒 Buyer - Người mua', 1500);
@@ -252,7 +271,7 @@ export default function LoginPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="h-8 text-xs bg-green-50 hover:bg-green-100 border-green-200 text-green-700 hover:shadow-md transition-all duration-200"
+                      className="quick-login-seller h-8 text-xs bg-green-50 hover:bg-green-100 border-green-200 text-green-700 hover:shadow-md transition-all duration-200"
                       onClick={() => {
                         setFormData({ email: 'seller@example.com', password: 'seller123' });
                         showInfo('🏪 Seller - Người bán', 1500);
@@ -265,7 +284,7 @@ export default function LoginPage() {
                       type="button"
                       variant="outline"
                       size="sm"
-                      className="h-8 text-xs bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-700 hover:shadow-md transition-all duration-200"
+                      className="quick-login-manager h-8 text-xs bg-purple-50 hover:bg-purple-100 border-purple-200 text-purple-700 hover:shadow-md transition-all duration-200"
                       onClick={() => {
                         setFormData({ email: 'manager@example.com', password: 'manager123' });
                         showInfo('👨‍💼 Manager - Quản lý kho', 1500);
@@ -364,7 +383,7 @@ export default function LoginPage() {
                 </div>
 
                 {/* Social Login Separator */}
-                <div className="relative">
+                <div id="social-login-section" className="relative">
                   <div className="absolute inset-0 flex items-center">
                     <Separator className="w-full border-gray-200 dark:border-gray-700" />
                   </div>
@@ -413,7 +432,7 @@ export default function LoginPage() {
                 </div>
 
                 {/* Sign Up Link */}
-                <div className="text-center pt-2">
+                <div id="signup-link" className="text-center pt-2">
                   <p className="text-sm text-gray-600 dark:text-gray-400">
                     {t('auth.dontHaveAccount')}{' '}
                     <Link 

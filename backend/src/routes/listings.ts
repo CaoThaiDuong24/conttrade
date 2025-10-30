@@ -72,7 +72,23 @@ export default async function listingRoutes(fastify: FastifyInstance) {
         priceCurrency,
         locationDepotId,
         rentalUnit,
-        facets
+        facets,
+        // ✅ NEW: Rental management fields
+        totalQuantity,
+        availableQuantity,
+        maintenanceQuantity,
+        minRentalDuration,
+        maxRentalDuration,
+        depositRequired,
+        depositAmount,
+        depositCurrency,
+        lateReturnFeeAmount,
+        lateReturnFeeUnit,
+        earliestAvailableDate,
+        latestReturnDate,
+        autoRenewalEnabled,
+        renewalNoticeDays,
+        renewalPriceAdjustment
       } = request.body as any;
 
       const userId = (request.user as any).userId;
@@ -85,6 +101,94 @@ export default async function listingRoutes(fastify: FastifyInstance) {
           success: false,
           message: 'Missing required fields: dealType, priceAmount, title, locationDepotId'
         });
+      }
+
+      // ✅ NEW: Validate rental management fields for RENTAL/LEASE
+      if (dealType === 'RENTAL' || dealType === 'LEASE') {
+        // Validate quantity fields
+        const total = totalQuantity || 1;
+        const available = availableQuantity !== undefined ? availableQuantity : 1;
+        const maintenance = maintenanceQuantity || 0;
+        const rented = 0; // Always 0 for new listings
+        const reserved = 0; // Always 0 for new listings
+
+        if (total < 1) {
+          return reply.status(400).send({
+            success: false,
+            message: 'Total quantity must be at least 1'
+          });
+        }
+
+        if (available < 0) {
+          return reply.status(400).send({
+            success: false,
+            message: 'Available quantity cannot be negative'
+          });
+        }
+
+        if (available > total) {
+          return reply.status(400).send({
+            success: false,
+            message: 'Available quantity cannot exceed total quantity'
+          });
+        }
+
+        if (available + maintenance + rented + reserved !== total) {
+          return reply.status(400).send({
+            success: false,
+            message: `Quantity allocation mismatch: available(${available}) + maintenance(${maintenance}) + rented(${rented}) + reserved(${reserved}) must equal total(${total})`
+          });
+        }
+
+        // Validate duration constraints
+        if (minRentalDuration && minRentalDuration < 1) {
+          return reply.status(400).send({
+            success: false,
+            message: 'Minimum rental duration must be at least 1'
+          });
+        }
+
+        if (maxRentalDuration && maxRentalDuration < 1) {
+          return reply.status(400).send({
+            success: false,
+            message: 'Maximum rental duration must be at least 1'
+          });
+        }
+
+        if (minRentalDuration && maxRentalDuration && minRentalDuration > maxRentalDuration) {
+          return reply.status(400).send({
+            success: false,
+            message: 'Minimum rental duration cannot exceed maximum rental duration'
+          });
+        }
+
+        // Validate deposit
+        if (depositRequired) {
+          if (!depositAmount || depositAmount <= 0) {
+            return reply.status(400).send({
+              success: false,
+              message: 'Deposit amount is required and must be greater than 0 when deposit is enabled'
+            });
+          }
+          if (!depositCurrency) {
+            return reply.status(400).send({
+              success: false,
+              message: 'Deposit currency is required when deposit is enabled'
+            });
+          }
+        }
+
+        // Validate dates
+        if (earliestAvailableDate && latestReturnDate) {
+          const earliest = new Date(earliestAvailableDate);
+          const latest = new Date(latestReturnDate);
+          if (earliest >= latest) {
+            return reply.status(400).send({
+              success: false,
+              message: 'Earliest available date must be before latest return date'
+            });
+          }
+        }
       }
 
       // Validate dealType từ master data
@@ -119,7 +223,27 @@ export default async function listingRoutes(fastify: FastifyInstance) {
           description: description || null,
           location_depot_id: locationDepotId,
           status: 'PENDING_REVIEW',
-          updated_at: new Date()
+          updated_at: new Date(),
+          
+          // ✅ NEW: Rental management fields
+          total_quantity: totalQuantity || 1,
+          available_quantity: availableQuantity !== undefined ? availableQuantity : 1,
+          rented_quantity: 0,
+          reserved_quantity: 0,
+          maintenance_quantity: maintenanceQuantity || 0,
+          min_rental_duration: minRentalDuration || null,
+          max_rental_duration: maxRentalDuration || null,
+          deposit_required: depositRequired || false,
+          deposit_amount: depositAmount ? Number(depositAmount) : null,
+          deposit_currency: depositCurrency || null,
+          late_return_fee_amount: lateReturnFeeAmount ? Number(lateReturnFeeAmount) : null,
+          late_return_fee_unit: lateReturnFeeUnit || null,
+          earliest_available_date: earliestAvailableDate ? new Date(earliestAvailableDate) : null,
+          latest_return_date: latestReturnDate ? new Date(latestReturnDate) : null,
+          auto_renewal_enabled: autoRenewalEnabled || false,
+          renewal_notice_days: renewalNoticeDays || 7,
+          renewal_price_adjustment: renewalPriceAdjustment ? Number(renewalPriceAdjustment) : 0.00,
+          total_rental_count: 0
         }
       });
 

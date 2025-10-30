@@ -1,7 +1,6 @@
 import createMiddleware from 'next-intl/middleware';
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
-import { normalizePermission } from './lib/auth/permission-mapper';
 
 // Define route permissions mapping
 const ROUTE_PERMISSIONS = {
@@ -18,96 +17,104 @@ const ROUTE_PERMISSIONS = {
   '/legal/privacy': null,
   '/listings': 'PM-001', // VIEW_PUBLIC_LISTINGS - Can be accessed by guests
   
-  // Dashboard routes  
-  '/dashboard': 'dashboard.view',
-  '/dashboard/test': 'dashboard.view',
+  // Dashboard routes - Allow all authenticated users
+  '/dashboard': 'PM-001', // Basic authenticated access - all users can view dashboard
+  '/dashboard/test': 'PM-001', // Basic authenticated access
   
   // Account routes
-  '/account/profile': 'account.read',
-  '/account/verify': 'account.verify',
+  '/account/profile': 'PM-001', // Basic authenticated access
+  '/account/verify': 'PM-001', // Basic authenticated access
   
-  // Buyer routes
-  '/rfq': 'rfq.read',
-  '/rfq/create': 'rfq.write',
-  '/rfq/sent': 'rfq.read',
-  '/rfq/received': 'rfq.read',
-  '/orders': 'orders.read',
-  '/orders/checkout': 'orders.write',
-  '/orders/tracking': 'orders.read',
-  '/payments': 'payments.view',
-  '/payments/escrow': 'payments.escrow',
-  '/payments/methods': 'payments.view',
-  '/payments/history': 'payments.view',
-  '/reviews': 'reviews.read',
-  '/reviews/new': 'reviews.write',
-  '/disputes': 'disputes.read',
-  '/disputes/new': 'disputes.write',
-  
+  // Buyer routes - RFQ
+  '/rfq': ['PM-020', 'PM-021'], // CREATE_RFQ (buyer) or ISSUE_QUOTE (seller) - both can access
+  '/rfq/create': 'PM-020', // CREATE_RFQ
+  '/rfq/sent': 'PM-020', // CREATE_RFQ
+  '/rfq/received': 'PM-021', // ISSUE_QUOTE
+
+  // Buyer routes - Orders
+  '/orders': 'PM-040', // CREATE_ORDER
+  '/orders/checkout': 'PM-040', // CREATE_ORDER
+  '/orders/tracking': 'PM-040', // CREATE_ORDER
+
+  // Buyer routes - Payments
+  '/payments': 'PM-041', // PAY_ESCROW
+  '/payments/escrow': 'PM-041', // PAY_ESCROW
+  '/payments/methods': 'PM-041', // PAY_ESCROW
+  '/payments/history': 'PM-041', // PAY_ESCROW
+
+  // Reviews
+  '/reviews': 'PM-050', // RATE_AND_REVIEW
+  '/reviews/new': 'PM-050', // RATE_AND_REVIEW
+
+  // Disputes
+  '/disputes': 'PM-060', // FILE_DISPUTE
+  '/disputes/new': 'PM-060', // FILE_DISPUTE
+
   // Account routes
-  '/account/settings': 'account.read',
-  
+  '/account/settings': 'PM-001', // Basic authenticated access
+
   // Seller routes
   '/sell': 'PM-010', // CREATE_LISTING
   '/sell/new': 'PM-010', // CREATE_LISTING
   '/sell/my-listings': 'PM-011', // EDIT_LISTING (view/edit own listings)
-  '/quotes/create': 'rfq.respond',
-  '/quotes/management': 'rfq.respond',
-  
+  '/quotes/create': 'PM-021', // ISSUE_QUOTE
+  '/quotes/management': 'PM-022', // VIEW_QUOTES
+
   // Depot routes
-  '/depot': 'depot.read',
-  '/depot/stock': 'depot.inventory',
-  '/depot/inspections': 'depot.inspect',
-  '/depot/repairs': 'depot.repair',
-  '/depot/movements': 'depot.inventory',
-  '/depot/transfers': 'depot.inventory',
-  '/depot/adjustments': 'depot.inventory',
-  
+  '/depot': 'PM-083', // DEPOT_VIEW_STOCK
+  '/depot/stock': 'PM-083', // DEPOT_VIEW_STOCK
+  '/depot/inspections': 'PM-082', // DEPOT_ISSUE_EIR
+  '/depot/repairs': 'PM-081', // DEPOT_UPDATE_JOB
+  '/depot/movements': 'PM-084', // DEPOT_VIEW_MOVEMENTS
+  '/depot/transfers': 'PM-086', // DEPOT_TRANSFER_STOCK
+  '/depot/adjustments': 'PM-085', // DEPOT_ADJUST_STOCK
+
   // Inspection routes
-  '/inspection/new': 'inspection.schedule',
-  '/inspection/reports': 'inspection.write',
-  '/inspection/quality': 'inspection.write',
-  
+  '/inspection/new': 'PM-030', // REQUEST_INSPECTION
+  '/inspection/reports': 'PM-031', // VIEW_INSPECTION_REPORT
+  '/inspection/quality': 'PM-031', // VIEW_INSPECTION_REPORT
+
   // Delivery routes
-  '/delivery': 'delivery.read',
-  '/delivery/track': 'delivery.track',
-  '/delivery/request': 'delivery.write',
-  
+  '/delivery': ['PM-042', 'PM-042B'], // REQUEST_DELIVERY or VIEW_DELIVERY (seller)
+  '/delivery/track': ['PM-042', 'PM-042B'], // REQUEST_DELIVERY or VIEW_DELIVERY (seller)
+  '/delivery/request': 'PM-042', // REQUEST_DELIVERY (buyer only)
+
   // Quotes compare
-  '/quotes/compare': 'rfq.read',
-  
+  '/quotes/compare': 'PM-022', // VIEW_QUOTES
+
   // Billing routes
-  '/billing': 'billing.read',
-  '/subscriptions': 'billing.read',
-  
+  '/billing': ['PM-090', 'PM-091B'], // FINANCE_RECONCILE or VIEW_SELLER_INVOICES (seller)
+  '/subscriptions': 'PM-090', // FINANCE_RECONCILE
+
   // Finance routes
-  '/finance/reconcile': 'billing.read',
-  
+  '/finance/reconcile': 'PM-090', // FINANCE_RECONCILE
+
   // Admin routes
-  '/admin': 'admin.access',
-  '/admin/users': 'admin.users',
-  '/admin/users/kyc': 'admin.users',
+  '/admin': 'PM-072', // ADMIN_VIEW_DASHBOARD
+  '/admin/users': 'PM-071', // ADMIN_MANAGE_USERS
+  '/admin/users/kyc': 'PM-071', // ADMIN_MANAGE_USERS
   '/admin/listings': 'PM-070', // ADMIN_REVIEW_LISTING
-  '/admin/disputes': 'admin.moderate',
-  '/admin/config': 'admin.settings',
-  '/admin/templates': 'admin.settings',
-  '/admin/audit': 'admin.audit',
-  '/admin/analytics': 'admin.analytics',
-  '/admin/reports': 'admin.access',
-  '/admin/rbac': 'admin.access',
-  '/admin/rbac/roles': 'admin.access',
-  '/admin/rbac/permissions': 'admin.access',
-  '/admin/rbac/matrix': 'admin.access',
-  '/admin/rbac/users': 'admin.access',
-  
+  '/admin/disputes': 'PM-061', // RESOLVE_DISPUTE
+  '/admin/config': 'PM-073', // ADMIN_CONFIG_PRICING
+  '/admin/templates': 'PM-117', // TEMPLATE_RW
+  '/admin/audit': 'PM-072', // ADMIN_VIEW_DASHBOARD
+  '/admin/analytics': 'PM-072', // ADMIN_VIEW_DASHBOARD
+  '/admin/reports': 'PM-072', // ADMIN_VIEW_DASHBOARD
+  '/admin/rbac': 'PM-072', // ADMIN_VIEW_DASHBOARD
+  '/admin/rbac/roles': 'PM-072', // ADMIN_VIEW_DASHBOARD
+  '/admin/rbac/permissions': 'PM-072', // ADMIN_VIEW_DASHBOARD
+  '/admin/rbac/matrix': 'PM-072', // ADMIN_VIEW_DASHBOARD
+  '/admin/rbac/users': 'PM-071', // ADMIN_MANAGE_USERS
+
   // Dynamic routes (with [id] parameters)
   '/listings/[id]': 'PM-001', // VIEW_PUBLIC_LISTINGS
-  '/orders/[id]': 'orders.read',
-  '/rfq/[id]': 'rfq.read',
-  '/rfq/[id]/qa': 'rfq.read',
-  '/inspection/[id]': 'inspection.read',
-  '/delivery/track/[id]': 'delivery.track',
-  '/admin/users/[id]': 'admin.users',
-  '/admin/disputes/[id]': 'admin.moderate',
+  '/orders/[id]': 'PM-040', // CREATE_ORDER
+  '/rfq/[id]': 'PM-020', // CREATE_RFQ
+  '/rfq/[id]/qa': 'PM-023', // MANAGE_QA
+  '/inspection/[id]': 'PM-031', // VIEW_INSPECTION_REPORT
+  '/delivery/track/[id]': 'PM-042', // REQUEST_DELIVERY
+  '/admin/users/[id]': 'PM-071', // ADMIN_MANAGE_USERS
+  '/admin/disputes/[id]': 'PM-061', // RESOLVE_DISPUTE
 
 } as const;
 
@@ -134,9 +141,9 @@ const intlMiddleware = createMiddleware({
 
 export default async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
-  
+
   console.log('🚪 MIDDLEWARE:', pathname);
-  
+
   // Skip middleware for static files, API routes, and auth pages during login flow
   if (
     pathname.startsWith('/_next') ||
@@ -154,7 +161,7 @@ export default async function middleware(request: NextRequest) {
 
   // First, handle internationalization
   const intlResponse = intlMiddleware(request);
-  
+
   // Extract locale from pathname
   const localeMatch = pathname.match(/^\/([a-z]{2})(\/.*)?$/);
   const locale = localeMatch ? localeMatch[1] : 'vi';
@@ -162,7 +169,7 @@ export default async function middleware(request: NextRequest) {
 
   // Check if route requires authentication
   const requiredPermission = getRequiredPermission(routePath);
-  
+
   // Public routes - no auth required
   if (requiredPermission === null) {
     console.log('✅ Public route, allowing access to:', pathname);
@@ -183,7 +190,7 @@ export default async function middleware(request: NextRequest) {
 
   if (!token) {
     console.log('❌ NO TOKEN - REDIRECT TO LOGIN');
-    
+
     // Only redirect if not already on login page to prevent loops
     if (!pathname.includes('/auth/login')) {
       const loginUrl = new URL(`/${locale}/auth/login`, request.url);
@@ -196,40 +203,111 @@ export default async function middleware(request: NextRequest) {
   try {
     // Verify JWT token using jose (Edge Runtime compatible)
     console.log('🔐 VERIFYING JWT...');
-    
+
     const secret = new TextEncoder().encode('your-super-secret-jwt-key-change-in-production');
     const { payload } = await jwtVerify(token, secret);
-    
+
     console.log('✅ JWT VALID for user:', payload.userId, 'Role:', payload.role || payload.roles);
     console.log('🔍 JWT PAYLOAD:', JSON.stringify(payload, null, 2));
     
-    // Get roles from JWT payload first, fallback to email/userId-based detection
-    const userRoles = await getUserRoles(
-      payload.userId as string, 
-      payload.role as string | undefined, 
-      payload.roles as string[] | undefined,
-      payload.email as string | undefined
-    );
-    const userPermissions = await getUserPermissions(userRoles);
+    // ✅ REALTIME PERMISSIONS: Always query from database to get latest permissions
+    // This ensures admin can grant/revoke permissions and they take effect immediately
+    let userRoles: string[] = [];
+    let userPermissions: string[] = [];
     
-    console.log('🔑 USER ROLES:', userRoles);
-    console.log('🔑 USER PERMISSIONS:', userPermissions);
+    try {
+      // Call backend API to get fresh user data with latest permissions
+      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+      const meResponse = await fetch(`${backendUrl}/api/v1/auth/me`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      if (meResponse.ok) {
+        const meData = await meResponse.json();
+        if (meData.success && meData.data?.user) {
+          const userData = meData.data.user;
+          
+          // Extract roles (can be array of strings OR array of objects with code)
+          if (Array.isArray(userData.roles)) {
+            userRoles = userData.roles.map((r: any) => 
+              typeof r === 'string' ? r : r.code
+            );
+          }
+          
+          // Extract permissions - flatten from all roles if permissions are nested in roles
+          const permissionSet = new Set<string>();
+          
+          // Case 1: permissions is a direct array of strings
+          if (Array.isArray(userData.permissions) && userData.permissions.length > 0) {
+            userData.permissions.forEach((p: any) => {
+              const permCode = typeof p === 'string' ? p : p.code;
+              if (permCode) permissionSet.add(permCode);
+            });
+          }
+          
+          // Case 2: permissions are nested in roles array
+          if (Array.isArray(userData.roles)) {
+            userData.roles.forEach((role: any) => {
+              if (role.permissions && Array.isArray(role.permissions)) {
+                role.permissions.forEach((p: any) => {
+                  const permCode = typeof p === 'string' ? p : p.code;
+                  if (permCode) permissionSet.add(permCode);
+                });
+              }
+            });
+          }
+          
+          userPermissions = Array.from(permissionSet);
+          
+          console.log('✅ Got REALTIME permissions from database via /auth/me');
+          console.log('🔑 USER ROLES:', userRoles);
+          console.log('🔑 USER PERMISSIONS:', userPermissions.length, 'permissions');
+          console.log('🔑 Sample permissions:', userPermissions.slice(0, 5).join(', '));
+        } else {
+          throw new Error('Invalid response from /auth/me');
+        }
+      } else {
+        throw new Error(`Failed to fetch user data: ${meResponse.status}`);
+      }
+    } catch (error) {
+      // Fallback to JWT-based permissions if API call fails
+      console.warn('⚠️ Failed to fetch realtime permissions, using JWT fallback:', error);
+      
+      userRoles = await getUserRoles(
+        payload.userId as string, 
+        payload.role as string | undefined, 
+        payload.roles as string[] | undefined,
+        payload.email as string | undefined
+      );
+      
+      userPermissions = (payload.permissions && Array.isArray(payload.permissions) && payload.permissions.length > 0)
+        ? payload.permissions as string[]
+        : await getUserPermissions(userRoles);
+        
+      console.log('🔑 USER ROLES (fallback):', userRoles);
+      console.log('🔑 USER PERMISSIONS (fallback):', userPermissions);
+    }
     
     // Check if user has required permission
-    if (requiredPermission && !hasPermission(userPermissions, userRoles, requiredPermission)) {
-      console.log('❌ PERMISSION DENIED:', requiredPermission);
-      
-      // Redirect to dashboard instead of login for authenticated users
-      const dashboardUrl = new URL(`/${locale}/dashboard`, request.url);
-      return NextResponse.redirect(dashboardUrl);
+    const hasRequiredPermission = requiredPermission ? hasPermission(userPermissions, userRoles, requiredPermission) : true;
+    
+    if (requiredPermission && !hasRequiredPermission) {
+      console.log('⚠️ PERMISSION MISSING:', requiredPermission, '- But allowing access to show "Under Development" page');
     }
 
     // Add user info to headers for server components
     const response = intlResponse instanceof Response ? intlResponse : NextResponse.next();
+    
+    // Add permission check result to headers so pages can show appropriate content
+    response.headers.set('x-has-permission', hasRequiredPermission.toString());
     response.headers.set('x-user-id', payload.userId as string);
     response.headers.set('x-user-roles', JSON.stringify(userRoles));
     response.headers.set('x-user-permissions', JSON.stringify(userPermissions));
-    
+
     console.log('✅ ACCESS GRANTED:', pathname);
     return response;
 
@@ -241,7 +319,7 @@ export default async function middleware(request: NextRequest) {
       routePath: routePath,
       pathname: pathname
     });
-    
+
     // Invalid token - redirect to login
     console.log('🔀 REDIRECTING TO LOGIN from:', pathname);
     const loginUrl = new URL(`/${locale}/auth/login`, request.url);
@@ -256,34 +334,35 @@ function getRequiredPermission(routePath: string) {
   if (routePath in ROUTE_PERMISSIONS) {
     return ROUTE_PERMISSIONS[routePath as keyof typeof ROUTE_PERMISSIONS];
   }
-  
+
   // Check if it's a sub-route of a defined route
   for (const [route, permission] of Object.entries(ROUTE_PERMISSIONS)) {
     if (routePath.startsWith(route + '/')) {
       return permission;
     }
   }
-  
-  // Log warning for undefined routes
+
+    // Log warning for undefined routes
   console.log('⚠️ Route not in ROUTE_PERMISSIONS:', routePath);
   
   // Smart defaults based on route patterns
   if (routePath.startsWith('/admin')) {
-    console.log('→ Defaulting to admin.access for admin route');
-    return 'admin.access';
+    console.log('→ Defaulting to PM-072 (ADMIN_VIEW_DASHBOARD) for admin route');
+    return 'PM-072';
   }
   if (routePath.startsWith('/depot')) {
-    console.log('→ Defaulting to depot.read for depot route');
-    return 'depot.read';
+    console.log('→ Defaulting to PM-083 (DEPOT_VIEW_STOCK) for depot route');
+    return 'PM-083';
   }
   if (routePath.startsWith('/account')) {
-    console.log('→ Defaulting to account.read for account route');
-    return 'account.read';
+    console.log('→ Defaulting to PM-001 (basic authenticated access) for account route');
+    return 'PM-001';
   }
   
-  // Default to requiring authentication for unlisted routes
-  console.log('→ Defaulting to dashboard.view');
-  return 'dashboard.view';
+  // ⚠️ DEFAULT: Allow authenticated users for undefined routes
+  // This prevents redirect loops when users access valid routes not in the permissions map
+  console.log('→ Defaulting to PM-001 (basic authenticated access) for undefined route');
+  return 'PM-001';
 }
 
 // Mock functions for user roles and permissions - replace with actual database calls
@@ -293,13 +372,13 @@ async function getUserRoles(userId: string, jwtRole?: string, jwtRoles?: string[
     console.log('📋 Using roles from JWT array:', jwtRoles);
     return jwtRoles;
   }
-  
+
   // Priority 2: Use single role from JWT payload
   if (jwtRole) {
     console.log('📋 Using role from JWT:', jwtRole);
     return [jwtRole];
   }
-  
+
   // Priority 3: Check email patterns (fallback for old tokens without roles)
   if (email) {
     // Admin role
@@ -307,7 +386,7 @@ async function getUserRoles(userId: string, jwtRole?: string, jwtRoles?: string[
       console.log('📋 Detected admin from email pattern');
       return ['admin'];
     }
-    
+
     // Depot roles
     if (email.includes('depot-manager@') || email.includes('manager@depot')) {
       console.log('📋 Detected depot_manager from email');
@@ -317,50 +396,50 @@ async function getUserRoles(userId: string, jwtRole?: string, jwtRoles?: string[
       console.log('📋 Detected depot_staff from email');
       return ['depot_staff'];
     }
-    
+
     // Inspector role
     if (email.includes('inspector@') || email.includes('inspect@')) {
       console.log('📋 Detected inspector from email');
       return ['inspector'];
     }
-    
+
     // Finance role
     if (email.includes('finance@') || email.includes('financial@')) {
       console.log('📋 Detected finance from email');
       return ['finance'];
     }
-    
+
     // Config Manager role
     if (email.includes('config@') || email.includes('config-manager@') || email.includes('configuration@')) {
       console.log('📋 Detected config_manager from email');
       return ['config_manager'];
     }
-    
+
     // Price Manager role
     if (email.includes('price@') || email.includes('price-manager@') || email.includes('pricing@')) {
       console.log('📋 Detected price_manager from email');
       return ['price_manager'];
     }
-    
+
     // Customer Support role
     if (email.includes('support@') || email.includes('cs@') || email.includes('customer-support@')) {
       console.log('📋 Detected customer_support from email');
       return ['customer_support'];
     }
-    
+
     // Seller role
     if (email.includes('seller@') || email.includes('vendor@')) {
       console.log('📋 Detected seller from email');
       return ['seller'];
     }
-    
+
     // Buyer role (explicit)
     if (email.includes('buyer@') || email.includes('purchase@')) {
       console.log('📋 Detected buyer from email');
       return ['buyer'];
     }
   }
-  
+
   // Priority 4: Check userId patterns (fallback for old tokens)
   if (userId.includes('admin')) {
     console.log('📋 Detected admin from userId');
@@ -382,7 +461,7 @@ async function getUserRoles(userId: string, jwtRole?: string, jwtRoles?: string[
     console.log('📋 Detected seller from userId');
     return ['seller'];
   }
-  
+
   console.log('📋 Defaulting to buyer role');
   return ['buyer']; // Default to buyer
 }
@@ -391,138 +470,134 @@ async function getUserPermissions(roles: string[]): Promise<string[]> {
   // This would typically be a database call to get user permissions
   // Mock permissions based on role
   console.log('🔑 Getting permissions for roles:', roles);
-  
+
   if (roles.includes('admin')) {
     return [
-      'dashboard.view',
-      'account.read', 'account.write', 'account.verify',
-      'admin.access', 'admin.users', 'admin.moderate', 'admin.settings', 'admin.audit', 'admin.analytics',
-      'PM-001', 'PM-002', 'PM-010', 'PM-011', 'PM-012', 'PM-013', 'PM-014', 'PM-070', // All listing permissions
-      'orders.read', 'orders.write', 'orders.process',
-      'payments.view', 'payments.process', 'payments.escrow',
-      'delivery.read', 'delivery.write', 'delivery.schedule',
-      'depot.read', 'depot.write', 'depot.inventory', 'depot.inspect', 'depot.repair',
-      'inspection.read', 'inspection.write', 'inspection.schedule',
-      'reviews.read', 'reviews.write', 'reviews.moderate',
-      'disputes.read', 'disputes.write', 'disputes.resolve',
-      'billing.read', 'billing.write'
+      'PM-001', 'PM-002', 'PM-003', // View, search listings, view seller profile
+      'PM-010', 'PM-011', 'PM-012', 'PM-013', 'PM-014', // All listing permissions
+      'PM-020', 'PM-021', 'PM-022', 'PM-023', 'PM-024', // RFQ permissions
+      'PM-030', 'PM-031', // Inspection permissions
+      'PM-040', 'PM-041', 'PM-042', 'PM-043', // Order permissions
+      'PM-050', // Reviews
+      'PM-060', 'PM-061', // Dispute permissions
+      'PM-070', 'PM-071', 'PM-072', 'PM-073', 'PM-074', // Admin permissions
+      'PM-080', 'PM-081', 'PM-082', 'PM-083', 'PM-084', 'PM-085', 'PM-086', // Depot permissions
+      'PM-090', 'PM-091', // Finance permissions
+      'PM-100', // Customer support
+      'PM-110', 'PM-111', 'PM-112', 'PM-113', 'PM-114', 'PM-115', 'PM-116', 'PM-117', 'PM-118', 'PM-119', 'PM-120', 'PM-121', 'PM-122', 'PM-123', 'PM-124', 'PM-125' // Config permissions
     ];
   }
-  
+
   if (roles.includes('depot_manager')) {
     return [
-      'dashboard.view',
-      'account.read', 'account.write',
-      'depot.read', 'depot.write', 'depot.inventory', 'depot.inspect', 'depot.repair',
-      'inspection.read', 'inspection.write',
-      'orders.read', 'delivery.read',
-      'billing.read', 'reviews.read', 'reviews.write'
+      'PM-001', 'PM-002', // View listings
+      'PM-030', 'PM-031', // Inspection permissions
+      'PM-040', 'PM-042', 'PM-043', // Order and delivery
+      'PM-050', // Reviews
+      'PM-080', 'PM-081', 'PM-082', 'PM-083', 'PM-084', 'PM-085', 'PM-086', // All depot permissions
+      'PM-090' // Finance reconcile
     ];
   }
-  
+
   if (roles.includes('depot_staff')) {
     return [
-      'dashboard.view',
-      'account.read', 'account.write',
-      'depot.read', 'depot.inventory', 'depot.inspect', 'depot.repair',
-      'delivery.read'
+      'PM-001', // View listings
+      'PM-042', // Delivery
+      'PM-080', 'PM-081', 'PM-082', 'PM-083', 'PM-084', 'PM-085', 'PM-086' // Depot permissions
     ];
   }
-  
+
   if (roles.includes('inspector')) {
     return [
-      'dashboard.view',
-      'account.read', 'account.write',
-      'inspection.read', 'inspection.write', 'inspection.schedule',
-      'depot.read'
+      'PM-001', // View listings
+      'PM-030', 'PM-031', // Inspection permissions
+      'PM-083' // View depot stock
     ];
   }
-  
+
   if (roles.includes('config_manager')) {
     return [
-      'dashboard.view',
-      'account.read', 'account.write',
-      'admin.settings'
+      'PM-001', // View listings
+      'PM-072', // Admin dashboard
+      'PM-110', 'PM-111', 'PM-112', 'PM-113', 'PM-114', 'PM-115', 'PM-116', 'PM-117', 'PM-118', 'PM-119', 'PM-120', 'PM-121', 'PM-122', 'PM-123', 'PM-124', 'PM-125' // All config permissions
     ];
   }
-  
+
   if (roles.includes('finance')) {
     return [
-      'dashboard.view',
-      'account.read', 'account.write',
-      'billing.read', 'billing.write',
-      'payments.view', 'payments.process', 'payments.escrow'
+      'PM-001', // View listings
+      'PM-040', 'PM-041', // Order and payment
+      'PM-072', // Admin dashboard
+      'PM-090', 'PM-091' // Finance permissions
     ];
   }
-  
+
   if (roles.includes('price_manager')) {
     return [
-      'dashboard.view',
-      'account.read', 'account.write',
-      'admin.settings',
-      'PM-001' // VIEW_PUBLIC_LISTINGS
+      'PM-001', 'PM-002', // View and search listings
+      'PM-072', 'PM-073', 'PM-074' // Admin dashboard and pricing
     ];
   }
-  
+
   if (roles.includes('customer_support')) {
     return [
-      'dashboard.view',
-      'account.read', 'account.write',
-      'disputes.read', 'disputes.resolve',
-      'orders.read', 'reviews.read'
+      'PM-001', 'PM-002', // View listings
+      'PM-040', // View orders
+      'PM-050', // Reviews
+      'PM-060', 'PM-061', // Dispute permissions
+      'PM-100' // CS manage tickets
     ];
   }
-  
+
   if (roles.includes('seller')) {
     return [
-      'dashboard.view',
-      'account.read', 'account.write',
-      'PM-001', 'PM-002', 'PM-010', 'PM-011', 'PM-012', 'PM-013', 'PM-014', // Seller listing permissions
-      'rfq.read', 'rfq.respond',
-      'orders.read',
-      'delivery.read',
-      'reviews.read', 'reviews.write',
-      'disputes.read',
-      'billing.read'
+      'PM-001', 'PM-002', 'PM-003', // View, search listings, view seller profile
+      'PM-010', 'PM-011', 'PM-012', 'PM-013', 'PM-014', // Seller listing permissions
+      'PM-020', 'PM-021', 'PM-022', 'PM-023', // RFQ, quotes, and Q&A management
+      'PM-040', 'PM-042', // Orders and delivery
+      'PM-050', // Reviews
+      'PM-060', // Disputes
+      'PM-090' // Billing
     ];
   }
-  
+
   // Default buyer permissions
   return [
-    'dashboard.view',
-    'account.read', 'account.write',
-    'PM-001', 'PM-002', // VIEW and SEARCH listings
-    'rfq.read', 'rfq.write',
-    'orders.read', 'orders.write',
-    'payments.view', 'payments.escrow',
-    'delivery.read',
-    'inspection.schedule',
-    'reviews.read', 'reviews.write',
-    'disputes.read', 'disputes.write'
+    'PM-001', 'PM-002', 'PM-003', // View and search listings
+    'PM-020', 'PM-022', // RFQ
+    'PM-030', // Request inspection
+    'PM-040', 'PM-041', 'PM-042', 'PM-043', // Orders, payment, delivery, receipt
+    'PM-050', // Reviews
+    'PM-060' // Disputes
   ];
 }
 
 // Helper function to check if user has permission
-function hasPermission(userPermissions: string[], userRoles: string[], requiredPermission: string): boolean {
-  // Check direct permission
-  if (userPermissions.includes(requiredPermission)) {
+function hasPermission(userPermissions: string[], userRoles: string[], requiredPermission: string | readonly string[]): boolean {
+  // Handle array of permissions (OR logic - user needs at least ONE)
+  if (Array.isArray(requiredPermission)) {
+    return requiredPermission.some(perm => hasPermission(userPermissions, userRoles, perm));
+  }
+
+  // Check direct permission (requiredPermission is string here)
+  if (userPermissions.includes(requiredPermission as string)) {
     return true;
   }
-  
+
   // Check role-based fallback
   const userLevel = Math.max(...userRoles.map(role => ROLE_HIERARCHY[role as keyof typeof ROLE_HIERARCHY] || 0));
-  
+
   // Admin can access everything
   if (userLevel >= ROLE_HIERARCHY.admin) {
     return true;
   }
-  
+
   // Special case: Allow buyers and above to view public listings
   if (requiredPermission === 'PM-001' && userLevel >= ROLE_HIERARCHY.buyer) {
     console.log('✅ Allowing PM-001 (VIEW_PUBLIC_LISTINGS) for authenticated user');
     return true;
   }
-  
+
   return false;
 }
 

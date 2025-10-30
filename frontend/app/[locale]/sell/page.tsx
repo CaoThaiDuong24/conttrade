@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter } from '@/i18n/routing';
 
 /**
  * Sell Index Page - Redirects to /sell/my-listings
@@ -11,7 +11,7 @@ export default function SellPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Redirect to my listings page as default
+    // Redirect to my listings page as default (using i18n router for locale support)
     router.replace('/sell/my-listings');
   }, [router]);
 

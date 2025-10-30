@@ -102,6 +102,7 @@ async function main() {
     { code: 'PM-040', name: 'CREATE_ORDER', description: 'Tạo đơn hàng', module: 'orders', action: 'create' },
     { code: 'PM-041', name: 'PAY_ESCROW', description: 'Thanh toán ký quỹ', module: 'payments', action: 'escrow' },
     { code: 'PM-042', name: 'REQUEST_DELIVERY', description: 'Yêu cầu vận chuyển', module: 'delivery', action: 'request' },
+    { code: 'PM-042B', name: 'VIEW_DELIVERY', description: 'Xem thông tin vận chuyển', module: 'delivery', action: 'view' },
     { code: 'PM-043', name: 'CONFIRM_RECEIPT', description: 'Xác nhận nhận hàng', module: 'orders', action: 'confirm' },
     
     // Review & Dispute Permissions (PM-050, PM-060, PM-061)
@@ -128,6 +129,7 @@ async function main() {
     // Finance Permissions (PM-090 to PM-091)
     { code: 'PM-090', name: 'FINANCE_RECONCILE', description: 'Đối soát/giải ngân', module: 'finance', action: 'reconcile' },
     { code: 'PM-091', name: 'FINANCE_INVOICE', description: 'Xuất hóa đơn', module: 'finance', action: 'invoice' },
+    { code: 'PM-091B', name: 'VIEW_SELLER_INVOICES', description: 'Xem hóa đơn/doanh thu seller', module: 'billing', action: 'view' },
     
     // Customer Support Permission (PM-100)
     { code: 'PM-100', name: 'CS_MANAGE_TICKETS', description: 'Xử lý yêu cầu hỗ trợ', module: 'support', action: 'manage' },
@@ -411,7 +413,7 @@ async function main() {
     depot_manager: ['PM-080', 'PM-081', 'PM-082', 'PM-083', 'PM-084', 'PM-085', 'PM-086', 'PM-001', 'PM-002'],
     inspector: ['PM-030', 'PM-031', 'PM-001', 'PM-002'],
     depot_staff: ['PM-083', 'PM-084', 'PM-001', 'PM-002'],
-    seller: ['PM-001', 'PM-002', 'PM-003', 'PM-010', 'PM-011', 'PM-012', 'PM-013', 'PM-014', 'PM-021', 'PM-022', 'PM-040', 'PM-050'],
+    seller: ['PM-001', 'PM-002', 'PM-003', 'PM-010', 'PM-011', 'PM-012', 'PM-013', 'PM-014', 'PM-020', 'PM-021', 'PM-022', 'PM-040', 'PM-042B', 'PM-050', 'PM-091B'],
     buyer: ['PM-001', 'PM-002', 'PM-003', 'PM-020', 'PM-022', 'PM-030', 'PM-040', 'PM-041', 'PM-042', 'PM-043', 'PM-050', 'PM-060']
   };
 
