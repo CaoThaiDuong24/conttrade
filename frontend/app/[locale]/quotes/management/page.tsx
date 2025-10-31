@@ -56,6 +56,7 @@ export default function QuotesManagementPage() {
   const t = useTranslations();
   const [quotes, setQuotes] = useState<Quote[]>([]);
   const [stats, setStats] = useState<QuoteStats | null>(null);
+  const [pagination, setPagination] = useState<{ total: number; total_pages: number } | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [sortBy, setSortBy] = useState<string>('created_at');
@@ -82,6 +83,7 @@ export default function QuotesManagementPage() {
 
       setQuotes(response.quotes);
       setStats(response.stats);
+      setPagination(response.pagination);
     } catch (error) {
       console.error('Error fetching quotes:', error);
       toast.error('Có lỗi khi tải danh sách báo giá');
@@ -90,12 +92,8 @@ export default function QuotesManagementPage() {
     }
   };
 
-  const filteredQuotes = quotes.filter(quote => {
-    const matchesSearch = quote.rfq_title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         quote.buyer_name.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || quote.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  // Không cần filter client-side vì API đã filter rồi
+  const displayQuotes = quotes;
 
   const getStatusBadge = (status: string) => {
     const config = {
@@ -349,11 +347,11 @@ export default function QuotesManagementPage() {
           <div>
             <CardTitle>Danh sách báo giá</CardTitle>
             <CardDescription>
-              {isLoading ? 'Đang tải...' : `${filteredQuotes.length} báo giá được tìm thấy`}
+              {isLoading ? 'Đang tải...' : pagination ? `${pagination.total} báo giá được tìm thấy` : `${displayQuotes.length} báo giá được tìm thấy`}
             </CardDescription>
           </div>
           
-          {filteredQuotes.length > 0 && (
+          {displayQuotes.length > 0 && (
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <span>Sắp xếp theo:</span>
               <Select value={sortBy} onValueChange={setSortBy}>
@@ -383,7 +381,7 @@ export default function QuotesManagementPage() {
             <div className="flex justify-center py-8">
               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
             </div>
-          ) : filteredQuotes.length === 0 ? (
+          ) : displayQuotes.length === 0 ? (
             <div className="text-center py-12">
               <FileText className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <h3 className="text-lg font-medium text-gray-900 dark:text-gray-100 mb-2">
@@ -472,7 +470,7 @@ export default function QuotesManagementPage() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {filteredQuotes.map((quote) => (
+                    {displayQuotes.map((quote) => (
                       <TableRow key={quote.id} className="hover:bg-muted/50">
                         <TableCell>
                           <div>
@@ -582,10 +580,10 @@ export default function QuotesManagementPage() {
               </div>
 
               {/* Pagination */}
-              {filteredQuotes.length >= itemsPerPage && (
+              {pagination && pagination.total_pages > 1 && (
                 <div className="flex items-center justify-between px-2 py-4">
                   <div className="text-sm text-muted-foreground">
-                    Hiển thị {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, filteredQuotes.length)} trong tổng số {filteredQuotes.length} báo giá
+                    Hiển thị {((currentPage - 1) * itemsPerPage) + 1} - {Math.min(currentPage * itemsPerPage, pagination?.total || 0)} trong tổng số {pagination?.total || 0} báo giá
                   </div>
                   <div className="flex items-center space-x-2">
                     <Button
@@ -598,24 +596,34 @@ export default function QuotesManagementPage() {
                       Trước
                     </Button>
                     <div className="flex items-center gap-1">
-                      {Array.from({ length: Math.ceil(filteredQuotes.length / itemsPerPage) }, (_, i) => i + 1)
-                        .slice(Math.max(0, currentPage - 3), currentPage + 2)
-                        .map((page) => (
+                      {pagination && Array.from({ length: Math.min(pagination.total_pages, 7) }, (_, i) => {
+                        const pageNum = i + 1;
+                        const totalPages = pagination.total_pages;
+                        if (totalPages <= 7) return pageNum;
+                        if (pageNum <= 2 || pageNum > totalPages - 2 || Math.abs(pageNum - currentPage) <= 1) return pageNum;
+                        if (pageNum === 3 && currentPage > 4) return '...';
+                        if (pageNum === totalPages - 2 && currentPage < totalPages - 3) return '...';
+                        return null;
+                      }).filter(Boolean).map((page, idx) => (
+                        page === '...' ? (
+                          <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">...</span>
+                        ) : (
                           <Button
                             key={page}
                             variant={page === currentPage ? "default" : "outline"}
                             size="sm"
-                            onClick={() => setCurrentPage(page)}
+                            onClick={() => setCurrentPage(page as number)}
                           >
                             {page}
                           </Button>
-                        ))}
+                        )
+                      ))}
                     </div>
                     <Button
                       variant="outline"
                       size="sm"
                       onClick={() => setCurrentPage(prev => prev + 1)}
-                      disabled={currentPage >= Math.ceil(filteredQuotes.length / itemsPerPage)}
+                      disabled={!pagination || currentPage >= pagination.total_pages}
                     >
                       Sau
                       <ChevronRight className="h-4 w-4" />

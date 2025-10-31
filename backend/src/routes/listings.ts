@@ -2,6 +2,7 @@
 import { FastifyInstance } from 'fastify';
 import { randomUUID } from 'crypto';
 import prisma from '../lib/prisma.js';
+import { Prisma } from '@prisma/client';
 import MasterDataService from '../lib/master-data.js';
 import { isValidListingStatus } from '../lib/listing-status-validation.js';
 
@@ -61,7 +62,7 @@ export default async function listingRoutes(fastify: FastifyInstance) {
   }, async (request, reply) => {
     try {
       console.log('=== CREATE LISTING DEBUG ===');
-      console.log('Request body:', request.body);
+      console.log('Request body:', JSON.stringify(request.body, null, 2));
       console.log('User from JWT:', request.user);
       
       const {
@@ -94,6 +95,19 @@ export default async function listingRoutes(fastify: FastifyInstance) {
       const userId = (request.user as any).userId;
       console.log('User ID:', userId);
       console.log('Rental Unit:', rentalUnit);
+      console.log('=== RECEIVED DATA ===');
+      console.log('Deal Type:', dealType);
+      console.log('Quantity fields:', {
+        totalQuantity,
+        availableQuantity,
+        maintenanceQuantity,
+        types: {
+          totalQuantity: typeof totalQuantity,
+          availableQuantity: typeof availableQuantity,
+          maintenanceQuantity: typeof maintenanceQuantity
+        }
+      });
+      console.log('=====================');
 
       // Validate required fields
       if (!dealType || !priceAmount || !title || !locationDepotId) {
@@ -103,42 +117,51 @@ export default async function listingRoutes(fastify: FastifyInstance) {
         });
       }
 
-      // ✅ NEW: Validate rental management fields for RENTAL/LEASE
+      // ✅ Validate quantity fields (REQUIRED for all deal types)
+      const total = totalQuantity !== undefined && totalQuantity !== null ? Number(totalQuantity) : 1;
+      const available = availableQuantity !== undefined && availableQuantity !== null ? Number(availableQuantity) : 1;
+      const maintenance = maintenanceQuantity !== undefined && maintenanceQuantity !== null ? Number(maintenanceQuantity) : 0;
+      const rented = 0; // Always 0 for new listings
+      const reserved = 0; // Always 0 for new listings
+
+      // Basic quantity validations
+      if (isNaN(total) || total < 1) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Total quantity must be a valid number and at least 1'
+        });
+      }
+
+      if (isNaN(available) || available < 0) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Available quantity must be a valid number and cannot be negative'
+        });
+      }
+
+      if (isNaN(maintenance) || maintenance < 0) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Maintenance quantity must be a valid number and cannot be negative'
+        });
+      }
+
+      if (available > total) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Available quantity cannot exceed total quantity'
+        });
+      }
+
+      if (available + maintenance + rented + reserved !== total) {
+        return reply.status(400).send({
+          success: false,
+          message: `Quantity allocation mismatch: available(${available}) + maintenance(${maintenance}) + rented(${rented}) + reserved(${reserved}) must equal total(${total})`
+        });
+      }
+
+      // ✅ Additional validations specific to RENTAL/LEASE
       if (dealType === 'RENTAL' || dealType === 'LEASE') {
-        // Validate quantity fields
-        const total = totalQuantity || 1;
-        const available = availableQuantity !== undefined ? availableQuantity : 1;
-        const maintenance = maintenanceQuantity || 0;
-        const rented = 0; // Always 0 for new listings
-        const reserved = 0; // Always 0 for new listings
-
-        if (total < 1) {
-          return reply.status(400).send({
-            success: false,
-            message: 'Total quantity must be at least 1'
-          });
-        }
-
-        if (available < 0) {
-          return reply.status(400).send({
-            success: false,
-            message: 'Available quantity cannot be negative'
-          });
-        }
-
-        if (available > total) {
-          return reply.status(400).send({
-            success: false,
-            message: 'Available quantity cannot exceed total quantity'
-          });
-        }
-
-        if (available + maintenance + rented + reserved !== total) {
-          return reply.status(400).send({
-            success: false,
-            message: `Quantity allocation mismatch: available(${available}) + maintenance(${maintenance}) + rented(${rented}) + reserved(${reserved}) must equal total(${total})`
-          });
-        }
 
         // Validate duration constraints
         if (minRentalDuration && minRentalDuration < 1) {
@@ -211,41 +234,69 @@ export default async function listingRoutes(fastify: FastifyInstance) {
       }
 
       // Create listing
-      const listing = await prisma.listings.create({
-        data: {
-          id: randomUUID(),
-          seller_user_id: userId,
-          deal_type: dealType,
-          price_currency: currency,
-          price_amount: Number(priceAmount),
-          rental_unit: rentalUnit || null,  // Save rental_unit if provided
-          title: title,
-          description: description || null,
-          location_depot_id: locationDepotId,
-          status: 'PENDING_REVIEW',
-          updated_at: new Date(),
-          
-          // ✅ NEW: Rental management fields
-          total_quantity: totalQuantity || 1,
-          available_quantity: availableQuantity !== undefined ? availableQuantity : 1,
-          rented_quantity: 0,
-          reserved_quantity: 0,
-          maintenance_quantity: maintenanceQuantity || 0,
-          min_rental_duration: minRentalDuration || null,
-          max_rental_duration: maxRentalDuration || null,
-          deposit_required: depositRequired || false,
-          deposit_amount: depositAmount ? Number(depositAmount) : null,
-          deposit_currency: depositCurrency || null,
-          late_return_fee_amount: lateReturnFeeAmount ? Number(lateReturnFeeAmount) : null,
-          late_return_fee_unit: lateReturnFeeUnit || null,
-          earliest_available_date: earliestAvailableDate ? new Date(earliestAvailableDate) : null,
-          latest_return_date: latestReturnDate ? new Date(latestReturnDate) : null,
-          auto_renewal_enabled: autoRenewalEnabled || false,
-          renewal_notice_days: renewalNoticeDays || 7,
-          renewal_price_adjustment: renewalPriceAdjustment ? Number(renewalPriceAdjustment) : 0.00,
-          total_rental_count: 0
-        }
+      console.log('=== ABOUT TO CREATE LISTING ===');
+      console.log('Data for Prisma:', {
+        seller_user_id: userId,
+        deal_type: dealType,
+        price_currency: currency,
+        price_amount: Number(priceAmount),
+        rental_unit: rentalUnit || null,
+        title: title,
+        total_quantity: total,
+        available_quantity: available,
+        maintenance_quantity: maintenance,
+        deposit_required: depositRequired || false,
+        deposit_amount: depositAmount ? Number(depositAmount) : null,
       });
+      
+      let listing;
+      try {
+        listing = await prisma.listings.create({
+          data: {
+            id: randomUUID(),
+            seller_user_id: userId,
+            deal_type: dealType,
+            price_currency: currency,
+            price_amount: new Prisma.Decimal(Number(priceAmount)),
+            rental_unit: rentalUnit || null,  // Save rental_unit if provided
+            title: title,
+            description: description || null,
+            location_depot_id: locationDepotId,
+            status: 'PENDING_REVIEW',
+            updated_at: new Date(),
+            
+            // ✅ Rental management fields (using validated values)
+            total_quantity: total,
+            available_quantity: available,
+            rented_quantity: rented,
+            reserved_quantity: reserved,
+            maintenance_quantity: maintenance,
+            min_rental_duration: minRentalDuration && Number(minRentalDuration) > 0 ? Number(minRentalDuration) : null,
+            max_rental_duration: maxRentalDuration && Number(maxRentalDuration) > 0 ? Number(maxRentalDuration) : null,
+            deposit_required: depositRequired || false,
+            deposit_amount: depositAmount ? new Prisma.Decimal(Number(depositAmount)) : null,
+            deposit_currency: depositCurrency || null,
+            late_return_fee_amount: lateReturnFeeAmount ? new Prisma.Decimal(Number(lateReturnFeeAmount)) : null,
+            late_return_fee_unit: lateReturnFeeUnit || null,
+            earliest_available_date: earliestAvailableDate ? new Date(earliestAvailableDate) : null,
+            latest_return_date: latestReturnDate ? new Date(latestReturnDate) : null,
+            auto_renewal_enabled: autoRenewalEnabled || false,
+            renewal_notice_days: renewalNoticeDays ? Number(renewalNoticeDays) : 7,
+            renewal_price_adjustment: renewalPriceAdjustment && Number(renewalPriceAdjustment) !== 0 ? new Prisma.Decimal(Number(renewalPriceAdjustment)) : new Prisma.Decimal(0),
+            total_rental_count: 0
+          }
+        });
+        console.log('=== LISTING CREATED SUCCESSFULLY ===');
+        console.log('Listing ID:', listing.id);
+      } catch (prismaError: any) {
+        console.error('=== PRISMA CREATE ERROR ===');
+        console.error('Error name:', prismaError.name);
+        console.error('Error message:', prismaError.message);
+        console.error('Error code:', prismaError.code);
+        console.error('Error meta:', JSON.stringify(prismaError.meta, null, 2));
+        console.error('Full error:', prismaError);
+        throw prismaError; // Re-throw để catch bên ngoài xử lý
+      }
 
       // Create facets if provided
       if (facets && Object.keys(facets).length > 0) {
@@ -265,15 +316,38 @@ export default async function listingRoutes(fastify: FastifyInstance) {
       });
     } catch (error: any) {
       console.error('=== CREATE LISTING ERROR ===');
-      console.error('Error details:', error);
+      console.error('Error name:', error.name);
       console.error('Error message:', error.message);
       console.error('Error stack:', error.stack);
       
+      // Log Prisma-specific errors with more details
+      if (error.code) {
+        console.error('Prisma error code:', error.code);
+      }
+      if (error.meta) {
+        console.error('Prisma meta:', JSON.stringify(error.meta, null, 2));
+      }
+      if (error.clientVersion) {
+        console.error('Prisma client version:', error.clientVersion);
+      }
+      
+      // Log the full error object
+      console.error('Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+      
       fastify.log.error('Create listing error:', error);
+      
+      // Return more detailed error message
+      let errorMessage = 'Lỗi hệ thống';
+      if (error.message) {
+        errorMessage = error.message;
+      }
+      
       return reply.status(500).send({ 
         success: false, 
-        message: 'Lỗi hệ thống',
-        error: error.message 
+        message: errorMessage,
+        error: error.message,
+        code: error.code || undefined,
+        details: error.meta || undefined
       });
     }
   });

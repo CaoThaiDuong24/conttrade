@@ -22,7 +22,9 @@ import {
   Eye,
   TrendingUp,
   PackageCheck,
-  PackageX
+  PackageX,
+  ChevronLeft,
+  ChevronRight
 } from "lucide-react";
 import { Link } from "@/i18n/routing";
 
@@ -66,6 +68,8 @@ export default function DeliveryPage() {
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
   const [stats, setStats] = useState<DeliveryStats>({
     total: 0,
     preparing: 0,
@@ -159,6 +163,16 @@ export default function DeliveryPage() {
 
     setFilteredDeliveries(filtered);
   };
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredDeliveries.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedDeliveries = filteredDeliveries.slice(startIndex, endIndex);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchQuery, activeTab]);
 
   const getStatusBadge = (status: string) => {
     const statusConfig: Record<string, { label: string; variant: any; icon: any }> = {
@@ -352,7 +366,7 @@ export default function DeliveryPage() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredDeliveries.map((delivery, index) => (
+                      {paginatedDeliveries.map((delivery, index) => (
                         <TableRow 
                           key={delivery.id} 
                           className={`hover:bg-teal-50 transition-colors ${index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}`}
@@ -409,6 +423,61 @@ export default function DeliveryPage() {
                       ))}
                     </TableBody>
                   </Table>
+
+                  {/* Pagination */}
+                  {filteredDeliveries.length > 0 && totalPages > 1 && (
+                    <div className="flex items-center justify-between px-4 py-4 border-t">
+                      <div className="text-sm text-muted-foreground">
+                        Hiển thị {startIndex + 1}-{Math.min(endIndex, filteredDeliveries.length)} trong tổng số {filteredDeliveries.length} đơn vận chuyển
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                          disabled={currentPage === 1}
+                        >
+                          <ChevronLeft className="h-4 w-4" />
+                          Trước
+                        </Button>
+                        
+                        <div className="flex items-center gap-1">
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                            if (
+                              page === 1 ||
+                              page === totalPages ||
+                              (page >= currentPage - 1 && page <= currentPage + 1)
+                            ) {
+                              return (
+                                <Button
+                                  key={page}
+                                  variant={currentPage === page ? "default" : "outline"}
+                                  size="sm"
+                                  onClick={() => setCurrentPage(page)}
+                                  className="w-9"
+                                >
+                                  {page}
+                                </Button>
+                              );
+                            } else if (page === currentPage - 2 || page === currentPage + 2) {
+                              return <span key={page} className="px-1">...</span>;
+                            }
+                            return null;
+                          })}
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                          disabled={currentPage === totalPages}
+                        >
+                          Sau
+                          <ChevronRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <Card className="border-2 border-dashed border-gray-300">

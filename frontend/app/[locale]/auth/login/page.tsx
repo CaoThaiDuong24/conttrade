@@ -2,6 +2,7 @@
 
 import { useTranslations } from 'next-intl';
 import { Link, useRouter } from "@/i18n/routing";
+import { useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,6 +20,7 @@ import { SimpleTourTest } from '@/components/tour/simple-tour-test';
 export default function LoginPage() {
   const t = useTranslations();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { login } = useAuth();
   const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -48,8 +50,16 @@ export default function LoginPage() {
       if (success) {
         showSuccess(t('auth.loginSuccess'), 2000);
         
+        // Get redirect URL from query params or default to dashboard
+        const redirectUrl = searchParams.get('redirect') || '/dashboard';
+        
+        // Use window.location for LAN access to ensure proper redirect
         setTimeout(() => {
-          router.push('/dashboard');
+          // Decode the URL if it's encoded (e.g., %2Fvi%2Fdashboard -> /vi/dashboard)
+          const decodedUrl = decodeURIComponent(redirectUrl);
+          
+          // Use window.location.href for absolute redirect (works with LAN IP)
+          window.location.href = decodedUrl;
         }, 1000);
       } else {
         showError(t('auth.loginError'), 3000);

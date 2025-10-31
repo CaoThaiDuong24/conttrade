@@ -1,1 +1,0 @@
-﻿ALTER TABLE orders ADD COLUMN IF NOT EXISTS ready_date TIMESTAMP;

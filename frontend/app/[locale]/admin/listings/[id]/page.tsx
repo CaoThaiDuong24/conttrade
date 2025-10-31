@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect } from 'react';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams } from 'next/navigation';
+import { useRouter } from '@/i18n/routing';
 import { toast } from 'sonner';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -28,6 +29,10 @@ import {
   Star
 } from 'lucide-react';
 import { getDealTypeDisplayName } from '@/lib/utils/dealType';
+import { getConditionLabel } from '@/lib/utils/condition';
+import { getSizeLabel } from '@/lib/utils/containerSize';
+import { getTypeLabel } from '@/lib/utils/containerType';
+import { getStandardLabel } from '@/lib/utils/qualityStandard';
 
 interface Listing {
   id: string;
@@ -49,6 +54,21 @@ interface Listing {
   updatedAt: string;
   rejectionReason?: string;
   images?: string[];
+  // Rental specific fields
+  rentalUnit?: string;
+  minRentalDuration?: number;
+  maxRentalDuration?: number;
+  depositRequired?: boolean;
+  depositAmount?: number;
+  depositCurrency?: string;
+  lateReturnFeeAmount?: number;
+  lateReturnFeeUnit?: string;
+  earliestAvailableDate?: string;
+  latestReturnDate?: string;
+  autoRenewalEnabled?: boolean;
+  totalQuantity?: number;
+  availableQuantity?: number;
+  rentedQuantity?: number;
 }
 
 export default function AdminListingDetailPage() {
@@ -68,9 +88,13 @@ export default function AdminListingDetailPage() {
       try {
         setIsLoading(true);
         const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
-        const response = await fetch(`${apiUrl}/api/v1/admin/listings/${listingId}`, {
+        const url = `${apiUrl}/api/v1/admin/listings/${listingId}`;
+        
+        const token = localStorage.getItem('accessToken');
+        
+        const response = await fetch(url, {
           headers: {
-            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+            'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
           }
         });
@@ -105,18 +129,35 @@ export default function AdminListingDetailPage() {
             createdAt: new Date(listingData.created_at).toLocaleDateString('vi-VN'),
             updatedAt: new Date(listingData.updated_at).toLocaleDateString('vi-VN'),
             rejectionReason: listingData.rejection_reason || '',
-            images: listingData.listing_media?.map((m: any) => m.media_url) || []
+            images: listingData.listing_media?.map((m: any) => m.media_url) || [],
+            // Rental specific fields
+            rentalUnit: listingData.rental_unit || undefined,
+            minRentalDuration: listingData.min_rental_duration || undefined,
+            maxRentalDuration: listingData.max_rental_duration || undefined,
+            depositRequired: listingData.deposit_required || false,
+            depositAmount: listingData.deposit_amount ? parseFloat(listingData.deposit_amount) : undefined,
+            depositCurrency: listingData.deposit_currency || undefined,
+            lateReturnFeeAmount: listingData.late_return_fee_amount ? parseFloat(listingData.late_return_fee_amount) : undefined,
+            lateReturnFeeUnit: listingData.late_return_fee_unit || undefined,
+            earliestAvailableDate: listingData.earliest_available_date ? new Date(listingData.earliest_available_date).toLocaleDateString('vi-VN') : undefined,
+            latestReturnDate: listingData.latest_return_date ? new Date(listingData.latest_return_date).toLocaleDateString('vi-VN') : undefined,
+            autoRenewalEnabled: listingData.auto_renewal_enabled || false,
+            totalQuantity: listingData.total_quantity || undefined,
+            availableQuantity: listingData.available_quantity || undefined,
+            rentedQuantity: listingData.rented_quantity || undefined
           };
           
           setListing(mappedListing);
         } else {
+          const errorData = await response.text();
+          console.error('Error response:', response.status, errorData);
           toast.error('Lỗi tải dữ liệu', {
             description: 'Không thể tải thông tin tin đăng.'
           });
           router.push('/admin/listings');
         }
       } catch (error) {
-        console.error('Error fetching listing detail:', error);
+        console.error('❌ Error fetching listing detail:', error);
         toast.error('Lỗi kết nối', {
           description: 'Không thể kết nối đến máy chủ.'
         });
@@ -452,7 +493,9 @@ export default function AdminListingDetailPage() {
                       <Ruler className="h-3 w-3" />
                       Kích thước
                     </Label>
-                    <div className="text-lg font-bold text-purple-900">{listing.size || 'N/A'}</div>
+                    <div className="text-lg font-bold text-purple-900">
+                      {listing.size ? getSizeLabel(listing.size.replace('ft', '')) : 'Chưa có thông tin'}
+                    </div>
                   </div>
                   
                   <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
@@ -460,7 +503,9 @@ export default function AdminListingDetailPage() {
                       <Package className="h-3 w-3" />
                       Loại
                     </Label>
-                    <div className="text-sm font-bold text-indigo-900">{listing.containerType?.toUpperCase() || 'N/A'}</div>
+                    <div className="text-sm font-bold text-indigo-900">
+                      {listing.containerType ? getTypeLabel(listing.containerType) : 'Chưa có thông tin'}
+                    </div>
                   </div>
                   
                   <div className="bg-cyan-50 p-4 rounded-lg border border-cyan-200">
@@ -469,7 +514,7 @@ export default function AdminListingDetailPage() {
                       Tình trạng
                     </Label>
                     <div className="text-sm font-bold text-cyan-900">
-                      {listing.condition === 'used' ? 'Đã qua SD' : listing.condition === 'new' ? 'Mới' : listing.condition || 'N/A'}
+                      {listing.condition ? getConditionLabel(listing.condition) : 'Chưa có thông tin'}
                     </div>
                   </div>
                   
@@ -478,11 +523,173 @@ export default function AdminListingDetailPage() {
                       <Shield className="h-3 w-3" />
                       Tiêu chuẩn
                     </Label>
-                    <div className="text-sm font-bold text-teal-900">{listing.standard || 'N/A'}</div>
+                    <div className="text-sm font-bold text-teal-900">
+                      {listing.standard ? getStandardLabel(listing.standard) : 'Chưa có thông tin'}
+                    </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
+
+            {/* Rental Information - Show only for RENTAL deals */}
+            {listing.dealType.toUpperCase() === 'RENTAL' && (
+              <Card className="shadow-sm border border-l-4 border-l-amber-500">
+                <CardHeader className="border-b bg-amber-50">
+                  <CardTitle className="flex items-center gap-2 text-xl text-amber-800">
+                    <Calendar className="h-5 w-5" />
+                    Thông tin thuê
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="pt-6 space-y-6">
+                  {/* Rental Duration & Unit */}
+                  <div className="grid grid-cols-3 gap-4">
+                    <div className="bg-blue-50 p-4 rounded-lg border border-blue-200">
+                      <Label className="text-blue-700 font-bold text-xs mb-2 block">Đơn vị thuê</Label>
+                      <div className="text-lg font-bold text-blue-900">
+                        {listing.rentalUnit?.toLowerCase() === 'day' ? 'Ngày' : 
+                         listing.rentalUnit?.toLowerCase() === 'week' ? 'Tuần' : 
+                         listing.rentalUnit?.toLowerCase() === 'month' ? 'Tháng' :
+                         listing.rentalUnit?.toLowerCase() === 'year' ? 'Năm' : 
+                         listing.rentalUnit || 'Chưa có thông tin'}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-indigo-50 p-4 rounded-lg border border-indigo-200">
+                      <Label className="text-indigo-700 font-bold text-xs mb-2 block">Thời gian tối thiểu</Label>
+                      <div className="text-lg font-bold text-indigo-900">
+                        {listing.minRentalDuration ? `${listing.minRentalDuration} ${listing.rentalUnit === 'day' ? 'ngày' : listing.rentalUnit === 'week' ? 'tuần' : listing.rentalUnit === 'month' ? 'tháng' : listing.rentalUnit === 'year' ? 'năm' : ''}` : 'Chưa có thông tin'}
+                      </div>
+                    </div>
+                    
+                    <div className="bg-purple-50 p-4 rounded-lg border border-purple-200">
+                      <Label className="text-purple-700 font-bold text-xs mb-2 block">Thời gian tối đa</Label>
+                      <div className="text-lg font-bold text-purple-900">
+                        {listing.maxRentalDuration ? `${listing.maxRentalDuration} ${listing.rentalUnit === 'day' ? 'ngày' : listing.rentalUnit === 'week' ? 'tuần' : listing.rentalUnit === 'month' ? 'tháng' : listing.rentalUnit === 'year' ? 'năm' : ''}` : 'Không giới hạn'}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Quantity Information */}
+                  {(listing.totalQuantity || listing.availableQuantity || listing.rentedQuantity) && (
+                    <div className="grid grid-cols-3 gap-4">
+                      <div className="bg-slate-50 p-4 rounded-lg border border-slate-200">
+                        <Label className="text-slate-700 font-bold text-xs mb-2 block">Tổng số lượng</Label>
+                        <div className="text-lg font-bold text-slate-900">{listing.totalQuantity || 0} container</div>
+                      </div>
+                      
+                      <div className="bg-green-50 p-4 rounded-lg border border-green-200">
+                        <Label className="text-green-700 font-bold text-xs mb-2 block">Có sẵn</Label>
+                        <div className="text-lg font-bold text-green-900">{listing.availableQuantity || 0} container</div>
+                      </div>
+                      
+                      <div className="bg-orange-50 p-4 rounded-lg border border-orange-200">
+                        <Label className="text-orange-700 font-bold text-xs mb-2 block">Đã thuê</Label>
+                        <div className="text-lg font-bold text-orange-900">{listing.rentedQuantity || 0} container</div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Deposit Information */}
+                  <div className="bg-gradient-to-r from-yellow-50 to-amber-50 p-5 rounded-xl border-2 border-amber-200">
+                    <h4 className="font-bold text-amber-900 mb-3 flex items-center gap-2">
+                      <DollarSign className="h-5 w-5" />
+                      Thông tin đặt cọc
+                    </h4>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <Label className="text-amber-700 font-semibold text-sm mb-1 block">Yêu cầu đặt cọc</Label>
+                        <div className="text-lg font-bold text-amber-900">
+                          {listing.depositRequired ? '✅ Có' : '❌ Không'}
+                        </div>
+                      </div>
+                      
+                      {listing.depositRequired && listing.depositAmount && (
+                        <div>
+                          <Label className="text-amber-700 font-semibold text-sm mb-1 block">Số tiền đặt cọc</Label>
+                          <div className="text-xl font-bold text-amber-900">
+                            {new Intl.NumberFormat('vi-VN').format(listing.depositAmount)} {listing.depositCurrency || listing.currency}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Late Fee Information */}
+                  {listing.lateReturnFeeAmount && (
+                    <div className="bg-red-50 p-5 rounded-xl border-2 border-red-200">
+                      <h4 className="font-bold text-red-900 mb-3 flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5" />
+                        Phí trả muộn
+                      </h4>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-red-700 font-semibold text-sm mb-1 block">Số tiền</Label>
+                          <div className="text-xl font-bold text-red-900">
+                            {new Intl.NumberFormat('vi-VN').format(listing.lateReturnFeeAmount)} {listing.currency}
+                          </div>
+                        </div>
+                        
+                        {listing.lateReturnFeeUnit && (
+                          <div>
+                            <Label className="text-red-700 font-semibold text-sm mb-1 block">Đơn vị tính</Label>
+                            <div className="text-lg font-bold text-red-900">
+                              {listing.lateReturnFeeUnit.toLowerCase().replace('_', ' ') === 'per day' ? 'Trên mỗi ngày' : 
+                               listing.lateReturnFeeUnit.toLowerCase().replace('_', ' ') === 'per hour' ? 'Trên mỗi giờ' : 
+                               listing.lateReturnFeeUnit.toLowerCase().replace('_', ' ') === 'per week' ? 'Trên mỗi tuần' : 
+                               listing.lateReturnFeeUnit.toLowerCase().replace('_', ' ') === 'per month' ? 'Trên mỗi tháng' : 
+                               listing.lateReturnFeeUnit}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Availability Dates */}
+                  {(listing.earliestAvailableDate || listing.latestReturnDate) && (
+                    <div className="grid grid-cols-2 gap-4">
+                      {listing.earliestAvailableDate && (
+                        <div className="bg-teal-50 p-4 rounded-lg border border-teal-200">
+                          <Label className="text-teal-700 font-bold text-xs mb-2 block flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            Ngày sớm nhất có thể thuê
+                          </Label>
+                          <div className="text-base font-bold text-teal-900">{listing.earliestAvailableDate}</div>
+                        </div>
+                      )}
+                      
+                      {listing.latestReturnDate && (
+                        <div className="bg-rose-50 p-4 rounded-lg border border-rose-200">
+                          <Label className="text-rose-700 font-bold text-xs mb-2 block flex items-center gap-1">
+                            <Calendar className="h-3 w-3" />
+                            Ngày trả muộn nhất
+                          </Label>
+                          <div className="text-base font-bold text-rose-900">{listing.latestReturnDate}</div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* Auto Renewal */}
+                  {listing.autoRenewalEnabled !== undefined && (
+                    <div className="bg-cyan-50 p-4 rounded-lg border border-cyan-200 flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="h-10 w-10 bg-cyan-100 rounded-full flex items-center justify-center">
+                          <Clock className="h-5 w-5 text-cyan-600" />
+                        </div>
+                        <div>
+                          <Label className="text-cyan-700 font-bold text-sm block">Tự động gia hạn</Label>
+                          <p className="text-xs text-cyan-600">Cho phép thuê tiếp theo sau khi hết hạn</p>
+                        </div>
+                      </div>
+                      <div className="text-xl font-bold text-cyan-900">
+                        {listing.autoRenewalEnabled ? '✅ Bật' : '❌ Tắt'}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
 
             {/* Rejection Reason */}
             {listing.status === 'rejected' && listing.rejectionReason && (
@@ -574,7 +781,7 @@ export default function AdminListingDetailPage() {
                 <div className="space-y-3">
                   <div className="bg-emerald-50 p-4 rounded-lg border border-emerald-200">
                     <Label className="text-emerald-700 font-bold text-sm mb-2 block">Depot</Label>
-                    <p className="text-slate-900 font-semibold">{listing.depot || 'N/A'}</p>
+                    <p className="text-slate-900 font-semibold">{listing.depot && listing.depot !== 'N/A' ? listing.depot : 'Chưa có thông tin'}</p>
                   </div>
                   
                   {listing.depotProvince && (

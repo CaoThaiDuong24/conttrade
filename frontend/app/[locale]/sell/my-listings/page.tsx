@@ -39,7 +39,7 @@ export default function MyListingsPage() {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [listingToDelete, setListingToDelete] = useState<string | null>(null);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
-  const itemsPerPage = 5;
+  const itemsPerPage = 20; // Tăng từ 5 lên 20 để hiển thị nhiều hơn
 
   useEffect(() => {
     let ignore = false;
@@ -56,7 +56,8 @@ export default function MyListingsPage() {
           return;
         }
         
-        const response = await fetch('http://localhost:3006/api/v1/listings/my', {
+        // Fetch với limit=999999 để lấy tất cả listings không giới hạn
+        const response = await fetch('http://localhost:3006/api/v1/listings/my?limit=999999', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -66,6 +67,7 @@ export default function MyListingsPage() {
         if (response.ok) {
           const data = await response.json();
           console.log('My listings response:', data);
+          console.log('Total listings fetched:', data.data?.listings?.length || 0);
           
           if (!ignore && data.data) {
             setListings(data.data.listings || []);

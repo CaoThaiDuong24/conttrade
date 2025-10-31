@@ -547,6 +547,19 @@ export default function NewListingPage() {
       errors.push('Depot đã chọn không còn chỗ trống, vui lòng chọn depot khác');
     }
     if (isRentalType(dealType) && !rentalUnit) errors.push('Vui lòng chọn đơn vị thời gian thuê');
+    
+    // Validate rental management fields for RENTAL/LEASE
+    if (isRentalType(dealType)) {
+      if (depositRequired) {
+        if (depositAmount === '' || !depositAmount || Number(depositAmount) <= 0) {
+          errors.push('Số tiền đặt cọc phải lớn hơn 0 khi bật yêu cầu đặt cọc');
+        }
+        if (!depositCurrency) {
+          errors.push('Vui lòng chọn đơn vị tiền tệ cho tiền đặt cọc');
+        }
+      }
+    }
+    
     if (uploadedImages.length === 0 && !uploadedVideo) errors.push('Vui lòng upload ít nhất 1 ảnh hoặc 1 video container');
     
     // Title validation (if provided)
@@ -619,9 +632,9 @@ export default function NewListingPage() {
         title: autoTitle,
         description: autoDescription,
         locationDepotId: depotId,
-        priceAmount: priceAmount as number,
+        priceAmount: Number(priceAmount),
         priceCurrency: priceCurrency,
-        rentalUnit: dealType === 'RENTAL' || dealType === 'LEASE' ? rentalUnit : undefined,
+        rentalUnit: isRentalType(dealType) ? rentalUnit : undefined,
         facets: {
           size: size,         // Use simple 'size' key for consistency
           type: ctype,
@@ -629,28 +642,45 @@ export default function NewListingPage() {
           condition
         },
         
-        // ✅ NEW: Rental management fields (chỉ gửi khi là RENTAL/LEASE)
+        // ✅ ALWAYS send quantity fields (required by Prisma schema as non-nullable Int)
+        // For SALE: use default values (1 container available)
+        // For RENTAL/LEASE: use user-provided values from the rental management form
+        totalQuantity: Number(isRentalType(dealType) ? totalQuantity : 1),
+        availableQuantity: Number(isRentalType(dealType) ? availableQuantity : 1),
+        maintenanceQuantity: Number(isRentalType(dealType) ? maintenanceQuantity : 0),
+        
+        // ✅ Rental-specific fields (only for RENTAL/LEASE)
         ...(isRentalType(dealType) && {
-          totalQuantity,
-          availableQuantity,
-          maintenanceQuantity,
-          minRentalDuration: minRentalDuration || undefined,
-          maxRentalDuration: maxRentalDuration || undefined,
+          minRentalDuration: minRentalDuration && Number(minRentalDuration) > 0 ? Number(minRentalDuration) : undefined,
+          maxRentalDuration: maxRentalDuration && Number(maxRentalDuration) > 0 ? Number(maxRentalDuration) : undefined,
           depositRequired,
-          depositAmount: depositAmount || undefined,
-          depositCurrency: depositCurrency || undefined,
-          lateReturnFeeAmount: lateReturnFeeAmount || undefined,
-          lateReturnFeeUnit: lateReturnFeeUnit || undefined,
+          // Only send deposit info if depositRequired is true
+          ...(depositRequired && {
+            depositAmount: depositAmount && Number(depositAmount) > 0 ? Number(depositAmount) : undefined,
+            depositCurrency: depositCurrency || undefined,
+          }),
+          // Only send late fee if amount is provided
+          ...(lateReturnFeeAmount && Number(lateReturnFeeAmount) > 0 && {
+            lateReturnFeeAmount: Number(lateReturnFeeAmount),
+            lateReturnFeeUnit: lateReturnFeeUnit || 'PER_DAY',
+          }),
           earliestAvailableDate: earliestAvailableDate || undefined,
           latestReturnDate: latestReturnDate || undefined,
           autoRenewalEnabled,
-          renewalNoticeDays,
-          renewalPriceAdjustment: renewalPriceAdjustment || 0
+          renewalNoticeDays: Number(renewalNoticeDays),
+          renewalPriceAdjustment: renewalPriceAdjustment && Number(renewalPriceAdjustment) !== 0 ? Number(renewalPriceAdjustment) : 0
         })
       };
 
       console.log('=== SUBMITTING LISTING DATA ===');
       console.log('Full listing data:', JSON.stringify(listingData, null, 2));
+      console.log('Deal Type:', dealType);
+      console.log('Is Rental Type:', isRentalType(dealType));
+      console.log('Quantity fields:', {
+        totalQuantity: listingData.totalQuantity,
+        availableQuantity: listingData.availableQuantity,
+        maintenanceQuantity: listingData.maintenanceQuantity
+      });
       console.log('Facets object:', listingData.facets);
       console.log('Size value:', size);
       console.log('Type value:', ctype);
@@ -669,7 +699,7 @@ export default function NewListingPage() {
       const result = await createListing(listingData);
       console.log('Create listing result:', result);
 
-      if (result.success) {
+      if (result.success && result.data?.listing?.id) {
         const listingId = result.data.listing.id;
         
         // Add uploaded media to the listing
@@ -725,14 +755,34 @@ export default function NewListingPage() {
         }, 1500);
       } else {
         console.error('Create listing failed:', result);
-        throw new Error('Không thể tạo tin đăng');
+        throw new Error('Không thể tạo tin đăng - Phản hồi từ server không hợp lệ');
       }
     } catch (err: any) {
-      console.error('Create listing error:', err);
-      const errorMessage = err.response?.data?.error || err.message || 'Có lỗi xảy ra khi tạo tin đăng';
+      console.error('=== CREATE LISTING ERROR ===');
+      console.error('Full error:', err);
+      console.error('Error response:', err.response);
+      console.error('Error data:', err.response?.data);
+      console.error('============================');
+      
+      // Extract detailed error message
+      let errorMessage = 'Có lỗi xảy ra khi tạo tin đăng';
+      
+      if (err.response?.data) {
+        const data = err.response.data;
+        errorMessage = data.error || data.message || errorMessage;
+        
+        // If there are validation details, show them
+        if (data.details) {
+          console.error('Error details:', data.details);
+          errorMessage += ` (Chi tiết: ${JSON.stringify(data.details)})`;
+        }
+      } else if (err.message) {
+        errorMessage = err.message;
+      }
+      
       setError(errorMessage);
       toast({
-        title: "Lỗi",
+        title: "Lỗi tạo tin đăng",
         description: errorMessage,
         variant: "destructive",
       });
@@ -1548,6 +1598,14 @@ export default function NewListingPage() {
                                   </SelectContent>
                                 </Select>
                               </div>
+                              {depositAmount !== '' && depositAmount > 0 && (
+                                <div className="flex items-center space-x-2 p-2 bg-green-50 rounded border border-green-200">
+                                  <DollarSign className="w-4 h-4 text-green-600" />
+                                  <span className="text-sm font-semibold text-green-700">
+                                    {new Intl.NumberFormat('vi-VN').format(Number(depositAmount))} {depositCurrency || priceCurrency}
+                                  </span>
+                                </div>
+                              )}
                               <p className="text-xs text-gray-500">
                                 Thường bằng 20-50% giá thuê 1 kỳ
                               </p>
@@ -1581,6 +1639,17 @@ export default function NewListingPage() {
                                   </SelectContent>
                                 </Select>
                               </div>
+                              {lateReturnFeeAmount !== '' && lateReturnFeeAmount > 0 && (
+                                <div className="flex items-center space-x-2 p-2 bg-amber-50 rounded border border-amber-200">
+                                  <Clock className="w-4 h-4 text-amber-600" />
+                                  <span className="text-sm font-semibold text-amber-700">
+                                    {new Intl.NumberFormat('vi-VN').format(Number(lateReturnFeeAmount))} {depositCurrency || priceCurrency}
+                                    {lateReturnFeeUnit === 'PER_DAY' && ' / Ngày'}
+                                    {lateReturnFeeUnit === 'PER_WEEK' && ' / Tuần'}
+                                    {lateReturnFeeUnit === 'PERCENTAGE' && '%'}
+                                  </span>
+                                </div>
+                              )}
                               <p className="text-xs text-gray-500">
                                 Phí phạt khi khách hàng trả container muộn hạn
                               </p>
@@ -1937,6 +2006,120 @@ export default function NewListingPage() {
                             </div>
                           </div>
                         </div>
+
+                        {/* Rental Management Review Card - Chỉ hiển thị khi chọn RENTAL/LEASE */}
+                        {isRentalType(dealType) && (
+                          <div className="bg-white border rounded-lg p-4 lg:col-span-2">
+                            <h4 className="font-medium text-gray-900 mb-3">Thông tin quản lý cho thuê</h4>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                              {/* Quantity Management */}
+                              <div className="space-y-2 text-sm">
+                                <p className="font-medium text-gray-700">📦 Quản lý số lượng</p>
+                                <div className="ml-4 space-y-1">
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Tổng số:</span>
+                                    <span className="font-medium">{totalQuantity} container</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Có sẵn:</span>
+                                    <span className="font-medium text-green-600">{availableQuantity}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Bảo trì:</span>
+                                    <span className="font-medium text-orange-600">{maintenanceQuantity}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Đang thuê:</span>
+                                    <span className="font-medium text-blue-600">{rentedQuantity}</span>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Duration Constraints */}
+                              <div className="space-y-2 text-sm">
+                                <p className="font-medium text-gray-700">⏱️ Thời gian thuê</p>
+                                <div className="ml-4 space-y-1">
+                                  {minRentalDuration && (
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-500">Tối thiểu:</span>
+                                      <span className="font-medium">{minRentalDuration} {rentalUnits.data?.find(ru => ru.code === rentalUnit)?.name || rentalUnit}</span>
+                                    </div>
+                                  )}
+                                  {maxRentalDuration && (
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-500">Tối đa:</span>
+                                      <span className="font-medium">{maxRentalDuration} {rentalUnits.data?.find(ru => ru.code === rentalUnit)?.name || rentalUnit}</span>
+                                    </div>
+                                  )}
+                                  {!minRentalDuration && !maxRentalDuration && (
+                                    <p className="text-gray-400 text-xs">Không giới hạn</p>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Deposit Policy */}
+                              <div className="space-y-2 text-sm">
+                                <p className="font-medium text-gray-700">💰 Chính sách đặt cọc</p>
+                                <div className="ml-4 space-y-1">
+                                  {depositRequired ? (
+                                    <>
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-500">Yêu cầu:</span>
+                                        <span className="font-medium text-green-600">Có</span>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-500">Số tiền:</span>
+                                        <span className="font-medium">{depositAmount ? Number(depositAmount).toLocaleString() : '0'} {depositCurrency}</span>
+                                      </div>
+                                      {lateReturnFeeAmount && lateReturnFeeAmount > 0 && (
+                                        <div className="flex justify-between">
+                                          <span className="text-gray-500">Phí trả muộn:</span>
+                                          <span className="font-medium text-red-600">
+                                            {Number(lateReturnFeeAmount).toLocaleString()} {depositCurrency}
+                                            {lateReturnFeeUnit && ` / ${lateReturnFeeUnit === 'PER_DAY' ? 'ngày' : lateReturnFeeUnit === 'PER_WEEK' ? 'tuần' : '%'}`}
+                                          </span>
+                                        </div>
+                                      )}
+                                    </>
+                                  ) : (
+                                    <p className="text-gray-400 text-xs">Không yêu cầu đặt cọc</p>
+                                  )}
+                                </div>
+                              </div>
+
+                              {/* Availability & Renewal */}
+                              <div className="space-y-2 text-sm">
+                                <p className="font-medium text-gray-700">📅 Thời gian & Gia hạn</p>
+                                <div className="ml-4 space-y-1">
+                                  {earliestAvailableDate && (
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-500">Ngày sớm nhất:</span>
+                                      <span className="font-medium">{new Date(earliestAvailableDate).toLocaleDateString('vi-VN')}</span>
+                                    </div>
+                                  )}
+                                  {latestReturnDate && (
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-500">Ngày trả muộn nhất:</span>
+                                      <span className="font-medium">{new Date(latestReturnDate).toLocaleDateString('vi-VN')}</span>
+                                    </div>
+                                  )}
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-500">Tự động gia hạn:</span>
+                                    <span className={`font-medium ${autoRenewalEnabled ? 'text-green-600' : 'text-gray-400'}`}>
+                                      {autoRenewalEnabled ? 'Có' : 'Không'}
+                                    </span>
+                                  </div>
+                                  {autoRenewalEnabled && renewalNoticeDays && (
+                                    <div className="flex justify-between">
+                                      <span className="text-gray-500">Thông báo trước:</span>
+                                      <span className="font-medium">{renewalNoticeDays} ngày</span>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
 
                         {/* Images Review Card */}
                         <div className="bg-white border rounded-lg p-4 lg:col-span-2">

@@ -7,6 +7,80 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model audit_logs {
+  id           String      @id
+  actor_id     String?
+  action       AuditAction
+  target_table String
+  target_id    String?
+  meta         Json?
+  created_at   DateTime    @default(now())
+  users        users?      @relation(fields: [actor_id], references: [id])
+}
+
+model business_hours {
+  id            String   @id
+  org_id        String?
+  timezone      String
+  schedule_json Json
+  created_at    DateTime @default(now())
+  updated_at    DateTime
+}
+
+model categories {
+  id          String   @id
+  code        String   @unique
+  name        String
+  description String?
+  icon        String?
+  sort_order  Int      @default(0)
+  created_at  DateTime @default(now())
+  updated_at  DateTime
+}
+
+model commission_rules {
+  id              String               @id
+  rule_code       String
+  name            String
+  basis           String
+  percent         Decimal
+  min_amount      Decimal?
+  max_amount      Decimal?
+  conditions_json Json?
+  effective_from  DateTime
+  effective_to    DateTime?
+  status          CommissionRuleStatus @default(ACTIVE)
+  created_at      DateTime             @default(now())
+  updated_at      DateTime
+}
+
+model config_entries {
+  id                String            @id
+  namespace_id      String
+  key               String
+  version           Int               @default(1)
+  status            ConfigEntryStatus @default(DRAFT)
+  value_json        Json
+  checksum          String?
+  created_by        String?
+  published_by      String?
+  created_at        DateTime          @default(now())
+  updated_at        DateTime
+  config_namespaces config_namespaces @relation(fields: [namespace_id], references: [id])
+
+  @@unique([namespace_id, key, version])
+}
+
+model config_namespaces {
+  id             String           @id
+  code           String           @unique
+  name           String
+  description    String?
+  created_at     DateTime         @default(now())
+  updated_at     DateTime
+  config_entries config_entries[]
+}
+
 model containers {
   id                    String                  @id
   iso_code              String
@@ -31,6 +105,27 @@ model containers {
   listings              listings[]
 }
 
+model conversations {
+  id                                   String     @id
+  listing_id                           String
+  buyer_id                             String
+  seller_id                            String
+  last_message_at                      DateTime?
+  buyer_unread                         Int        @default(0)
+  seller_unread                        Int        @default(0)
+  created_at                           DateTime   @default(now())
+  updated_at                           DateTime   @default(now())
+  users_conversations_buyer_idTousers  users      @relation("conversations_buyer_idTousers", fields: [buyer_id], references: [id], onDelete: Cascade)
+  listings                             listings   @relation(fields: [listing_id], references: [id], onDelete: Cascade)
+  users_conversations_seller_idTousers users      @relation("conversations_seller_idTousers", fields: [seller_id], references: [id], onDelete: Cascade)
+  messages                             messages[]
+
+  @@index([buyer_id])
+  @@index([listing_id])
+  @@index([seller_id])
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model deliveries {
   id                     String            @id
   order_id               String
@@ -92,6 +187,33 @@ model delivery_events {
   deliveries  deliveries        @relation(fields: [delivery_id], references: [id], onDelete: Cascade)
 }
 
+model depot_calendars {
+  id                String   @id
+  depot_id          String
+  closed_dates_json Json?
+  notes             String?
+  created_at        DateTime @default(now())
+  updated_at        DateTime
+  depots            depots   @relation(fields: [depot_id], references: [id])
+}
+
+model depot_stock_movements {
+  id            String            @id
+  depot_id      String
+  container_id  String?
+  owner_org_id  String?
+  movement_type MovementType
+  direction     MovementDirection
+  ref_doc_type  RefDocType
+  ref_doc_id    String?
+  reason        String?
+  occurred_at   DateTime
+  created_by    String?
+  created_at    DateTime          @default(now())
+  containers    containers?       @relation(fields: [container_id], references: [id])
+  depots        depots            @relation(fields: [depot_id], references: [id])
+}
+
 model depot_users {
   id            String      @id
   depot_id      String
@@ -133,6 +255,22 @@ model depots {
   repairs               repairs[]
 }
 
+model dispute_audit_logs {
+  id            String   @id @default(dbgenerated("(gen_random_uuid())::text"))
+  dispute_id    String
+  user_id       String
+  action        String   @db.VarChar(50)
+  old_value     String?
+  new_value     String?
+  metadata_json Json?
+  created_at    DateTime @default(now()) @db.Timestamptz(6)
+  disputes      disputes @relation(fields: [dispute_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_dispute_audit_dispute")
+  users         users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_dispute_audit_user")
+
+  @@index([created_at(sort: Desc)], map: "idx_dispute_audit_created_at")
+  @@index([dispute_id], map: "idx_dispute_audit_dispute_id")
+}
+
 model dispute_evidence {
   id          String   @id
   dispute_id  String
@@ -143,6 +281,24 @@ model dispute_evidence {
   created_at  DateTime @default(now())
   disputes    disputes @relation(fields: [dispute_id], references: [id], onDelete: Cascade)
   users       users    @relation(fields: [uploader_id], references: [id])
+}
+
+model dispute_messages {
+  id               String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  dispute_id       String
+  sender_id        String
+  message          String
+  attachments_json Json?
+  is_internal      Boolean?  @default(false)
+  is_resolution    Boolean?  @default(false)
+  created_at       DateTime  @default(now()) @db.Timestamptz(6)
+  read_at          DateTime? @db.Timestamptz(6)
+  disputes         disputes  @relation(fields: [dispute_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_dispute_message_dispute")
+  users            users     @relation(fields: [sender_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_dispute_message_sender")
+
+  @@index([created_at], map: "idx_dispute_messages_created_at")
+  @@index([dispute_id], map: "idx_dispute_messages_dispute_id")
+  @@index([sender_id], map: "idx_dispute_messages_sender_id")
 }
 
 model disputes {
@@ -182,75 +338,6 @@ model disputes {
   @@index([status], map: "idx_disputes_status")
 }
 
-model dispute_messages {
-  id               String    @id @default(dbgenerated("(gen_random_uuid())::text"))
-  dispute_id       String
-  sender_id        String
-  message          String
-  attachments_json Json?
-  is_internal      Boolean?  @default(false)
-  is_resolution    Boolean?  @default(false)
-  created_at       DateTime  @default(now()) @db.Timestamptz(6)
-  read_at          DateTime? @db.Timestamptz(6)
-  disputes         disputes  @relation(fields: [dispute_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_dispute_message_dispute")
-  users            users     @relation(fields: [sender_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_dispute_message_sender")
-
-  @@index([created_at], map: "idx_dispute_messages_created_at")
-  @@index([dispute_id], map: "idx_dispute_messages_dispute_id")
-  @@index([sender_id], map: "idx_dispute_messages_sender_id")
-}
-
-model dispute_audit_logs {
-  id            String   @id @default(dbgenerated("(gen_random_uuid())::text"))
-  dispute_id    String
-  user_id       String
-  action        String   @db.VarChar(50)
-  old_value     String?
-  new_value     String?
-  metadata_json Json?
-  created_at    DateTime @default(now()) @db.Timestamptz(6)
-  disputes      disputes @relation(fields: [dispute_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_dispute_audit_dispute")
-  users         users    @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_dispute_audit_user")
-
-  @@index([created_at(sort: Desc)], map: "idx_dispute_audit_created_at")
-  @@index([dispute_id], map: "idx_dispute_audit_dispute_id")
-}
-
-model order_preparations {
-  id                             String    @id @default(dbgenerated("(gen_random_uuid())::text"))
-  order_id                       String
-  seller_id                      String
-  preparation_started_at         DateTime  @default(now()) @db.Timestamptz(6)
-  preparation_completed_at       DateTime? @db.Timestamptz(6)
-  estimated_ready_date           DateTime? @db.Timestamptz(6)
-  container_inspection_completed Boolean?  @default(false)
-  container_cleaned              Boolean?  @default(false)
-  container_repaired             Boolean?  @default(false)
-  documents_prepared             Boolean?  @default(false)
-  customs_cleared                Boolean?  @default(false)
-  inspection_photos_json         Json?
-  repair_photos_json             Json?
-  document_urls_json             Json?
-  preparation_notes              String?
-  seller_notes                   String?
-  pickup_location_json           Json?
-  pickup_contact_name            String?   @db.VarChar(255)
-  pickup_contact_phone           String?   @db.VarChar(50)
-  pickup_instructions            String?
-  pickup_available_from          DateTime? @db.Timestamptz(6)
-  pickup_available_to            DateTime? @db.Timestamptz(6)
-  status                         String?   @default("PREPARING") @db.VarChar(50)
-  created_at                     DateTime  @default(now()) @db.Timestamptz(6)
-  updated_at                     DateTime  @default(now()) @db.Timestamptz(6)
-  orders                         orders    @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_order_preparation_order")
-  users                          users     @relation(fields: [seller_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_order_preparation_seller")
-
-  @@index([order_id], map: "idx_order_preparations_order_id")
-  @@index([estimated_ready_date], map: "idx_order_preparations_ready_date")
-  @@index([seller_id], map: "idx_order_preparations_seller_id")
-  @@index([status], map: "idx_order_preparations_status")
-}
-
 model documents {
   id              String         @id
   order_id        String?
@@ -270,6 +357,76 @@ model documents {
   valid_until     DateTime?
   users           users?         @relation(fields: [issued_by], references: [id])
   orders          orders?        @relation(fields: [order_id], references: [id])
+}
+
+model favorites {
+  id         String   @id
+  user_id    String
+  listing_id String
+  created_at DateTime @default(now())
+  listings   listings @relation(fields: [listing_id], references: [id], onDelete: Cascade)
+  users      users    @relation(fields: [user_id], references: [id], onDelete: Cascade)
+
+  @@unique([user_id, listing_id])
+  @@index([listing_id])
+  @@index([user_id])
+}
+
+model feature_flags {
+  id             String            @id
+  code           String            @unique
+  name           String
+  description    String?
+  enabled        Boolean           @default(false)
+  rollout_json   Json?
+  effective_from DateTime?
+  effective_to   DateTime?
+  version        Int               @default(1)
+  status         FeatureFlagStatus @default(DRAFT)
+  created_at     DateTime          @default(now())
+  updated_at     DateTime
+}
+
+model fee_schedules {
+  id             String            @id
+  fee_code       String
+  name           String
+  calc_type      String
+  currency       String
+  amount         Decimal?
+  percent        Decimal?
+  tiers_json     Json?
+  scope          String
+  effective_from DateTime
+  effective_to   DateTime?
+  status         FeeScheduleStatus @default(ACTIVE)
+  created_at     DateTime          @default(now())
+  updated_at     DateTime
+}
+
+model form_schemas {
+  id          String           @id
+  code        String           @unique
+  name        String
+  scope       String
+  json_schema Json
+  ui_schema   Json?
+  version     Int              @default(1)
+  status      FormSchemaStatus @default(DRAFT)
+  created_at  DateTime         @default(now())
+  updated_at  DateTime
+}
+
+model i18n_translations {
+  id         String   @id
+  namespace  String
+  key        String
+  locale     String
+  value      String
+  created_at DateTime @default(now())
+  updated_at DateTime
+
+  @@unique([namespace, key, locale])
 }
 
 model inspection_items {
@@ -309,6 +466,18 @@ model inspections {
   repairs                               repairs[]
 }
 
+model integration_configs {
+  id          String            @id
+  vendor_code String
+  name        String
+  config_json Json
+  secrets_ref String?
+  version     Int               @default(1)
+  status      IntegrationStatus @default(ACTIVE)
+  created_at  DateTime          @default(now())
+  updated_at  DateTime
+}
+
 model listing_facets {
   id         String   @id
   listing_id String
@@ -337,72 +506,76 @@ model listing_media {
   users             users?    @relation(fields: [uploaded_by], references: [id])
 }
 
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model listings {
-  id                String           @id
-  container_id      String?
-  seller_user_id    String
-  org_id            String?
-  deal_type         DealType
-  price_currency    String           @default("VND")
-  price_amount      Decimal
-  rental_unit       String?
-  location_depot_id String?
-  status            ListingStatus    @default(DRAFT)
-  title             String
-  description       String?
-  features          Json?
-  specifications    Json?
-  view_count        Int              @default(0)
-  favorite_count    Int              @default(0)
-  published_at      DateTime?
-  expires_at        DateTime?
-  created_at        DateTime         @default(now())
-  updated_at        DateTime
-  deleted_at        DateTime?
-  rejection_reason  String?
-  admin_reviewed_by String?          @db.VarChar(255)
-  admin_reviewed_at DateTime?        @db.Timestamp(6)
-  
-  // ============ RENTAL QUANTITY MANAGEMENT ============
-  total_quantity            Int      @default(1)      // Tổng số container
-  available_quantity        Int      @default(1)      // Số lượng có sẵn cho thuê
-  rented_quantity           Int      @default(0)      // Số lượng đang được thuê
-  reserved_quantity         Int      @default(0)      // Số lượng đã đặt trước
-  maintenance_quantity      Int      @default(0)      // Số lượng đang bảo trì
-  
-  // ============ RENTAL DURATION CONSTRAINTS ============
-  min_rental_duration       Int?                      // Thời gian thuê tối thiểu
-  max_rental_duration       Int?                      // Thời gian thuê tối đa
-  
-  // ============ DEPOSIT & FEE POLICY ============
-  deposit_required          Boolean  @default(false)  // Yêu cầu đặt cọc
-  deposit_amount            Decimal?                  // Số tiền đặt cọc
-  deposit_currency          String?                   // Tiền tệ đặt cọc
-  late_return_fee_amount    Decimal?                  // Phí trả muộn
-  late_return_fee_unit      String?                   // PER_DAY, PER_WEEK, PERCENTAGE
-  
-  // ============ AVAILABILITY DATES ============
-  earliest_available_date   DateTime?                 // Ngày sớm nhất có thể thuê
-  latest_return_date        DateTime?                 // Ngày phải trả lại muộn nhất
-  
-  // ============ RENEWAL POLICY ============
-  auto_renewal_enabled      Boolean  @default(false)  // Cho phép gia hạn tự động
-  renewal_notice_days       Int      @default(7)      // Thông báo trước X ngày
-  renewal_price_adjustment  Decimal? @default(0.00)   // % điều chỉnh giá
-  
-  // ============ RENTAL TRACKING ============
-  last_rented_at            DateTime?                 // Lần thuê gần nhất
-  total_rental_count        Int      @default(0)      // Tổng số lần được thuê
-  
-  inspections       inspections[]
-  listing_facets    listing_facets[]
-  listing_media     listing_media[]
-  containers        containers?      @relation(fields: [container_id], references: [id])
-  depots            depots?          @relation(fields: [location_depot_id], references: [id])
-  orgs              orgs?            @relation(fields: [org_id], references: [id])
-  users             users            @relation(fields: [seller_user_id], references: [id])
-  orders            orders[]
-  rfqs              rfqs[]
+  id                       String           @id
+  container_id             String?
+  seller_user_id           String
+  org_id                   String?
+  deal_type                DealType
+  price_currency           String           @default("VND")
+  price_amount             Decimal
+  rental_unit              String?
+  location_depot_id        String?
+  status                   ListingStatus    @default(DRAFT)
+  title                    String
+  description              String?
+  features                 Json?
+  specifications           Json?
+  view_count               Int              @default(0)
+  favorite_count           Int              @default(0)
+  published_at             DateTime?
+  expires_at               DateTime?
+  created_at               DateTime         @default(now())
+  updated_at               DateTime
+  deleted_at               DateTime?
+  rejection_reason         String?
+  admin_reviewed_by        String?          @db.VarChar(255)
+  admin_reviewed_at        DateTime?        @db.Timestamp(6)
+  total_quantity           Int?             @default(1)
+  available_quantity       Int?             @default(1)
+  rented_quantity          Int?             @default(0)
+  reserved_quantity        Int?             @default(0)
+  maintenance_quantity     Int?             @default(0)
+  min_rental_duration      Int?
+  max_rental_duration      Int?
+  deposit_required         Boolean?         @default(false)
+  deposit_amount           Decimal?         @db.Decimal(15, 2)
+  deposit_currency         String?          @db.VarChar(3)
+  late_return_fee_amount   Decimal?         @db.Decimal(15, 2)
+  late_return_fee_unit     String?          @db.VarChar(20)
+  earliest_available_date  DateTime?        @db.Timestamp(6)
+  latest_return_date       DateTime?        @db.Timestamp(6)
+  auto_renewal_enabled     Boolean?         @default(false)
+  renewal_notice_days      Int?             @default(7)
+  renewal_price_adjustment Decimal?         @default(0.00) @db.Decimal(5, 2)
+  last_rented_at           DateTime?        @db.Timestamp(6)
+  total_rental_count       Int?             @default(0)
+  conversations            conversations[]
+  favorites                favorites[]
+  inspections              inspections[]
+  listing_facets           listing_facets[]
+  listing_media            listing_media[]
+  containers               containers?      @relation(fields: [container_id], references: [id])
+  depots                   depots?          @relation(fields: [location_depot_id], references: [id])
+  orgs                     orgs?            @relation(fields: [org_id], references: [id])
+  users                    users            @relation(fields: [seller_user_id], references: [id])
+  orders                   orders[]
+  rfqs                     rfqs[]
+}
+
+model marketplace_policies {
+  id             String       @id
+  policy_code    String
+  name           String
+  content_md     String
+  effective_from DateTime
+  effective_to   DateTime?
+  version        Int          @default(1)
+  status         PolicyStatus @default(DRAFT)
+  created_at     DateTime     @default(now())
+  updated_at     DateTime
 }
 
 model md_adjust_reasons {
@@ -452,7 +625,6 @@ model md_commission_codes {
   updated_at  DateTime
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model md_container_sizes {
   id          String   @id
   size_ft     Int
@@ -481,7 +653,6 @@ model md_countries {
   md_provinces md_provinces[]
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model md_currencies {
   id             String   @id
   code           String   @unique
@@ -635,7 +806,6 @@ model md_listing_statuses {
   updated_at  DateTime
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model md_movement_types {
   id          String   @id
   code        String   @unique
@@ -738,7 +908,6 @@ model md_quality_standards {
   updated_at  DateTime
 }
 
-/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
 model md_rating_scales {
   id          String   @id
   code        String   @unique
@@ -847,6 +1016,54 @@ model md_violation_codes {
   updated_at  DateTime
 }
 
+model messages {
+  id              String        @id
+  conversation_id String
+  sender_id       String
+  content         String
+  attachments     Json?
+  is_read         Boolean       @default(false)
+  read_at         DateTime?
+  created_at      DateTime      @default(now())
+  conversations   conversations @relation(fields: [conversation_id], references: [id], onDelete: Cascade)
+  users           users         @relation(fields: [sender_id], references: [id], onDelete: Cascade)
+
+  @@index([conversation_id])
+  @@index([is_read])
+  @@index([sender_id])
+}
+
+model notification_templates {
+  id             String              @id
+  channel        NotificationChannel
+  template_code  String
+  locale         String
+  subject        String?
+  body_md        String
+  variables_json Json?
+  version        Int                 @default(1)
+  status         TemplateStatus      @default(DRAFT)
+  created_at     DateTime            @default(now())
+  updated_at     DateTime
+}
+
+model notifications {
+  id         String    @id @db.VarChar(255)
+  user_id    String    @db.VarChar(255)
+  type       String    @db.VarChar(50)
+  title      String    @db.VarChar(255)
+  message    String
+  data       Json?
+  read       Boolean?  @default(false)
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+
+  @@index([created_at], map: "idx_notifications_created_at")
+  @@index([read], map: "idx_notifications_read")
+  @@index([type], map: "idx_notifications_type")
+  @@index([user_id], map: "idx_notifications_user_id")
+}
+
 model order_items {
   id          String   @id
   order_id    String
@@ -860,6 +1077,42 @@ model order_items {
   orders      orders   @relation(fields: [order_id], references: [id], onDelete: Cascade)
 }
 
+model order_preparations {
+  id                             String    @id @default(dbgenerated("(gen_random_uuid())::text"))
+  order_id                       String
+  seller_id                      String
+  preparation_started_at         DateTime  @default(now()) @db.Timestamptz(6)
+  preparation_completed_at       DateTime? @db.Timestamptz(6)
+  estimated_ready_date           DateTime? @db.Timestamptz(6)
+  container_inspection_completed Boolean?  @default(false)
+  container_cleaned              Boolean?  @default(false)
+  container_repaired             Boolean?  @default(false)
+  documents_prepared             Boolean?  @default(false)
+  customs_cleared                Boolean?  @default(false)
+  inspection_photos_json         Json?
+  repair_photos_json             Json?
+  document_urls_json             Json?
+  preparation_notes              String?
+  seller_notes                   String?
+  pickup_location_json           Json?
+  pickup_contact_name            String?   @db.VarChar(255)
+  pickup_contact_phone           String?   @db.VarChar(50)
+  pickup_instructions            String?
+  pickup_available_from          DateTime? @db.Timestamptz(6)
+  pickup_available_to            DateTime? @db.Timestamptz(6)
+  status                         String?   @default("PREPARING") @db.VarChar(50)
+  created_at                     DateTime  @default(now()) @db.Timestamptz(6)
+  updated_at                     DateTime  @default(now()) @db.Timestamptz(6)
+  orders                         orders    @relation(fields: [order_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_order_preparation_order")
+  users                          users     @relation(fields: [seller_id], references: [id], onDelete: Cascade, onUpdate: NoAction, map: "fk_order_preparation_seller")
+
+  @@index([order_id], map: "idx_order_preparations_order_id")
+  @@index([estimated_ready_date], map: "idx_order_preparations_ready_date")
+  @@index([seller_id], map: "idx_order_preparations_seller_id")
+  @@index([status], map: "idx_order_preparations_status")
+}
+
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model orders {
   id                            String               @id
   buyer_id                      String
@@ -938,6 +1191,27 @@ model orgs {
   subscriptions       subscriptions[]
 }
 
+model partners {
+  id           String        @id
+  type         PartnerType
+  name         String
+  contact_json Json
+  status       PartnerStatus @default(ACTIVE)
+  created_at   DateTime      @default(now())
+  updated_at   DateTime
+}
+
+model payment_methods {
+  id          String   @id
+  code        String   @unique
+  provider    String
+  method_type String
+  enabled     Boolean  @default(true)
+  config_json Json
+  created_at  DateTime @default(now())
+  updated_at  DateTime
+}
+
 model payments {
   id                 String          @id
   order_id           String
@@ -969,17 +1243,6 @@ model permissions {
   created_at       DateTime           @default(now())
   updated_at       DateTime
   role_permissions role_permissions[]
-}
-
-model categories {
-  id          String   @id
-  code        String   @unique
-  name        String
-  description String?
-  icon        String?
-  sort_order  Int      @default(0)
-  created_at  DateTime @default(now())
-  updated_at  DateTime
 }
 
 model plans {
@@ -1057,6 +1320,18 @@ model quotes {
   quote_items    quote_items[]
   rfqs           rfqs          @relation(fields: [rfq_id], references: [id], onDelete: Cascade)
   users          users         @relation(fields: [seller_id], references: [id])
+}
+
+model redaction_patterns {
+  id          String   @id
+  code        String   @unique
+  pattern     String
+  description String?
+  channel     String
+  enabled     Boolean  @default(true)
+  severity    String
+  created_at  DateTime @default(now())
+  updated_at  DateTime
 }
 
 model repair_items {
@@ -1145,6 +1420,7 @@ model role_permissions {
   @@unique([role_id, permission_id, scope])
 }
 
+/// This model or at least one of its fields has comments in the database, and requires an additional setup for migrations: Read more: https://pris.ly/d/database-comments
 model roles {
   id               String             @id
   code             String             @unique
@@ -1190,6 +1466,18 @@ model subscriptions {
   users        users?             @relation(fields: [user_id], references: [id])
 }
 
+model tax_rates {
+  id             String        @id
+  region         String
+  tax_code       String
+  rate           Decimal
+  effective_from DateTime
+  effective_to   DateTime?
+  status         TaxRateStatus @default(ACTIVE)
+  created_at     DateTime      @default(now())
+  updated_at     DateTime
+}
+
 model user_roles {
   id                                  String    @id
   user_id                             String
@@ -1206,300 +1494,56 @@ model user_roles {
 }
 
 model users {
-  id                                          String               @id
-  email                                       String?              @unique
-  phone                                       String?              @unique
-  password_hash                               String
-  status                                      UserStatus           @default(PENDING_VERIFICATION)
-  kyc_status                                  KYCStatus            @default(UNVERIFIED)
-  display_name                                String?
-  first_name                                  String?
-  last_name                                   String?
-  avatar_url                                  String?
-  default_locale                              String               @default("vi")
-  timezone                                    String               @default("Asia/Ho_Chi_Minh")
-  last_login_at                               DateTime?
-  email_verified_at                           DateTime?
-  phone_verified_at                           DateTime?
-  created_at                                  DateTime             @default(now())
-  updated_at                                  DateTime
-  deleted_at                                  DateTime?
-  permissions_updated_at                      DateTime?
-  audit_logs                                  audit_logs[]
-  depot_users                                 depot_users[]
-  dispute_audit_logs                          dispute_audit_logs[]
-  dispute_evidence                            dispute_evidence[]
-  dispute_messages                            dispute_messages[]
-  disputes_disputes_raised_byTousers          disputes[]           @relation("disputes_raised_byTousers")
-  disputes_disputes_resolved_byTousers        disputes[]           @relation("disputes_resolved_byTousers")
-  documents                                   documents[]
-  inspections_inspections_inspector_idTousers inspections[]        @relation("inspections_inspector_idTousers")
-  inspections_inspections_requested_byTousers inspections[]        @relation("inspections_requested_byTousers")
-  listing_media                               listing_media[]
-  listings                                    listings[]
-  order_preparations                          order_preparations[]
-  orders_orders_buyer_idTousers               orders[]             @relation("orders_buyer_idTousers")
-  orders_orders_seller_idTousers              orders[]             @relation("orders_seller_idTousers")
-  org_users                                   org_users[]
-  orgs                                        orgs[]
-  qa_answers                                  qa_answers[]
-  qa_questions                                qa_questions[]
-  quotes                                      quotes[]
-  reviews_reviews_response_byTousers          reviews[]            @relation("reviews_response_byTousers")
-  reviews_reviews_reviewee_idTousers          reviews[]            @relation("reviews_reviewee_idTousers")
-  reviews_reviews_reviewer_idTousers          reviews[]            @relation("reviews_reviewer_idTousers")
-  rfqs                                        rfqs[]
-  subscriptions                               subscriptions[]
-  user_roles_user_roles_assigned_byTousers    user_roles[]         @relation("user_roles_assigned_byTousers")
-  user_roles_user_roles_user_idTousers        user_roles[]         @relation("user_roles_user_idTousers")
-}
-
-model audit_logs {
-  id           String      @id
-  actor_id     String?
-  action       AuditAction
-  target_table String
-  target_id    String?
-  meta         Json?
-  created_at   DateTime    @default(now())
-  users        users?      @relation(fields: [actor_id], references: [id])
-}
-
-model business_hours {
-  id            String   @id
-  org_id        String?
-  timezone      String
-  schedule_json Json
-  created_at    DateTime @default(now())
-  updated_at    DateTime
-}
-
-model commission_rules {
-  id              String               @id
-  rule_code       String
-  name            String
-  basis           String
-  percent         Decimal
-  min_amount      Decimal?
-  max_amount      Decimal?
-  conditions_json Json?
-  effective_from  DateTime
-  effective_to    DateTime?
-  status          CommissionRuleStatus @default(ACTIVE)
-  created_at      DateTime             @default(now())
-  updated_at      DateTime
-}
-
-model config_entries {
-  id                String            @id
-  namespace_id      String
-  key               String
-  version           Int               @default(1)
-  status            ConfigEntryStatus @default(DRAFT)
-  value_json        Json
-  checksum          String?
-  created_by        String?
-  published_by      String?
-  created_at        DateTime          @default(now())
-  updated_at        DateTime
-  config_namespaces config_namespaces @relation(fields: [namespace_id], references: [id])
-
-  @@unique([namespace_id, key, version])
-}
-
-model config_namespaces {
-  id             String           @id
-  code           String           @unique
-  name           String
-  description    String?
-  created_at     DateTime         @default(now())
-  updated_at     DateTime
-  config_entries config_entries[]
-}
-
-model depot_calendars {
-  id                String   @id
-  depot_id          String
-  closed_dates_json Json?
-  notes             String?
-  created_at        DateTime @default(now())
-  updated_at        DateTime
-  depots            depots   @relation(fields: [depot_id], references: [id])
-}
-
-model depot_stock_movements {
-  id            String            @id
-  depot_id      String
-  container_id  String?
-  owner_org_id  String?
-  movement_type MovementType
-  direction     MovementDirection
-  ref_doc_type  RefDocType
-  ref_doc_id    String?
-  reason        String?
-  occurred_at   DateTime
-  created_by    String?
-  created_at    DateTime          @default(now())
-  containers    containers?       @relation(fields: [container_id], references: [id])
-  depots        depots            @relation(fields: [depot_id], references: [id])
-}
-
-model feature_flags {
-  id             String            @id
-  code           String            @unique
-  name           String
-  description    String?
-  enabled        Boolean           @default(false)
-  rollout_json   Json?
-  effective_from DateTime?
-  effective_to   DateTime?
-  version        Int               @default(1)
-  status         FeatureFlagStatus @default(DRAFT)
-  created_at     DateTime          @default(now())
-  updated_at     DateTime
-}
-
-model fee_schedules {
-  id             String            @id
-  fee_code       String
-  name           String
-  calc_type      String
-  currency       String
-  amount         Decimal?
-  percent        Decimal?
-  tiers_json     Json?
-  scope          String
-  effective_from DateTime
-  effective_to   DateTime?
-  status         FeeScheduleStatus @default(ACTIVE)
-  created_at     DateTime          @default(now())
-  updated_at     DateTime
-}
-
-model form_schemas {
-  id          String           @id
-  code        String           @unique
-  name        String
-  scope       String
-  json_schema Json
-  ui_schema   Json?
-  version     Int              @default(1)
-  status      FormSchemaStatus @default(DRAFT)
-  created_at  DateTime         @default(now())
-  updated_at  DateTime
-}
-
-model i18n_translations {
-  id         String   @id
-  namespace  String
-  key        String
-  locale     String
-  value      String
-  created_at DateTime @default(now())
-  updated_at DateTime
-
-  @@unique([namespace, key, locale])
-}
-
-model integration_configs {
-  id          String            @id
-  vendor_code String
-  name        String
-  config_json Json
-  secrets_ref String?
-  version     Int               @default(1)
-  status      IntegrationStatus @default(ACTIVE)
-  created_at  DateTime          @default(now())
-  updated_at  DateTime
-}
-
-model marketplace_policies {
-  id             String       @id
-  policy_code    String
-  name           String
-  content_md     String
-  effective_from DateTime
-  effective_to   DateTime?
-  version        Int          @default(1)
-  status         PolicyStatus @default(DRAFT)
-  created_at     DateTime     @default(now())
-  updated_at     DateTime
-}
-
-model notification_templates {
-  id             String              @id
-  channel        NotificationChannel
-  template_code  String
-  locale         String
-  subject        String?
-  body_md        String
-  variables_json Json?
-  version        Int                 @default(1)
-  status         TemplateStatus      @default(DRAFT)
-  created_at     DateTime            @default(now())
-  updated_at     DateTime
-}
-
-model partners {
-  id           String        @id
-  type         PartnerType
-  name         String
-  contact_json Json
-  status       PartnerStatus @default(ACTIVE)
-  created_at   DateTime      @default(now())
-  updated_at   DateTime
-}
-
-model payment_methods {
-  id          String   @id
-  code        String   @unique
-  provider    String
-  method_type String
-  enabled     Boolean  @default(true)
-  config_json Json
-  created_at  DateTime @default(now())
-  updated_at  DateTime
-}
-
-model redaction_patterns {
-  id          String   @id
-  code        String   @unique
-  pattern     String
-  description String?
-  channel     String
-  enabled     Boolean  @default(true)
-  severity    String
-  created_at  DateTime @default(now())
-  updated_at  DateTime
-}
-
-model tax_rates {
-  id             String        @id
-  region         String
-  tax_code       String
-  rate           Decimal
-  effective_from DateTime
-  effective_to   DateTime?
-  status         TaxRateStatus @default(ACTIVE)
-  created_at     DateTime      @default(now())
-  updated_at     DateTime
-}
-
-model notifications {
-  id         String    @id @db.VarChar(255)
-  user_id    String    @db.VarChar(255)
-  type       String    @db.VarChar(50)
-  title      String    @db.VarChar(255)
-  message    String
-  data       Json?
-  read       Boolean?  @default(false)
-  created_at DateTime? @default(now()) @db.Timestamp(6)
-  updated_at DateTime? @default(now()) @db.Timestamp(6)
-
-  @@index([created_at], map: "idx_notifications_created_at")
-  @@index([read], map: "idx_notifications_read")
-  @@index([type], map: "idx_notifications_type")
-  @@index([user_id], map: "idx_notifications_user_id")
+  id                                           String               @id
+  email                                        String?              @unique
+  phone                                        String?              @unique
+  password_hash                                String
+  status                                       UserStatus           @default(PENDING_VERIFICATION)
+  kyc_status                                   KYCStatus            @default(UNVERIFIED)
+  display_name                                 String?
+  first_name                                   String?
+  last_name                                    String?
+  avatar_url                                   String?
+  default_locale                               String               @default("vi")
+  timezone                                     String               @default("Asia/Ho_Chi_Minh")
+  last_login_at                                DateTime?
+  email_verified_at                            DateTime?
+  phone_verified_at                            DateTime?
+  created_at                                   DateTime             @default(now())
+  updated_at                                   DateTime
+  deleted_at                                   DateTime?
+  permissions_updated_at                       DateTime?
+  audit_logs                                   audit_logs[]
+  conversations_conversations_buyer_idTousers  conversations[]      @relation("conversations_buyer_idTousers")
+  conversations_conversations_seller_idTousers conversations[]      @relation("conversations_seller_idTousers")
+  depot_users                                  depot_users[]
+  dispute_audit_logs                           dispute_audit_logs[]
+  dispute_evidence                             dispute_evidence[]
+  dispute_messages                             dispute_messages[]
+  disputes_disputes_raised_byTousers           disputes[]           @relation("disputes_raised_byTousers")
+  disputes_disputes_resolved_byTousers         disputes[]           @relation("disputes_resolved_byTousers")
+  documents                                    documents[]
+  favorites                                    favorites[]
+  inspections_inspections_inspector_idTousers  inspections[]        @relation("inspections_inspector_idTousers")
+  inspections_inspections_requested_byTousers  inspections[]        @relation("inspections_requested_byTousers")
+  listing_media                                listing_media[]
+  listings                                     listings[]
+  messages                                     messages[]
+  order_preparations                           order_preparations[]
+  orders_orders_buyer_idTousers                orders[]             @relation("orders_buyer_idTousers")
+  orders_orders_seller_idTousers               orders[]             @relation("orders_seller_idTousers")
+  org_users                                    org_users[]
+  orgs                                         orgs[]
+  qa_answers                                   qa_answers[]
+  qa_questions                                 qa_questions[]
+  quotes                                       quotes[]
+  reviews_reviews_response_byTousers           reviews[]            @relation("reviews_response_byTousers")
+  reviews_reviews_reviewee_idTousers           reviews[]            @relation("reviews_reviewee_idTousers")
+  reviews_reviews_reviewer_idTousers           reviews[]            @relation("reviews_reviewer_idTousers")
+  rfqs                                         rfqs[]
+  subscriptions                                subscriptions[]
+  user_roles_user_roles_assigned_byTousers     user_roles[]         @relation("user_roles_assigned_byTousers")
+  user_roles_user_roles_user_idTousers         user_roles[]         @relation("user_roles_user_idTousers")
 }
 
 enum AuditAction {
@@ -1564,6 +1608,12 @@ enum DeliveryEventType {
   CANCELLED
 }
 
+enum DeliveryMethod {
+  self_pickup
+  logistics
+  seller_delivers
+}
+
 enum DeliveryStatus {
   PENDING
   SCHEDULED
@@ -1588,6 +1638,13 @@ enum DisputeStatus {
   ESCALATED
 }
 
+enum DocumentStatus {
+  DRAFT
+  ISSUED
+  EXPIRED
+  CANCELLED
+}
+
 enum DocumentType {
   EDO
   EIR
@@ -1595,13 +1652,6 @@ enum DocumentType {
   RECEIPT
   CONTRACT
   OTHER
-}
-
-enum DocumentStatus {
-  DRAFT
-  ISSUED
-  EXPIRED
-  CANCELLED
 }
 
 enum FeatureFlagStatus {
@@ -1891,10 +1941,4 @@ enum UserType {
   INDIVIDUAL
   COMPANY
   GOVERNMENT
-}
-
-enum DeliveryMethod {
-  self_pickup
-  logistics
-  seller_delivers
 }

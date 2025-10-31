@@ -44,29 +44,30 @@ export default function ListingsPage() {
   const [items, setItems] = useState<any[]>([]);
   const [page, setPage] = useState(1);
   const [total, setTotal] = useState(0);
+  const [totalPages, setTotalPages] = useState(0);
   const [q, setQ] = useState('');
   const [searchInput, setSearchInput] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 10;
+  const itemsPerPage = 20;
 
   useEffect(() => {
     let ignore = false;
     (async () => {
       try {
-        console.log('[Listings Page] Starting fetch with params:', { q, page, limit: 20 });
+        console.log('[Listings Page] Starting fetch with params:', { q, page, limit: itemsPerPage });
         console.log('[Listings Page] User auth status:', user);
         
         setLoading(true);
         setError(null);
-        const res = await fetchListings({ q, page, limit: 20 });
+        const res = await fetchListings({ q, page, limit: itemsPerPage });
         console.log('[Listings Page] API Response:', res);
         console.log('[Listings Page] Response data:', res.data);
         console.log('[Listings Page] Listings array:', res.data?.listings);
         if (!ignore && res.data) {
           setItems(res.data.listings || []);
           setTotal(res.data.pagination?.total || 0);
+          setTotalPages(res.data.pagination?.totalPages || Math.ceil((res.data.pagination?.total || 0) / itemsPerPage));
           console.log('[Listings Page] State updated - items:', res.data.listings?.length, 'total:', res.data.pagination?.total);
         }
       } catch (error: any) {
@@ -74,6 +75,7 @@ export default function ListingsPage() {
         if (!ignore) {
           setItems([]);
           setTotal(0);
+          setTotalPages(0);
           setError(error.message || 'Không thể tải danh sách tin đăng');
         }
       } finally {
@@ -88,7 +90,6 @@ export default function ListingsPage() {
   const handleSearch = () => {
     setQ(searchInput);
     setPage(1);
-    setCurrentPage(1);
   };
 
   const handleSearchKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
@@ -96,17 +97,6 @@ export default function ListingsPage() {
       handleSearch();
     }
   };
-
-  // Pagination
-  const totalPages = Math.ceil(items.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedItems = items.slice(startIndex, endIndex);
-
-  // Reset to page 1 when items change
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [items.length]);
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -261,7 +251,7 @@ export default function ListingsPage() {
       {/* Listings Grid */}
       {!loading && !error && items.length > 0 && (
         <>
-          <div className="grid gap-6">{paginatedItems.map((listing) => (
+          <div className="grid gap-6">{items.map((listing) => (
             <Card 
               key={listing.id} 
               className="border-primary/10 hover:shadow-lg hover:border-primary/30 transition-all duration-300 group"
@@ -397,14 +387,14 @@ export default function ListingsPage() {
           <CardContent className="p-6">
             <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
               <p className="text-sm text-muted-foreground">
-                Hiển thị <span className="font-semibold text-foreground">{startIndex + 1}</span> - <span className="font-semibold text-foreground">{Math.min(endIndex, items.length)}</span> trong tổng số <span className="font-semibold text-foreground">{items.length}</span> tin đăng
+                Hiển thị <span className="font-semibold text-foreground">{((page - 1) * itemsPerPage) + 1}</span> - <span className="font-semibold text-foreground">{Math.min(page * itemsPerPage, total)}</span> trong tổng số <span className="font-semibold text-foreground">{total}</span> tin đăng
               </p>
               <div className="flex items-center gap-2">
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-                  disabled={currentPage === 1}
+                  onClick={() => setPage(prev => Math.max(1, prev - 1))}
+                  disabled={page === 1}
                   className="hover:bg-primary/5 hover:border-primary transition-all duration-300"
                 >
                   <ChevronLeft className="h-4 w-4 mr-1" />
@@ -412,27 +402,38 @@ export default function ListingsPage() {
                 </Button>
                 
                 <div className="flex items-center gap-1">
-                  {Array.from({ length: totalPages }, (_, i) => i + 1).map((pageNum) => (
-                    <Button
-                      key={pageNum}
-                      variant={currentPage === pageNum ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => setCurrentPage(pageNum)}
-                      className={currentPage === pageNum 
-                        ? "bg-gradient-to-r from-primary via-primary/90 to-primary/80 hover:from-primary/90 hover:via-primary/80 hover:to-primary/70 transition-all duration-300 min-w-[2.5rem]" 
-                        : "hover:bg-primary/5 hover:border-primary transition-all duration-300 min-w-[2.5rem]"
-                      }
-                    >
-                      {pageNum}
-                    </Button>
+                  {Array.from({ length: Math.min(totalPages, 10) }, (_, i) => {
+                    const pageNum = i + 1;
+                    if (totalPages <= 10) return pageNum;
+                    if (pageNum <= 3 || pageNum > totalPages - 3 || Math.abs(pageNum - page) <= 1) return pageNum;
+                    if (pageNum === 4 && page > 5) return '...';
+                    if (pageNum === totalPages - 3 && page < totalPages - 4) return '...';
+                    return null;
+                  }).filter(Boolean).map((pageNum, idx) => (
+                    pageNum === '...' ? (
+                      <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">...</span>
+                    ) : (
+                      <Button
+                        key={pageNum}
+                        variant={page === pageNum ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setPage(pageNum as number)}
+                        className={page === pageNum 
+                          ? "bg-gradient-to-r from-primary via-primary/90 to-primary/80 hover:from-primary/90 hover:via-primary/80 hover:to-primary/70 transition-all duration-300 min-w-[2.5rem]" 
+                          : "hover:bg-primary/5 hover:border-primary transition-all duration-300 min-w-[2.5rem]"
+                        }
+                      >
+                        {pageNum}
+                      </Button>
+                    )
                   ))}
                 </div>
 
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-                  disabled={currentPage === totalPages}
+                  onClick={() => setPage(prev => Math.min(totalPages, prev + 1))}
+                  disabled={page === totalPages}
                   className="hover:bg-primary/5 hover:border-primary transition-all duration-300"
                 >
                   Sau

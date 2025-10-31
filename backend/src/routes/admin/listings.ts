@@ -257,6 +257,8 @@ export default async function adminListingsRoutes(fastify: FastifyInstance) {
   fastify.get('/:id', { preHandler: [adminAuth] }, async (request, reply) => {
     try {
       const { id } = request.params as any;
+      console.log('📄 Admin GET listing detail - ID:', id);
+      console.log('📄 User from token:', (request.user as any)?.userId);
 
       const listing = await prisma.listings.findUnique({
         where: { id },
@@ -268,24 +270,28 @@ export default async function adminListingsRoutes(fastify: FastifyInstance) {
             select: { id: true, name: true, province: true }
           },
           listing_facets: true,
-          listing_media: true,
-          md_listing_statuses: true
+          listing_media: true
+          // md_listing_statuses removed - not a relation in schema
         }
       });
 
       if (!listing) {
+        console.log('❌ Listing not found:', id);
         return reply.status(404).send({
           success: false,
           message: 'Listing not found'
         });
       }
 
+      console.log('✅ Listing found:', listing.id, listing.title);
       return reply.send({
         success: true,
-        data: listing
+        data: {
+          listing: listing
+        }
       });
     } catch (error) {
-      console.error('Admin get listing detail error:', error);
+      console.error('❌ Admin get listing detail error:', error);
       return reply.status(500).send({
         success: false,
         message: 'Internal server error',

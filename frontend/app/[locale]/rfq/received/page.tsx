@@ -49,6 +49,8 @@ export default function RFQReceivedPage() {
   const [rfqs, setRfqs] = useState<RFQ[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     fetchRFQs();
@@ -167,6 +169,17 @@ export default function RFQReceivedPage() {
     rfq.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     rfq.buyerName.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Pagination
+  const totalPages = Math.ceil(filteredRFQs.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedRFQs = filteredRFQs.slice(startIndex, endIndex);
+
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const getStatusBadge = (status: string) => {
     const config = {
@@ -328,7 +341,7 @@ export default function RFQReceivedPage() {
                   </TableRow>
                 </TableHeader>
               <TableBody>
-                {filteredRFQs.map((rfq) => (
+                {paginatedRFQs.map((rfq) => (
                   <TableRow key={rfq.id}>
                     <TableCell>
                       <div>
@@ -407,6 +420,59 @@ export default function RFQReceivedPage() {
                 ))}
               </TableBody>
             </Table>
+
+            {/* Pagination */}
+            {totalPages > 1 && (
+              <div className="mt-6 flex flex-col sm:flex-row items-center justify-between gap-4 border-t pt-4">
+                <p className="text-sm text-muted-foreground">
+                  Hiển thị <span className="font-semibold">{startIndex + 1}</span> - <span className="font-semibold">{Math.min(endIndex, filteredRFQs.length)}</span> trong tổng số <span className="font-semibold">{filteredRFQs.length}</span> RFQ
+                </p>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    Trước
+                  </Button>
+                  
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                      const pageNum = i + 1;
+                      if (totalPages <= 7) return pageNum;
+                      if (pageNum <= 2 || pageNum > totalPages - 2 || Math.abs(pageNum - currentPage) <= 1) return pageNum;
+                      if (pageNum === 3 && currentPage > 4) return '...';
+                      if (pageNum === totalPages - 2 && currentPage < totalPages - 3) return '...';
+                      return null;
+                    }).filter(Boolean).map((pageNum, idx) => (
+                      pageNum === '...' ? (
+                        <span key={`ellipsis-${idx}`} className="px-2">...</span>
+                      ) : (
+                        <Button
+                          key={pageNum}
+                          variant={currentPage === pageNum ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(pageNum as number)}
+                          className="min-w-[2.5rem]"
+                        >
+                          {pageNum}
+                        </Button>
+                      )
+                    ))}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Sau
+                  </Button>
+                </div>
+              </div>
+            )}
             </div>
           )}
         </CardContent>

@@ -40,6 +40,8 @@ export default function OrdersPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
 
   // Determine user role for API call
@@ -345,6 +347,17 @@ export default function OrdersPage() {
            order.status === activeTab.toUpperCase() || 
            order.status === activeTab.toLowerCase();
   });
+
+  // Pagination
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedOrders = filteredOrders.slice(startIndex, endIndex);
+
+  // Reset to page 1 when changing tabs
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeTab]);
 
   // Count orders by status
   const getOrderCount = (status: string) => {
@@ -678,10 +691,67 @@ export default function OrdersPage() {
                 )}
                 
                 <div className="grid gap-4">
-                  {filteredOrders.map((order) => (
+                  {paginatedOrders.map((order) => (
                     <OrderCard key={order.id} order={order} />
                   ))}
                 </div>
+
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <Card className="border-primary/10 shadow-sm">
+                    <CardContent className="p-6">
+                      <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <p className="text-sm text-muted-foreground">
+                          Hiển thị <span className="font-semibold text-foreground">{startIndex + 1}</span> - <span className="font-semibold text-foreground">{Math.min(endIndex, filteredOrders.length)}</span> trong tổng số <span className="font-semibold text-foreground">{filteredOrders.length}</span> đơn hàng
+                        </p>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                            disabled={currentPage === 1}
+                          >
+                            Trước
+                          </Button>
+                          
+                          <div className="flex items-center gap-1">
+                            {Array.from({ length: Math.min(totalPages, 7) }, (_, i) => {
+                              const pageNum = i + 1;
+                              if (totalPages <= 7) return pageNum;
+                              if (pageNum <= 2 || pageNum > totalPages - 2 || Math.abs(pageNum - currentPage) <= 1) return pageNum;
+                              if (pageNum === 3 && currentPage > 4) return '...';
+                              if (pageNum === totalPages - 2 && currentPage < totalPages - 3) return '...';
+                              return null;
+                            }).filter(Boolean).map((pageNum, idx) => (
+                              pageNum === '...' ? (
+                                <span key={`ellipsis-${idx}`} className="px-2 text-muted-foreground">...</span>
+                              ) : (
+                                <Button
+                                  key={pageNum}
+                                  variant={currentPage === pageNum ? "default" : "outline"}
+                                  size="sm"
+                                  onClick={() => setCurrentPage(pageNum as number)}
+                                  className="min-w-[2.5rem]"
+                                >
+                                  {pageNum}
+                                </Button>
+                              )
+                            ))}
+                          </div>
+
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                            disabled={currentPage === totalPages}
+                          >
+                            Sau
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                )}
               </>
             ) : (
               <Card>

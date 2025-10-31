@@ -15,7 +15,9 @@ import {
   Package,
   User,
   MoreVertical,
-  Send
+  Send,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { Link } from '@/i18n/routing';
 
@@ -52,6 +54,8 @@ export default function MessagesPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
 
   useEffect(() => {
     if (user) {
@@ -103,6 +107,16 @@ export default function MessagesPage() {
     conv.listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     conv.otherUser.displayName.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Pagination logic
+  const totalPages = Math.ceil(filteredConversations.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedConversations = filteredConversations.slice(startIndex, endIndex);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
 
   const formatTime = (dateString: string) => {
     const date = new Date(dateString);
@@ -183,7 +197,7 @@ export default function MessagesPage() {
 
         {/* Conversations List */}
         <div className="space-y-3">
-          {filteredConversations.length === 0 ? (
+          {paginatedConversations.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-12">
                 <MessageSquare className="h-12 w-12 text-muted-foreground mb-4" />
@@ -200,7 +214,7 @@ export default function MessagesPage() {
               </CardContent>
             </Card>
           ) : (
-            filteredConversations.map((conversation) => (
+            paginatedConversations.map((conversation) => (
               <Card key={conversation.id} className="hover:shadow-md transition-shadow cursor-pointer">
                 <Link href={`/messages/${conversation.id}`}>
                   <CardContent className="p-4">
@@ -255,6 +269,65 @@ export default function MessagesPage() {
             ))
           )}
         </div>
+
+        {/* Pagination */}
+        {filteredConversations.length > 0 && totalPages > 1 && (
+          <Card className="mt-6">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  Hiển thị {startIndex + 1}-{Math.min(endIndex, filteredConversations.length)} trong tổng số {filteredConversations.length} cuộc hội thoại
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
+                    disabled={currentPage === 1}
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Trước
+                  </Button>
+                  
+                  <div className="flex items-center gap-1">
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => {
+                      if (
+                        page === 1 ||
+                        page === totalPages ||
+                        (page >= currentPage - 1 && page <= currentPage + 1)
+                      ) {
+                        return (
+                          <Button
+                            key={page}
+                            variant={currentPage === page ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setCurrentPage(page)}
+                            className="w-9"
+                          >
+                            {page}
+                          </Button>
+                        );
+                      } else if (page === currentPage - 2 || page === currentPage + 2) {
+                        return <span key={page} className="px-1">...</span>;
+                      }
+                      return null;
+                    })}
+                  </div>
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
+                    disabled={currentPage === totalPages}
+                  >
+                    Sau
+                    <ChevronRight className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         {/* Summary Stats */}
         {filteredConversations.length > 0 && (

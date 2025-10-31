@@ -143,6 +143,23 @@ export async function createListing(listingData: {
     condition: string;
   };
   media?: string[];
+  // Quantity management (required for all deal types)
+  totalQuantity: number;
+  availableQuantity: number;
+  maintenanceQuantity: number;
+  // Rental-specific fields (optional, only for RENTAL/LEASE)
+  minRentalDuration?: number;
+  maxRentalDuration?: number;
+  depositRequired?: boolean;
+  depositAmount?: number;
+  depositCurrency?: string;
+  lateReturnFeeAmount?: number;
+  lateReturnFeeUnit?: string;
+  earliestAvailableDate?: string;
+  latestReturnDate?: string;
+  autoRenewalEnabled?: boolean;
+  renewalNoticeDays?: number;
+  renewalPriceAdjustment?: number;
 }) {
   const data = await apiClient.request<{ 
     success: boolean;

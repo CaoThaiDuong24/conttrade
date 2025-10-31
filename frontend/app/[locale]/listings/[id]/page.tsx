@@ -72,6 +72,7 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
             price: parseFloat(apiListing.price_amount || apiListing.priceAmount || apiListing.price || 0),
             currency: apiListing.price_currency || apiListing.priceCurrency || apiListing.currency || 'VND',
             dealType: apiListing.deal_type,
+            rentalUnit: apiListing.rental_unit,
             size: apiListing.listing_facets?.find((f: any) => f.key === 'size')?.value || 'N/A',
             type: apiListing.listing_facets?.find((f: any) => f.key === 'type')?.value || 'N/A',
             standard: apiListing.listing_facets?.find((f: any) => f.key === 'standard')?.value || 'N/A',
@@ -83,6 +84,24 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
             reviews: apiListing.reviews_count || apiListing.reviewsCount || 0,
             postedDate: apiListing.created_at ? new Date(apiListing.created_at).toLocaleDateString('vi-VN') : 'N/A',
             featured: apiListing.featured || false,
+            // Rental management fields
+            totalQuantity: apiListing.total_quantity || 1,
+            availableQuantity: apiListing.available_quantity || 1,
+            rentedQuantity: apiListing.rented_quantity || 0,
+            reservedQuantity: apiListing.reserved_quantity || 0,
+            maintenanceQuantity: apiListing.maintenance_quantity || 0,
+            minRentalDuration: apiListing.min_rental_duration,
+            maxRentalDuration: apiListing.max_rental_duration,
+            depositRequired: apiListing.deposit_required || false,
+            depositAmount: apiListing.deposit_amount ? parseFloat(apiListing.deposit_amount) : null,
+            depositCurrency: apiListing.deposit_currency,
+            lateReturnFeeAmount: apiListing.late_return_fee_amount ? parseFloat(apiListing.late_return_fee_amount) : null,
+            lateReturnFeeUnit: apiListing.late_return_fee_unit,
+            earliestAvailableDate: apiListing.earliest_available_date,
+            latestReturnDate: apiListing.latest_return_date,
+            autoRenewalEnabled: apiListing.auto_renewal_enabled || false,
+            renewalNoticeDays: apiListing.renewal_notice_days || 7,
+            renewalPriceAdjustment: apiListing.renewal_price_adjustment ? parseFloat(apiListing.renewal_price_adjustment) : 0,
             images: apiListing.listing_media?.length > 0 
               ? apiListing.listing_media.map((m: any) => {
                   const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
@@ -336,6 +355,13 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
                 <div className="bg-gradient-to-br from-blue-50 to-blue-100 rounded-xl p-4 border border-blue-200">
                   <div className="text-2xl font-bold text-blue-700 mb-1">
                     {new Intl.NumberFormat('vi-VN').format(listing.price)} {listing.currency}
+                    {(listing.dealType === 'RENTAL' || listing.dealType === 'LEASE') && listing.rentalUnit && (
+                      <span className="text-lg font-medium">
+                        {listing.rentalUnit === 'MONTH' && ' / tháng'}
+                        {listing.rentalUnit === 'WEEK' && ' / tuần'}
+                        {listing.rentalUnit === 'DAY' && ' / ngày'}
+                      </span>
+                    )}
                   </div>
                   <div className="text-blue-600 text-sm font-medium">
                     Giá {getDealTypeDisplayName(listing.dealType).toLowerCase()}
@@ -402,6 +428,151 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
                 </div>
               </div>
             </div>
+
+            {/* Rental Management Information (chỉ hiển thị cho RENTAL/LEASE) */}
+            {(listing.dealType === 'RENTAL' || listing.dealType === 'LEASE') && (
+              <div className="bg-white rounded-xl shadow-sm p-6">
+                <h3 className="text-lg font-semibold mb-4 text-gray-900 flex items-center">
+                  <svg className="w-5 h-5 mr-2 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                  </svg>
+                  Thông tin quản lý cho thuê
+                </h3>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Quantity Management */}
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-gray-800 text-sm uppercase tracking-wide">Quản lý số lượng</h4>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-gray-600 font-medium">Tổng số</span>
+                      <span className="font-semibold text-gray-900">{listing.totalQuantity} container</span>
+                    </div>
+                    <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                      <span className="text-gray-600 font-medium">Có sẵn</span>
+                      <Badge className="bg-green-100 text-green-800 hover:bg-green-100">
+                        {listing.availableQuantity} container
+                      </Badge>
+                    </div>
+                    {listing.rentedQuantity > 0 && (
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-600 font-medium">Đang thuê</span>
+                        <span className="font-semibold text-blue-700">{listing.rentedQuantity}</span>
+                      </div>
+                    )}
+                    {listing.reservedQuantity > 0 && (
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-600 font-medium">Đã đặt trước</span>
+                        <span className="font-semibold text-yellow-700">{listing.reservedQuantity}</span>
+                      </div>
+                    )}
+                    {listing.maintenanceQuantity > 0 && (
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-600 font-medium">Đang bảo trì</span>
+                        <span className="font-semibold text-orange-700">{listing.maintenanceQuantity}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Duration & Dates */}
+                  <div className="space-y-3">
+                    <h4 className="font-semibold text-gray-800 text-sm uppercase tracking-wide">Thời hạn thuê</h4>
+                    {listing.minRentalDuration && (
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-600 font-medium">Tối thiểu</span>
+                        <span className="font-semibold text-gray-900">
+                          {listing.minRentalDuration} {listing.rentalUnit === 'MONTH' ? 'tháng' : listing.rentalUnit === 'DAY' ? 'ngày' : 'tuần'}
+                        </span>
+                      </div>
+                    )}
+                    {listing.maxRentalDuration && (
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-600 font-medium">Tối đa</span>
+                        <span className="font-semibold text-gray-900">
+                          {listing.maxRentalDuration} {listing.rentalUnit === 'MONTH' ? 'tháng' : listing.rentalUnit === 'DAY' ? 'ngày' : 'tuần'}
+                        </span>
+                      </div>
+                    )}
+                    {listing.earliestAvailableDate && (
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-600 font-medium">Sớm nhất giao</span>
+                        <span className="font-semibold text-gray-900">
+                          {new Date(listing.earliestAvailableDate).toLocaleDateString('vi-VN')}
+                        </span>
+                      </div>
+                    )}
+                    {listing.latestReturnDate && (
+                      <div className="flex justify-between items-center py-2 border-b border-gray-100">
+                        <span className="text-gray-600 font-medium">Muộn nhất trả</span>
+                        <span className="font-semibold text-gray-900">
+                          {new Date(listing.latestReturnDate).toLocaleDateString('vi-VN')}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* Deposit & Fee Policy */}
+                {(listing.depositRequired || listing.lateReturnFeeAmount) && (
+                  <div className="mt-6 pt-6 border-t border-gray-200">
+                    <h4 className="font-semibold text-gray-800 text-sm uppercase tracking-wide mb-3">Chính sách đặt cọc & phí</h4>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      {listing.depositRequired && listing.depositAmount && (
+                        <div className="bg-yellow-50 rounded-lg p-4 border border-yellow-200">
+                          <div className="flex items-center mb-2">
+                            <svg className="w-5 h-5 text-yellow-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span className="font-semibold text-yellow-800">Yêu cầu đặt cọc</span>
+                          </div>
+                          <div className="text-2xl font-bold text-yellow-700">
+                            {new Intl.NumberFormat('vi-VN').format(listing.depositAmount)} {listing.depositCurrency || listing.currency}
+                          </div>
+                          <p className="text-xs text-yellow-600 mt-1">Khách hàng phải đặt cọc trước khi thuê</p>
+                        </div>
+                      )}
+                      
+                      {listing.lateReturnFeeAmount && (
+                        <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+                          <div className="flex items-center mb-2">
+                            <svg className="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <span className="font-semibold text-red-800">Phí trả muộn</span>
+                          </div>
+                          <div className="text-2xl font-bold text-red-700">
+                            {listing.lateReturnFeeUnit === 'PERCENTAGE' 
+                              ? `${listing.lateReturnFeeAmount}%`
+                              : `${new Intl.NumberFormat('vi-VN').format(listing.lateReturnFeeAmount)} ${listing.currency}`
+                            }
+                            {listing.lateReturnFeeUnit === 'PER_DAY' && <span className="text-sm"> / ngày</span>}
+                            {listing.lateReturnFeeUnit === 'PER_WEEK' && <span className="text-sm"> / tuần</span>}
+                          </div>
+                          <p className="text-xs text-red-600 mt-1">Phí phạt khi trả container muộn hạn</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Renewal Policy */}
+                {listing.autoRenewalEnabled && (
+                  <div className="mt-6 pt-6 border-t border-gray-200">
+                    <div className="flex items-center bg-blue-50 rounded-lg p-4 border border-blue-200">
+                      <CheckCircle className="w-5 h-5 text-blue-600 mr-3 flex-shrink-0" />
+                      <div>
+                        <p className="font-semibold text-blue-800">Cho phép gia hạn tự động</p>
+                        <p className="text-sm text-blue-600 mt-1">
+                          Thông báo trước {listing.renewalNoticeDays} ngày
+                          {listing.renewalPriceAdjustment !== 0 && (
+                            <> • Điều chỉnh giá: {listing.renewalPriceAdjustment > 0 ? '+' : ''}{listing.renewalPriceAdjustment}%</>
+                          )}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Sidebar */}

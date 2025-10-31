@@ -307,7 +307,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         expires.setTime(expires.getTime() + (7 * 24 * 60 * 60 * 1000)); // 7 days
         
         // Set cookie with proper format for middleware
-        document.cookie = `${name}=${token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax; Secure=${window.location.protocol === 'https:'}`;
+        // For LAN access (HTTP), don't use Secure flag as it requires HTTPS
+        const isHttps = window.location.protocol === 'https:';
+        const cookieString = isHttps
+          ? `${name}=${token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax; Secure`
+          : `${name}=${token}; expires=${expires.toUTCString()}; path=/; SameSite=Lax`;
+        
+        document.cookie = cookieString;
+        console.log('🍪 Cookie set:', cookieString.substring(0, 50) + '...');
     }
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
