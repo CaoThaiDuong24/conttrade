@@ -16,15 +16,15 @@ const ROUTE_PERMISSIONS = {
   '/legal/terms': null,
   '/legal/privacy': null,
   '/listings': 'PM-001', // VIEW_PUBLIC_LISTINGS - Can be accessed by guests
-  
+
   // Dashboard routes - Allow all authenticated users
   '/dashboard': 'PM-001', // Basic authenticated access - all users can view dashboard
   '/dashboard/test': 'PM-001', // Basic authenticated access
-  
+
   // Account routes
   '/account/profile': 'PM-001', // Basic authenticated access
   '/account/verify': 'PM-001', // Basic authenticated access
-  
+
   // Buyer routes - RFQ
   '/rfq': ['PM-020', 'PM-021'], // CREATE_RFQ (buyer) or ISSUE_QUOTE (seller) - both can access
   '/rfq/create': 'PM-020', // CREATE_RFQ
@@ -204,17 +204,19 @@ export default async function middleware(request: NextRequest) {
     // Verify JWT token using jose (Edge Runtime compatible)
     console.log('🔐 VERIFYING JWT...');
 
-    const secret = new TextEncoder().encode('your-super-secret-jwt-key-change-in-production');
+    // Use the same JWT secret as the backend
+    const jwtSecret = process.env.JWT_SECRET || 'your-jwt-secret-key-change-in-production';
+    const secret = new TextEncoder().encode(jwtSecret);
     const { payload } = await jwtVerify(token, secret);
 
     console.log('✅ JWT VALID for user:', payload.userId, 'Role:', payload.role || payload.roles);
     console.log('🔍 JWT PAYLOAD:', JSON.stringify(payload, null, 2));
-    
+
     // ✅ REALTIME PERMISSIONS: Always query from database to get latest permissions
     // This ensures admin can grant/revoke permissions and they take effect immediately
     let userRoles: string[] = [];
     let userPermissions: string[] = [];
-    
+
     try {
       // Call backend API to get fresh user data with latest permissions
       const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
@@ -225,22 +227,22 @@ export default async function middleware(request: NextRequest) {
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (meResponse.ok) {
         const meData = await meResponse.json();
         if (meData.success && meData.data?.user) {
           const userData = meData.data.user;
-          
+
           // Extract roles (can be array of strings OR array of objects with code)
           if (Array.isArray(userData.roles)) {
-            userRoles = userData.roles.map((r: any) => 
+            userRoles = userData.roles.map((r: any) =>
               typeof r === 'string' ? r : r.code
             );
           }
-          
+
           // Extract permissions - flatten from all roles if permissions are nested in roles
           const permissionSet = new Set<string>();
-          
+
           // Case 1: permissions is a direct array of strings
           if (Array.isArray(userData.permissions) && userData.permissions.length > 0) {
             userData.permissions.forEach((p: any) => {
@@ -248,7 +250,7 @@ export default async function middleware(request: NextRequest) {
               if (permCode) permissionSet.add(permCode);
             });
           }
-          
+
           // Case 2: permissions are nested in roles array
           if (Array.isArray(userData.roles)) {
             userData.roles.forEach((role: any) => {
@@ -260,9 +262,9 @@ export default async function middleware(request: NextRequest) {
               }
             });
           }
-          
+
           userPermissions = Array.from(permissionSet);
-          
+
           console.log('✅ Got REALTIME permissions from database via /auth/me');
           console.log('🔑 USER ROLES:', userRoles);
           console.log('🔑 USER PERMISSIONS:', userPermissions.length, 'permissions');
@@ -276,32 +278,32 @@ export default async function middleware(request: NextRequest) {
     } catch (error) {
       // Fallback to JWT-based permissions if API call fails
       console.warn('⚠️ Failed to fetch realtime permissions, using JWT fallback:', error);
-      
+
       userRoles = await getUserRoles(
-        payload.userId as string, 
-        payload.role as string | undefined, 
+        payload.userId as string,
+        payload.role as string | undefined,
         payload.roles as string[] | undefined,
         payload.email as string | undefined
       );
-      
+
       userPermissions = (payload.permissions && Array.isArray(payload.permissions) && payload.permissions.length > 0)
         ? payload.permissions as string[]
         : await getUserPermissions(userRoles);
-        
+
       console.log('🔑 USER ROLES (fallback):', userRoles);
       console.log('🔑 USER PERMISSIONS (fallback):', userPermissions);
     }
-    
+
     // Check if user has required permission
     const hasRequiredPermission = requiredPermission ? hasPermission(userPermissions, userRoles, requiredPermission) : true;
-    
+
     if (requiredPermission && !hasRequiredPermission) {
       console.log('⚠️ PERMISSION MISSING:', requiredPermission, '- But allowing access to show "Under Development" page');
     }
 
     // Add user info to headers for server components
     const response = intlResponse instanceof Response ? intlResponse : NextResponse.next();
-    
+
     // Add permission check result to headers so pages can show appropriate content
     response.headers.set('x-has-permission', hasRequiredPermission.toString());
     response.headers.set('x-user-id', payload.userId as string);
@@ -344,7 +346,7 @@ function getRequiredPermission(routePath: string) {
 
     // Log warning for undefined routes
   console.log('⚠️ Route not in ROUTE_PERMISSIONS:', routePath);
-  
+
   // Smart defaults based on route patterns
   if (routePath.startsWith('/admin')) {
     console.log('→ Defaulting to PM-072 (ADMIN_VIEW_DASHBOARD) for admin route');
@@ -358,7 +360,7 @@ function getRequiredPermission(routePath: string) {
     console.log('→ Defaulting to PM-001 (basic authenticated access) for account route');
     return 'PM-001';
   }
-  
+
   // ⚠️ DEFAULT: Allow authenticated users for undefined routes
   // This prevents redirect loops when users access valid routes not in the permissions map
   console.log('→ Defaulting to PM-001 (basic authenticated access) for undefined route');

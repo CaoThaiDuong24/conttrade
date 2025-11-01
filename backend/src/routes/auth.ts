@@ -11,15 +11,15 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
       // Kiểm tra email hoặc phone đã tồn tại
       const existingUser = await prisma.$queryRaw`
-        SELECT id FROM users 
+        SELECT id FROM users
         WHERE email = ${email || null} OR phone = ${phone || null}
         LIMIT 1
       `;
 
       if (Array.isArray(existingUser) && existingUser.length > 0) {
-        return reply.status(400).send({ 
-          success: false, 
-          message: 'Email hoặc số điện thoại đã được sử dụng' 
+        return reply.status(400).send({
+          success: false,
+          message: 'Email hoặc số điện thoại đã được sử dụng'
         });
       }
 
@@ -79,8 +79,8 @@ export default async function authRoutes(fastify: FastifyInstance) {
         stack: error?.stack,
         code: error?.code
       });
-      return reply.status(500).send({ 
-        success: false, 
+      return reply.status(500).send({
+        success: false,
         message: 'Lỗi hệ thống',
         error: process.env.NODE_ENV === 'development' ? error?.message : undefined
       });
@@ -90,7 +90,41 @@ export default async function authRoutes(fastify: FastifyInstance) {
   // A-002: POST /auth/login - Đăng nhập
   fastify.post('/login', async (request, reply) => {
     try {
+      console.log('🔑 Login request received:', {
+        body: request.body,
+        headers: request.headers['content-type']
+      });
+
       const { email, phone, password } = request.body as any;
+
+      if (!email && !phone) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Email hoặc số điện thoại là bắt buộc'
+        });
+      }
+
+      if (!password) {
+        return reply.status(400).send({
+          success: false,
+          message: 'Mật khẩu là bắt buộc'
+        });
+      }
+
+      console.log('🔍 Searching for user with email:', email || 'N/A', 'phone:', phone || 'N/A');
+
+      // Test database connection first
+      try {
+        await prisma.$queryRaw`SELECT 1 as test`;
+        console.log('✅ Database connection OK');
+      } catch (dbError: any) {
+        console.error('❌ Database connection failed:', dbError?.message);
+        return reply.status(503).send({
+          success: false,
+          message: 'Không thể kết nối đến cơ sở dữ liệu',
+          error: process.env.NODE_ENV === 'development' ? dbError?.message : undefined
+        });
+      }
 
       // Tìm user theo email hoặc phone với roles và permissions
       const user = await prisma.users.findFirst({
@@ -119,18 +153,18 @@ export default async function authRoutes(fastify: FastifyInstance) {
       });
 
       if (!user) {
-        return reply.status(401).send({ 
-          success: false, 
-          message: 'Thông tin đăng nhập không chính xác' 
+        return reply.status(401).send({
+          success: false,
+          message: 'Thông tin đăng nhập không chính xác'
         });
       }
 
       // Kiểm tra password
       const isValidPassword = await bcrypt.compare(password, user.password_hash);
       if (!isValidPassword) {
-        return reply.status(401).send({ 
-          success: false, 
-          message: 'Thông tin đăng nhập không chính xác' 
+        return reply.status(401).send({
+          success: false,
+          message: 'Thông tin đăng nhập không chính xác'
         });
       }
 
@@ -138,7 +172,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       const roles = user.user_roles_user_roles_user_idTousers.map(ur => ur.roles.code);
       const roleVersions: Record<string, number> = {};
       const permissions = new Set<string>();
-      
+
       user.user_roles_user_roles_user_idTousers.forEach(ur => {
         roleVersions[ur.roles.code] = ur.roles.role_version || 1;
         // Collect all permissions from this role
@@ -146,14 +180,14 @@ export default async function authRoutes(fastify: FastifyInstance) {
           permissions.add(rp.permissions.code);
         });
       });
-      
+
       console.log('🔐 User roles on login:', roles, 'Versions:', roleVersions);
       console.log('🔑 User permissions:', Array.from(permissions));
 
       // Tạo JWT token với roles, permissions và roleVersions
       const token = fastify.jwt.sign(
-        { 
-          userId: user.id, 
+        {
+          userId: user.id,
           email: user.email,
           roles: roles,
           permissions: Array.from(permissions),
@@ -166,7 +200,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       // Reset permissions_updated_at vì user đã nhận permissions mới qua JWT
       await prisma.users.update({
         where: { id: user.id },
-        data: { 
+        data: {
           last_login_at: new Date(),
           permissions_updated_at: null // Reset để token không bị reject ngay
         }
@@ -190,11 +224,19 @@ export default async function authRoutes(fastify: FastifyInstance) {
           token: token
         }
       });
-    } catch (error) {
+    } catch (error: any) {
+      console.error('❌ Login error details:', {
+        message: error?.message,
+        stack: error?.stack,
+        code: error?.code,
+        name: error?.name
+      });
       fastify.log.error('Login error:', error);
-      return reply.status(500).send({ 
-        success: false, 
-        message: 'Lỗi hệ thống' 
+      return reply.status(500).send({
+        success: false,
+        message: 'Lỗi hệ thống',
+        error: process.env.NODE_ENV === 'development' ? error?.message : undefined,
+        code: error?.code || 'UNKNOWN_ERROR'
       });
     }
   });
@@ -207,7 +249,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       // Kiểm tra refresh token
       const tokenRecord = await prisma.refresh_tokens.findUnique({
         where: { token: refreshToken },
-        include: { 
+        include: {
           users: {
             include: {
               user_roles_user_roles_user_idTousers: {
@@ -221,9 +263,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
       });
 
       if (!tokenRecord || tokenRecord.revokedAt) {
-        return reply.status(401).send({ 
-          success: false, 
-          message: 'Refresh token không hợp lệ' 
+        return reply.status(401).send({
+          success: false,
+          message: 'Refresh token không hợp lệ'
         });
       }
 
@@ -236,8 +278,8 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
       // Tạo token mới với roleVersions mới nhất
       const newToken = fastify.jwt.sign(
-        { 
-          userId: tokenRecord.userId, 
+        {
+          userId: tokenRecord.userId,
           email: tokenRecord.users.email,
           roles: roles,
           roleVersions: roleVersions
@@ -251,9 +293,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
       });
     } catch (error) {
       fastify.log.error('Refresh token error:', error);
-      return reply.status(500).send({ 
-        success: false, 
-        message: 'Lỗi hệ thống' 
+      return reply.status(500).send({
+        success: false,
+        message: 'Lỗi hệ thống'
       });
     }
   });
@@ -338,9 +380,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
       return reply.send({ success: true, message: 'Đăng xuất thành công' });
     } catch (error) {
       fastify.log.error('Logout error:', error);
-      return reply.status(500).send({ 
-        success: false, 
-        message: 'Lỗi hệ thống' 
+      return reply.status(500).send({
+        success: false,
+        message: 'Lỗi hệ thống'
       });
     }
   });
@@ -360,9 +402,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
       });
 
       if (!user) {
-        return reply.status(404).send({ 
-          success: false, 
-          message: 'Không tìm thấy tài khoản' 
+        return reply.status(404).send({
+          success: false,
+          message: 'Không tìm thấy tài khoản'
         });
       }
 
@@ -370,15 +412,15 @@ export default async function authRoutes(fastify: FastifyInstance) {
       // Tạo reset token và lưu vào database
       // Gửi link reset qua email/SMS
 
-      return reply.send({ 
-        success: true, 
-        message: 'Hướng dẫn đặt lại mật khẩu đã được gửi' 
+      return reply.send({
+        success: true,
+        message: 'Hướng dẫn đặt lại mật khẩu đã được gửi'
       });
     } catch (error) {
       fastify.log.error('Forgot password error:', error);
-      return reply.status(500).send({ 
-        success: false, 
-        message: 'Lỗi hệ thống' 
+      return reply.status(500).send({
+        success: false,
+        message: 'Lỗi hệ thống'
       });
     }
   });
@@ -392,15 +434,15 @@ export default async function authRoutes(fastify: FastifyInstance) {
       // Kiểm tra token có hợp lệ không
       // Mã hóa password mới và update
 
-      return reply.send({ 
-        success: true, 
-        message: 'Mật khẩu đã được đặt lại thành công' 
+      return reply.send({
+        success: true,
+        message: 'Mật khẩu đã được đặt lại thành công'
       });
     } catch (error) {
       fastify.log.error('Reset password error:', error);
-      return reply.status(500).send({ 
-        success: false, 
-        message: 'Lỗi hệ thống' 
+      return reply.status(500).send({
+        success: false,
+        message: 'Lỗi hệ thống'
       });
     }
   });
@@ -443,9 +485,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
       });
 
       if (!user) {
-        return reply.status(404).send({ 
-          success: false, 
-          message: 'Không tìm thấy tài khoản' 
+        return reply.status(404).send({
+          success: false,
+          message: 'Không tìm thấy tài khoản'
         });
       }
 
@@ -481,9 +523,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
       });
     } catch (error) {
       fastify.log.error('Get me error:', error);
-      return reply.status(401).send({ 
-        success: false, 
-        message: 'Token không hợp lệ' 
+      return reply.status(401).send({
+        success: false,
+        message: 'Token không hợp lệ'
       });
     }
   });
@@ -526,9 +568,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
       });
     } catch (error) {
       fastify.log.error('Update profile error:', error);
-      return reply.status(500).send({ 
-        success: false, 
-        message: 'Lỗi hệ thống' 
+      return reply.status(500).send({
+        success: false,
+        message: 'Lỗi hệ thống'
       });
     }
   });
@@ -550,18 +592,18 @@ export default async function authRoutes(fastify: FastifyInstance) {
     const user = await prisma.userss.findUnique({
       where: { id: userId }
     });      if (!user) {
-        return reply.status(404).send({ 
-          success: false, 
-          message: 'Không tìm thấy tài khoản' 
+        return reply.status(404).send({
+          success: false,
+          message: 'Không tìm thấy tài khoản'
         });
       }
 
       // Kiểm tra mật khẩu hiện tại
       const isValidPassword = await bcrypt.compare(currentPassword, user.password);
       if (!isValidPassword) {
-        return reply.status(400).send({ 
-          success: false, 
-          message: 'Mật khẩu hiện tại không chính xác' 
+        return reply.status(400).send({
+          success: false,
+          message: 'Mật khẩu hiện tại không chính xác'
         });
       }
 
@@ -573,15 +615,15 @@ export default async function authRoutes(fastify: FastifyInstance) {
         data: { password: newPasswordHash }
       });
 
-      return reply.send({ 
-        success: true, 
-        message: 'Mật khẩu đã được thay đổi thành công' 
+      return reply.send({
+        success: true,
+        message: 'Mật khẩu đã được thay đổi thành công'
       });
     } catch (error) {
       fastify.log.error('Change password error:', error);
-      return reply.status(500).send({ 
-        success: false, 
-        message: 'Lỗi hệ thống' 
+      return reply.status(500).send({
+        success: false,
+        message: 'Lỗi hệ thống'
       });
     }
   });
@@ -631,7 +673,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       const roles = user.user_roles_user_roles_user_idTousers.map(ur => ur.roles.code);
       const roleVersions: Record<string, number> = {};
       const permissions = new Set<string>();
-      
+
       user.user_roles_user_roles_user_idTousers.forEach(ur => {
         roleVersions[ur.roles.code] = ur.roles.role_version || 1;
         ur.roles.role_permissions.forEach(rp => {
@@ -646,7 +688,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       // Reset permissions_updated_at vì user đã nhận permissions mới
       await prisma.users.update({
         where: { id: userId },
-        data: { 
+        data: {
           permissions_updated_at: null,
           updated_at: new Date()
         }
@@ -654,8 +696,8 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
       // Tạo JWT token mới với permissions cập nhật
       const newToken = fastify.jwt.sign(
-        { 
-          userId: user.id, 
+        {
+          userId: user.id,
           email: user.email,
           roles: roles,
           permissions: Array.from(permissions),
