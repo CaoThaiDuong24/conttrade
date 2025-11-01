@@ -222,13 +222,17 @@ export default async function rfqRoutes(fastify: FastifyInstance) {
       // Check access: buyer or seller của listing
       const isBuyer = rfq.buyer_id === userId;
       
-      // Fetch listing to get seller info
-      const listing = await prisma.listings.findUnique({
-        where: { id: rfq.listing_id },
-        select: { seller_user_id: true }
-      });
-      
-      const isSeller = listing?.seller_user_id === userId;
+      // Get seller from included listing data
+      const isSeller = rfq.listings?.seller_user_id === userId;
+
+      console.log('=== RFQ DETAIL ACCESS CHECK ===');
+      console.log('RFQ ID:', id);
+      console.log('Current User ID:', userId);
+      console.log('Buyer ID:', rfq.buyer_id);
+      console.log('Seller ID:', rfq.listings?.seller_user_id);
+      console.log('Is Buyer:', isBuyer);
+      console.log('Is Seller:', isSeller);
+      console.log('================================');
 
       if (!isBuyer && !isSeller) {
         return reply.status(403).send({
@@ -292,7 +296,7 @@ export default async function rfqRoutes(fastify: FastifyInstance) {
         });
       }
 
-      if (listing.sellerUserId === userId) {
+      if (listing.seller_user_id === userId) {
         return reply.status(400).send({
           success: false,
           message: 'Cannot create RFQ for your own listing'
@@ -429,7 +433,7 @@ export default async function rfqRoutes(fastify: FastifyInstance) {
         where: { id },
         include: {
           listings: {
-            select: { sellerUserId: true }
+            select: { seller_user_id: true }
           }
         }
       });
@@ -442,7 +446,16 @@ export default async function rfqRoutes(fastify: FastifyInstance) {
       }
 
       const isBuyer = rfq.buyer_id === userId;
-      const isSeller = rfq.listings.sellerUserId === userId;
+      const isSeller = rfq.listings.seller_user_id === userId;
+
+      console.log('=== RFQ QUOTES ACCESS CHECK ===');
+      console.log('RFQ ID:', id);
+      console.log('Current User ID:', userId);
+      console.log('Buyer ID:', rfq.buyer_id);
+      console.log('Seller ID:', rfq.listings.seller_user_id);
+      console.log('Is Buyer:', isBuyer);
+      console.log('Is Seller:', isSeller);
+      console.log('================================');
 
       if (!isBuyer && !isSeller) {
         return reply.status(403).send({

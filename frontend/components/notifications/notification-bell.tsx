@@ -59,22 +59,32 @@ export function NotificationBell() {
       const token = localStorage.getItem('accessToken');
       
       if (!token) {
+        console.log('⚠️ No access token found in localStorage');
         setNotifications([]);
         setUnreadCount(0);
         return;
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/notifications`, {
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/notifications`;
+      console.log('🔔 Fetching notifications from:', apiUrl);
+      console.log('🔑 Using token:', token.substring(0, 20) + '...');
+
+      const response = await fetch(apiUrl, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
         },
       });
 
+      console.log('📡 Response status:', response.status);
+
       if (response.ok) {
         const data = await response.json();
+        console.log('📩 Raw response data:', data);
         
         if (data.success && Array.isArray(data.data)) {
+          console.log('✅ Received', data.data.length, 'notifications');
+          
           const sortedNotifications = data.data.sort((a: Notification, b: Notification) => 
             new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
           );
@@ -82,17 +92,26 @@ export function NotificationBell() {
           setNotifications(sortedNotifications);
           const unread = sortedNotifications.filter((n: Notification) => !n.read).length;
           setUnreadCount(unread);
+          console.log('📊 Unread count:', unread);
         } else {
+          console.log('⚠️ Response format unexpected:', data);
           setNotifications([]);
           setUnreadCount(0);
         }
       } else if (response.status === 401) {
+        console.error('❌ Unauthorized - Token invalid');
+        const errorText = await response.text();
+        console.error('Error response:', errorText);
         localStorage.removeItem('accessToken');
         setNotifications([]);
         setUnreadCount(0);
+      } else {
+        console.error('❌ Error response:', response.status);
+        const errorText = await response.text();
+        console.error('Error body:', errorText);
       }
     } catch (error) {
-      console.error('Error fetching notifications:', error);
+      console.error('❌ Error fetching notifications:', error);
     } finally {
       setLoading(false);
     }
@@ -120,9 +139,15 @@ export function NotificationBell() {
   const markAsRead = async (notificationId: string) => {
     try {
       const token = localStorage.getItem('accessToken');
-      if (!token) return;
+      if (!token) {
+        console.log('⚠️ No token for marking as read');
+        return;
+      }
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/notifications/${notificationId}/read`, {
+      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/notifications/${notificationId}/read`;
+      console.log('📍 Marking as read:', apiUrl);
+      
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -130,16 +155,23 @@ export function NotificationBell() {
         },
       });
 
+      console.log('📡 Mark as read response:', response.status);
+
       if (response.ok) {
+        console.log('✅ Marked notification as read:', notificationId);
         setNotifications(prev => 
           prev.map(n => 
             n.id === notificationId ? { ...n, read: true } : n
           )
         );
         setUnreadCount(prev => Math.max(0, prev - 1));
+      } else {
+        console.error('❌ Failed to mark as read:', response.status);
+        const errorText = await response.text();
+        console.error('Error:', errorText);
       }
     } catch (error) {
-      console.error('Error marking notification as read:', error);
+      console.error('❌ Error marking notification as read:', error);
     }
   };
 
@@ -256,18 +288,30 @@ export function NotificationBell() {
     }
   };
 
-  // Format timestamp
+  // Format timestamp - Show full date and time: HH:MM DD/MM/YYYY (Vietnam timezone)
   const formatTime = (dateString: string) => {
     try {
-      const date = new Date(dateString);
-      const now = new Date();
-      const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60));
+      // The backend already returns time in Vietnam timezone as "YYYY-MM-DDTHH:MI:SS"
+      // We just need to parse it and format it for display
+      // Add +07:00 to indicate Vietnam timezone so Date knows it's not UTC
+      const vietnamDate = new Date(dateString + '+07:00');
       
-      if (diffInMinutes < 1) return 'Vừa xong';
-      if (diffInMinutes < 60) return `${diffInMinutes} phút trước`;
-      if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} giờ trước`;
-      return `${Math.floor(diffInMinutes / 1440)} ngày trước`;
-    } catch {
+      // Check if date is valid
+      if (isNaN(vietnamDate.getTime())) {
+        console.error('Invalid date:', dateString);
+        return 'Không xác định';
+      }
+      
+      // Format as HH:MM DD/MM/YYYY
+      const hours = vietnamDate.getHours().toString().padStart(2, '0');
+      const minutes = vietnamDate.getMinutes().toString().padStart(2, '0');
+      const day = vietnamDate.getDate().toString().padStart(2, '0');
+      const month = (vietnamDate.getMonth() + 1).toString().padStart(2, '0');
+      const year = vietnamDate.getFullYear();
+      
+      return `${hours}:${minutes} ${day}/${month}/${year}`;
+    } catch (error) {
+      console.error('Error formatting time:', error);
       return 'Không xác định';
     }
   };

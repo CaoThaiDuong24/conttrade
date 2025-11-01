@@ -111,10 +111,16 @@ export function renderListingStatusBadge(status: string, showIcon = true) {
  */
 export const DEAL_TYPE_LABELS: Record<string, string> = {
   SALE: 'Bán',
+  RENTAL: 'Thuê ngắn hạn',
+  LEASE: 'Thuê dài hạn',
+  SWAP: 'Trao đổi',
   RENTAL_DAILY: 'Cho thuê theo ngày',
   RENTAL_MONTHLY: 'Cho thuê theo tháng',
   // Lowercase versions
   sale: 'Bán',
+  rental: 'Thuê ngắn hạn',
+  lease: 'Thuê dài hạn',
+  swap: 'Trao đổi',
   rental_daily: 'Cho thuê theo ngày',
   rental_monthly: 'Cho thuê theo tháng',
 };
@@ -123,5 +129,5 @@ export const DEAL_TYPE_LABELS: Record<string, string> = {
  * Get Vietnamese label for deal type
  */
 export function getDealTypeLabel(dealType: string): string {
-  return DEAL_TYPE_LABELS[dealType] || dealType;
+  return DEAL_TYPE_LABELS[dealType] || DEAL_TYPE_LABELS[dealType?.toUpperCase()] || dealType;
 }

@@ -1,0 +1,120 @@
+name: Deploy to Ubuntu Server
+
+on:
+  push:
+    branches:
+      - master
+      - main
+  workflow_dispatch:  # Cho phép trigger thủ công từ GitHub UI
+
+jobs:
+  deploy:
+    name: Deploy Application
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v4
+      
+      - name: 🔑 Setup SSH Key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.SSH_PRIVATE_KEY }}" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          ssh-keyscan -H ${{ secrets.SSH_HOST }} >> ~/.ssh/known_hosts
+      
+      - name: 🚀 Deploy to Server
+        env:
+          SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_USER: ${{ secrets.SSH_USER }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
+          DEPLOY_PATH: ${{ secrets.DEPLOY_PATH }}
+          DB_PASSWORD: ${{ secrets.DB_PASSWORD }}
+          JWT_SECRET: ${{ secrets.JWT_SECRET }}
+        run: |
+          ssh -i ~/.ssh/deploy_key -p ${SSH_PORT} ${SSH_USER}@${SSH_HOST} << 'ENDSSH'
+            set -e
+            
+            echo "🔹 Starting deployment process..."
+            
+            # Navigate to deployment directory
+            cd ${DEPLOY_PATH}
+            
+            echo "🔹 Pulling latest code from GitHub..."
+            git fetch origin
+            git reset --hard origin/master
+            
+            echo "🔹 Installing/updating dependencies..."
+            
+            # Backend dependencies
+            cd backend
+            npm install --production
+            
+            # Run database migrations
+            echo "🔹 Running database migrations..."
+            npx prisma generate
+            npx prisma migrate deploy
+            
+            # Build backend
+            echo "🔹 Building backend..."
+            npm run build
+            
+            # Frontend dependencies and build
+            cd ../frontend
+            npm install --production
+            
+            echo "🔹 Building frontend..."
+            npm run build
+            
+            # Return to root
+            cd ..
+            
+            echo "🔹 Restarting services with PM2..."
+            pm2 reload ecosystem.config.js --update-env
+            
+            echo "🔹 Checking application status..."
+            pm2 list
+            
+            echo "✅ Deployment completed successfully!"
+            
+          ENDSSH
+      
+      - name: 🔍 Health Check
+        run: |
+          echo "Waiting 10 seconds for services to start..."
+          sleep 10
+          
+          # Check if frontend is responding
+          FRONTEND_STATUS=$(curl -o /dev/null -s -w "%{http_code}" http://${{ secrets.SSH_HOST }}:3000 || echo "000")
+          echo "Frontend status: $FRONTEND_STATUS"
+          
+          # Check if backend is responding
+          BACKEND_STATUS=$(curl -o /dev/null -s -w "%{http_code}" http://${{ secrets.SSH_HOST }}:3006/health || echo "000")
+          echo "Backend status: $BACKEND_STATUS"
+          
+          if [ "$FRONTEND_STATUS" != "200" ] && [ "$FRONTEND_STATUS" != "000" ]; then
+            echo "⚠️  Frontend health check: Status $FRONTEND_STATUS"
+          fi
+          
+          if [ "$BACKEND_STATUS" != "200" ] && [ "$BACKEND_STATUS" != "000" ]; then
+            echo "⚠️  Backend health check: Status $BACKEND_STATUS"
+          fi
+          
+          echo "✅ Health check completed"
+      
+      - name: 🧹 Cleanup
+        if: always()
+        run: |
+          rm -f ~/.ssh/deploy_key
+      
+      - name: 📢 Notify Success
+        if: success()
+        run: |
+          echo "🎉 Deployment successful!"
+          echo "Frontend: http://${{ secrets.SSH_HOST }}:3000"
+          echo "Backend: http://${{ secrets.SSH_HOST }}:3006"
+      
+      - name: 📢 Notify Failure
+        if: failure()
+        run: |
+          echo "❌ Deployment failed! Please check the logs above."

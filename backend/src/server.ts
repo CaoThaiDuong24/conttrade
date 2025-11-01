@@ -22,6 +22,7 @@ import bcrypt from 'bcryptjs'
 import { nanoid } from 'nanoid'
 import prisma from './lib/prisma.js'
 import authRoutes from './routes/auth.js'
+import usersRoutes from './routes/users.js'
 import listingRoutes from './routes/listings.js'
 import adminRoutes from './routes/admin/index.js'
 // import adminRbacRoutes from './routes/admin-rbac.js' // KHÔNG dùng nữa, dùng admin/rbac.ts
@@ -207,6 +208,9 @@ console.log('Registering routes...')
 try {
   await app.register(authRoutes, { prefix: '/api/v1/auth' })
   console.log('✅ Auth routes registered')
+  
+  await app.register(usersRoutes, { prefix: '/api/v1/users' })
+  console.log('✅ Users routes registered')
   
   await app.register(listingRoutes, { prefix: '/api/v1/listings' })
   console.log('✅ Listing routes registered')

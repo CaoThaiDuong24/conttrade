@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test RFQ Button Visibility</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .section {
+            margin: 20px 0;
+            padding: 15px;
+            background: #f9f9f9;
+            border-left: 4px solid #4CAF50;
+        }
+        .error {
+            border-left-color: #f44336;
+            background: #ffebee;
+        }
+        .success {
+            border-left-color: #4CAF50;
+            background: #e8f5e9;
+        }
+        button {
+            background: #6366f1;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #4f46e5;
+        }
+        pre {
+            background: #263238;
+            color: #aed581;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+        }
+        .info-grid {
+            display: grid;
+            grid-template-columns: 200px 1fr;
+            gap: 10px;
+            margin: 10px 0;
+        }
+        .info-label {
+            font-weight: bold;
+            color: #555;
+        }
+        .info-value {
+            color: #333;
+        }
+        .check {
+            display: inline-block;
+            margin-right: 5px;
+        }
+        .check.yes { color: #4CAF50; }
+        .check.no { color: #f44336; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔍 Test RFQ Button Visibility</h1>
+        
+        <div class="section">
+            <h2>1. Lấy thông tin User hiện tại</h2>
+            <button onclick="getCurrentUser()">Lấy User Info</button>
+            <pre id="userInfo">Chưa có dữ liệu...</pre>
+        </div>
+
+        <div class="section">
+            <h2>2. Lấy thông tin RFQ</h2>
+            <input type="text" id="rfqId" placeholder="RFQ ID" style="width: 400px; padding: 8px;" value="9708c22a-c425-4bd4-9af8-525d6d15688e">
+            <button onclick="getRFQInfo()">Lấy RFQ Info</button>
+            <pre id="rfqInfo">Chưa có dữ liệu...</pre>
+        </div>
+
+        <div class="section">
+            <h2>3. Kiểm tra điều kiện hiển thị button</h2>
+            <button onclick="checkButtonVisibility()">Kiểm tra</button>
+            <div id="checkResult"></div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3006';
+        let currentUser = null;
+        let rfqData = null;
+
+        // Get token from cookie
+        function getToken() {
+            const cookies = document.cookie.split(';');
+            const tokenCookie = cookies.find(cookie => cookie.trim().startsWith('accessToken='));
+            return tokenCookie ? tokenCookie.split('=')[1] : null;
+        }
+
+        async function getCurrentUser() {
+            const token = getToken();
+            if (!token) {
+                document.getElementById('userInfo').textContent = '❌ Không tìm thấy token. Vui lòng đăng nhập!';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/v1/users/me`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                currentUser = data.data;
+                document.getElementById('userInfo').textContent = JSON.stringify(data.data, null, 2);
+            } catch (error) {
+                document.getElementById('userInfo').textContent = `❌ Lỗi: ${error.message}`;
+            }
+        }
+
+        async function getRFQInfo() {
+            const rfqId = document.getElementById('rfqId').value;
+            const token = getToken();
+            
+            if (!token) {
+                document.getElementById('rfqInfo').textContent = '❌ Không tìm thấy token!';
+                return;
+            }
+
+            if (!rfqId) {
+                document.getElementById('rfqInfo').textContent = '❌ Vui lòng nhập RFQ ID!';
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_URL}/api/v1/rfqs/${rfqId}`, {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP ${response.status}`);
+                }
+
+                const data = await response.json();
+                rfqData = data.data;
+                document.getElementById('rfqInfo').textContent = JSON.stringify(data.data, null, 2);
+            } catch (error) {
+                document.getElementById('rfqInfo').textContent = `❌ Lỗi: ${error.message}`;
+            }
+        }
+
+        function checkButtonVisibility() {
+            const resultDiv = document.getElementById('checkResult');
+
+            if (!currentUser) {
+                resultDiv.innerHTML = '<div class="section error">❌ Chưa lấy thông tin user. Vui lòng click "Lấy User Info" trước!</div>';
+                return;
+            }
+
+            if (!rfqData) {
+                resultDiv.innerHTML = '<div class="section error">❌ Chưa lấy thông tin RFQ. Vui lòng click "Lấy RFQ Info" trước!</div>';
+                return;
+            }
+
+            const currentUserId = currentUser.id;
+            const sellerId = rfqData.listings?.users?.id;
+            const rfqStatus = rfqData.status;
+            const hasQuoteFromSeller = rfqData.quotes?.some(q => q.seller_id === currentUserId);
+            
+            // Check conditions
+            const isSeller = currentUserId === sellerId;
+            const isSubmitted = rfqStatus === 'SUBMITTED';
+            const canSendQuote = !hasQuoteFromSeller;
+            
+            const shouldShowButton = isSeller && isSubmitted && canSendQuote;
+
+            let html = '<div class="info-grid">';
+            html += `<div class="info-label">Current User ID:</div><div class="info-value"><code>${currentUserId}</code></div>`;
+            html += `<div class="info-label">Seller ID (listing owner):</div><div class="info-value"><code>${sellerId || 'N/A'}</code></div>`;
+            html += `<div class="info-label">RFQ Status:</div><div class="info-value"><strong>${rfqStatus}</strong></div>`;
+            html += `<div class="info-label">Existing Quotes:</div><div class="info-value">${rfqData.quotes?.length || 0} quotes</div>`;
+            html += '</div>';
+
+            html += '<hr style="margin: 20px 0;">';
+            html += '<h3>Kiểm tra điều kiện:</h3>';
+            html += '<div class="info-grid">';
+            html += `<div class="info-label"><span class="check ${isSeller ? 'yes' : 'no'}">${isSeller ? '✅' : '❌'}</span> Is Seller?</div><div class="info-value">${isSeller ? 'YES' : 'NO'} - ${isSeller ? 'User là chủ container' : 'User KHÔNG phải chủ container'}</div>`;
+            html += `<div class="info-label"><span class="check ${isSubmitted ? 'yes' : 'no'}">${isSubmitted ? '✅' : '❌'}</span> Is SUBMITTED?</div><div class="info-value">${isSubmitted ? 'YES' : 'NO'} - Status phải là SUBMITTED</div>`;
+            html += `<div class="info-label"><span class="check ${canSendQuote ? 'yes' : 'no'}">${canSendQuote ? '✅' : '❌'}</span> Can Send Quote?</div><div class="info-value">${canSendQuote ? 'YES' : 'NO'} - ${canSendQuote ? 'Chưa gửi báo giá' : 'Đã gửi báo giá rồi'}</div>`;
+            html += '</div>';
+
+            html += '<hr style="margin: 20px 0;">';
+            html += `<div class="section ${shouldShowButton ? 'success' : 'error'}">`;
+            html += `<h2>${shouldShowButton ? '✅ BUTTON NÊN HIỂN THỊ' : '❌ BUTTON KHÔNG HIỂN THỊ'}</h2>`;
+            html += `<p><strong>Kết quả:</strong> ${shouldShowButton ? 'Tất cả điều kiện đều thỏa mãn!' : 'Một hoặc nhiều điều kiện không thỏa mãn.'}</p>`;
+            html += '</div>';
+
+            resultDiv.innerHTML = html;
+        }
+    </script>
+</body>
+</html>

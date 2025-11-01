@@ -211,8 +211,9 @@ export default async function adminListingsRoutes(fastify: FastifyInstance) {
         data: {
           status,
           rejection_reason: status === 'REJECTED' ? rejectionReason : null,
-          approved_at: status === 'ACTIVE' ? new Date() : null,
-          approved_by: status === 'ACTIVE' ? request.user.userId : null
+          admin_reviewed_at: new Date(),
+          admin_reviewed_by: request.user.userId,
+          updated_at: new Date()
         }
       });
 
@@ -220,14 +221,14 @@ export default async function adminListingsRoutes(fastify: FastifyInstance) {
       try {
         if (status === 'ACTIVE') {
           await ListingNotificationService.notifyListingApproved(
-            existingListing.seller_user_id,
             id,
+            existingListing.seller_user_id,
             existingListing.title
           );
         } else if (status === 'REJECTED') {
           await ListingNotificationService.notifyListingRejected(
-            existingListing.seller_user_id,
             id,
+            existingListing.seller_user_id,
             existingListing.title,
             rejectionReason || 'No reason provided'
           );

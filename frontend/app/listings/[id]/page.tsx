@@ -25,7 +25,7 @@ import { ImageGallery, FavoriteButton } from '@/components/listings';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
-import { getDealTypeLabel } from '@/lib/utils/listingStatus';
+import { getDealTypeDisplayName } from '@/lib/utils/dealType';
 import { getConditionLabel } from '@/lib/utils/condition';
 import { getSizeLabel } from '@/lib/utils/containerSize';
 import { getStandardLabel } from '@/lib/utils/qualityStandard';
@@ -322,7 +322,7 @@ export default function ListingDetailPage() {
                   {formatPrice(listing.price_amount, listing.price_currency)}
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">
-                  {getDealTypeLabel(listing.deal_type)}
+                  {getDealTypeDisplayName(listing.deal_type)}
                 </p>
               </div>
 

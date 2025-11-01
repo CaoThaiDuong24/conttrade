@@ -28,7 +28,7 @@ import {
 import { useNotificationContext } from '@/components/providers/notification-provider';
 import { apiClient } from '@/lib/api';
 import { formatVND, formatPrice } from '@/lib/currency';
-import { getDealTypeLabel } from '@/lib/utils/listingStatus';
+import { getDealTypeDisplayName } from '@/lib/utils/dealType';
 
 // Helper function to format currency with dot as thousand separator
 const formatCurrency = (amount: number | string): string => {
@@ -119,6 +119,7 @@ interface RFQ {
   delivery_location?: string;
   budget?: number;
   currency?: string;
+  current_user_id?: string; // Add this to store current user
   listings: {
     id: string;
     title: string;
@@ -173,12 +174,57 @@ export default function RFQDetailPage() {
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [currentUserId, setCurrentUserId] = useState<string | null>(null);
+  const [userLoading, setUserLoading] = useState(true);
 
   const rfqId = params.id as string;
 
+  // ⚡ Fetch user FIRST in separate useEffect
   useEffect(() => {
-    fetchRFQDetail();
-  }, [rfqId]);
+    const fetchCurrentUser = async () => {
+      try {
+        const getToken = () => {
+          if (typeof window === 'undefined') return null;
+          const cookies = document.cookie.split(';');
+          const tokenCookie = cookies.find(cookie => cookie.trim().startsWith('accessToken='));
+          return tokenCookie ? tokenCookie.split('=')[1] : null;
+        };
+        
+        const token = getToken();
+        if (!token) {
+          setUserLoading(false);
+          return;
+        }
+        
+        const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/me`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (userResponse.ok) {
+          const userData = await userResponse.json();
+          const userId = userData.data?.id || null;
+          setCurrentUserId(userId);
+          console.log('✅ User fetched - Current User ID:', userId);
+        }
+      } catch (error) {
+        console.error('Error fetching user:', error);
+      } finally {
+        setUserLoading(false);
+      }
+    };
+
+    fetchCurrentUser();
+  }, []);
+
+  // Fetch RFQ after user is loaded
+  useEffect(() => {
+    if (!userLoading && currentUserId !== null) {
+      console.log('🔄 Fetching RFQ with user ID:', currentUserId);
+      fetchRFQDetail();
+    }
+  }, [rfqId, userLoading, currentUserId]);
 
   const fetchRFQDetail = async () => {
     try {
@@ -197,22 +243,6 @@ export default function RFQDetailPage() {
         showError('Chưa đăng nhập');
         router.push('/auth/login');
         return;
-      }
-      
-      // Get current user info
-      try {
-        const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/me`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        if (userResponse.ok) {
-          const userData = await userResponse.json();
-          setCurrentUserId(userData.data?.id);
-        }
-      } catch (error) {
-        console.error('Error fetching user:', error);
       }
       
       // Call real API
@@ -238,7 +268,23 @@ export default function RFQDetailPage() {
       console.log('RFQ Detail API Response:', data); // Debug log
       
       if (data.success && data.data) {
-        setRfq(data.data);
+        // ⚡ ADD current_user_id to RFQ data
+        const rfqWithUser = {
+          ...data.data,
+          current_user_id: currentUserId
+        };
+        setRfq(rfqWithUser);
+        
+        // Debug button visibility conditions - USE STATE currentUserId
+        console.log('🔍 DEBUG - Button Visibility Check:');
+        console.log('  - Current User ID (state):', currentUserId);
+        console.log('  - Seller ID (listing owner):', data.data.listings?.users?.id);
+        console.log('  - RFQ Status:', data.data.status);
+        console.log('  - Existing quotes:', data.data.quotes?.length || 0);
+        console.log('  - User is seller?', currentUserId === data.data.listings?.users?.id);
+        console.log('  - Status is SUBMITTED?', data.data.status === 'SUBMITTED');
+        console.log('  - Already has quote from this seller?', 
+          data.data.quotes?.some((q: any) => q.seller_id === currentUserId));
       } else {
         showError('Dữ liệu RFQ không hợp lệ');
       }
@@ -413,7 +459,7 @@ export default function RFQDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-white">
       {/* Simple header */}
       <div className="bg-white border-b shadow-sm">
         <div className="w-full px-6 py-4">
@@ -435,6 +481,31 @@ export default function RFQDetailPage() {
               </div>
             </div>
             <div className="flex items-center gap-3">
+              {/* Button Báo giá for Seller - Prominent placement in header */}
+              {rfq.current_user_id && 
+               rfq.current_user_id === rfq.listings?.users?.id && 
+               rfq.status === 'SUBMITTED' && 
+               !rfq.quotes?.some(q => q.seller_id === rfq.current_user_id) && (
+                <Button 
+                  size="lg"
+                  className="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold shadow-lg hover:shadow-xl"
+                  onClick={() => router.push(`/quotes/create?rfqId=${rfq.id}`)}
+                >
+                  <DollarSign className="mr-2 h-5 w-5" />
+                  💰 Gửi báo giá ngay
+                </Button>
+              )}
+              {/* DEV MODE: Show button anyway for testing */}
+              {process.env.NODE_ENV === 'development' && !rfq.current_user_id && (
+                <Button 
+                  size="sm"
+                  variant="outline"
+                  className="border-yellow-400 text-yellow-700"
+                  onClick={() => router.push(`/quotes/create?rfqId=${rfq.id}`)}
+                >
+                  🐛 TEST: Gửi báo giá
+                </Button>
+              )}
               {getStatusBadge(rfq.status)}
             </div>
           </div>
@@ -613,7 +684,7 @@ export default function RFQDetailPage() {
                           <div>
                             <p className="text-sm text-gray-600">Loại giao dịch</p>
                             <p className="font-semibold text-gray-900">
-                              {getDealTypeLabel(rfq.listings.deal_type)}
+                              {getDealTypeDisplayName(rfq.listings.deal_type)}
                             </p>
                           </div>
                         </div>
@@ -673,32 +744,74 @@ export default function RFQDetailPage() {
                   </h2>
                 </div>
                 <div className="p-6">
-                  {/* Alert for seller to send quote */}
-                  {currentUserId && 
-                   currentUserId === rfq.listings.users.id && 
+                  {/* Alert for seller to send quote - Enhanced with more info */}
+                  {rfq.current_user_id && 
+                   rfq.current_user_id === rfq.listings?.users?.id && 
                    rfq.status === 'SUBMITTED' && 
-                   !rfq.quotes.some(q => q.seller_id === currentUserId) && (
-                    <div className="mb-6 bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-300 rounded-xl p-6 shadow-lg">
+                   !rfq.quotes?.some(q => q.seller_id === rfq.current_user_id) && (
+                    <div className="mb-6 bg-gradient-to-r from-purple-50 via-indigo-50 to-blue-50 border-2 border-purple-300 rounded-xl p-6 shadow-2xl animate-pulse-slow">
                       <div className="flex items-start gap-4">
-                        <div className="bg-gradient-to-r from-purple-500 to-indigo-500 p-3 rounded-full shadow-lg">
-                          <AlertTriangle className="h-6 w-6 text-white" />
+                        <div className="bg-gradient-to-r from-purple-500 to-indigo-600 p-4 rounded-full shadow-lg animate-bounce-slow">
+                          <DollarSign className="h-7 w-7 text-white" />
                         </div>
                         <div className="flex-1">
-                          <h3 className="text-lg font-bold text-purple-800 mb-2">
-                            🎯 Đây là RFQ cho container của bạn!
+                          <h3 className="text-xl font-bold text-purple-900 mb-3 flex items-center gap-2">
+                            🎯 Cơ hội kinh doanh mới!
                           </h3>
-                          <p className="text-purple-700 mb-4">
-                            Khách hàng <strong>{rfq.users.display_name}</strong> quan tâm đến container của bạn và muốn nhận báo giá. 
-                            Hãy gửi báo giá để tăng cơ hội bán hàng!
-                          </p>
+                          <div className="bg-white rounded-lg p-4 mb-4 border border-purple-200">
+                            <p className="text-purple-800 font-medium mb-3">
+                              Khách hàng <strong className="text-purple-900 text-lg">{rfq.users.display_name}</strong> đã gửi yêu cầu báo giá cho container của bạn:
+                            </p>
+                            <div className="grid md:grid-cols-2 gap-3 text-sm">
+                              <div className="flex items-center gap-2 bg-purple-50 p-2 rounded">
+                                <Package className="h-4 w-4 text-purple-600" />
+                                <span className="text-purple-700">
+                                  <strong>Container:</strong> {rfq.listings.title}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 bg-indigo-50 p-2 rounded">
+                                <DollarSign className="h-4 w-4 text-indigo-600" />
+                                <span className="text-indigo-700">
+                                  <strong>Số lượng:</strong> {rfq.quantity} container
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 bg-blue-50 p-2 rounded">
+                                <Calendar className="h-4 w-4 text-blue-600" />
+                                <span className="text-blue-700">
+                                  <strong>Cần trước:</strong> {new Date(rfq.need_by).toLocaleDateString('vi-VN')}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 bg-purple-50 p-2 rounded">
+                                <User className="h-4 w-4 text-purple-600" />
+                                <span className="text-purple-700">
+                                  <strong>Mục đích:</strong> {rfq.purpose === 'PURCHASE' ? 'Mua' : rfq.purpose === 'RENTAL' ? 'Thuê' : 'Hỏi thông tin'}
+                                </span>
+                              </div>
+                            </div>
+                          </div>
+                          
+                          <div className="bg-yellow-50 border border-yellow-300 rounded-lg p-3 mb-4">
+                            <div className="flex items-start gap-2">
+                              <AlertTriangle className="h-5 w-5 text-yellow-600 mt-0.5" />
+                              <div className="text-sm text-yellow-800">
+                                <p className="font-semibold mb-1">⏰ Hành động nhanh để không bỏ lỡ cơ hội!</p>
+                                <p>Gửi báo giá càng sớm càng tốt để tăng khả năng được khách hàng chọn.</p>
+                              </div>
+                            </div>
+                          </div>
+                          
                           <Button 
                             size="lg"
-                            className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold shadow-lg hover:shadow-xl"
+                            className="w-full bg-gradient-to-r from-purple-600 via-indigo-600 to-blue-600 hover:from-purple-700 hover:via-indigo-700 hover:to-blue-700 text-white font-bold shadow-lg hover:shadow-2xl h-14 text-lg"
                             onClick={() => router.push(`/quotes/create?rfqId=${rfq.id}`)}
                           >
-                            <DollarSign className="mr-2 h-5 w-5" />
-                            💰 Gửi báo giá ngay
+                            <DollarSign className="mr-2 h-6 w-6" />
+                            💰 Gửi báo giá ngay - Tăng doanh thu!
                           </Button>
+                          
+                          <p className="text-xs text-purple-600 text-center mt-3 italic">
+                            ✨ Khách hàng đang chờ phản hồi từ bạn
+                          </p>
                         </div>
                       </div>
                     </div>
@@ -857,7 +970,7 @@ export default function RFQDetailPage() {
                        !(quote.status === 'sent' || quote.status === 'SENT' || quote.status === 'pending' || 
                          quote.status === 'draft' || quote.status === 'DRAFT') && (
                         <div className="space-y-2 border-t pt-2">
-                          <p className="text-sm text-muted-foreground">Status: {quote.status}</p>
+                          {/* <p className="text-sm text-muted-foreground">Status: {quote.status}</p> */}
                           <div className="flex gap-2">
                             <Button 
                               onClick={() => handleQuoteAction(quote.id, 'accept')}
@@ -969,7 +1082,7 @@ export default function RFQDetailPage() {
                 </div>
                 <div className="p-4 space-y-3">
                   {/* Action 1: Gửi báo giá (Seller only) - Show if current user hasn't sent a quote yet */}
-                  {currentUserId && rfq.status === 'SUBMITTED' && !rfq.quotes.some(q => q.seller_id === currentUserId) && (
+                  {rfq.current_user_id && rfq.status === 'SUBMITTED' && !rfq.quotes?.some(q => q.seller_id === rfq.current_user_id) && (
                     <Button 
                       className="w-full h-14 bg-gradient-to-r from-purple-500 to-indigo-600 hover:from-purple-600 hover:to-indigo-700 text-white font-bold shadow-xl hover:shadow-2xl transform hover:scale-[1.03] transition-all duration-200 border-0 text-lg relative overflow-hidden"
                       onClick={() => router.push(`/quotes/create?rfqId=${rfq.id}`)}

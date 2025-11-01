@@ -1,0 +1,413 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Notifications API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 50px auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .section {
+            margin: 30px 0;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+        button.secondary {
+            background-color: #2196F3;
+        }
+        button.secondary:hover {
+            background-color: #0b7dda;
+        }
+        button.danger {
+            background-color: #f44336;
+        }
+        button.danger:hover {
+            background-color: #da190b;
+        }
+        input {
+            padding: 10px;
+            margin: 10px 5px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            width: 300px;
+        }
+        #response {
+            margin-top: 20px;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        .success {
+            color: green;
+            font-weight: bold;
+        }
+        .error {
+            color: red;
+            font-weight: bold;
+        }
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-left: 4px solid #2196F3;
+            margin: 20px 0;
+        }
+        .notification-item {
+            background: white;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #4CAF50;
+            border-radius: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .notification-item.unread {
+            border-left-color: #ff9800;
+            background: #fff3e0;
+        }
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-left: 10px;
+        }
+        .badge-unread {
+            background: #ff9800;
+            color: white;
+        }
+        .badge-read {
+            background: #9e9e9e;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔔 Test Notifications API</h1>
+        
+        <div class="info">
+            <strong>📝 Hướng dẫn:</strong><br>
+            1. Nhập token của bạn (lấy từ localStorage hoặc login)<br>
+            2. Click "Lấy danh sách thông báo" để xem tất cả thông báo<br>
+            3. Click "Tạo thông báo test" để tạo thông báo mới<br>
+            4. Backend API: <code>http://localhost:3006/api/v1/notifications</code>
+        </div>
+
+        <div class="section">
+            <h3>🔑 Cấu hình Token</h3>
+            <input type="text" id="tokenInput" placeholder="Nhập token của bạn..." />
+            <button onclick="saveToken()">Lưu Token</button>
+            <button class="secondary" onclick="loadTokenFromStorage()">Lấy Token từ Frontend</button>
+            <button class="danger" onclick="clearToken()">Xóa Token</button>
+            <div id="tokenStatus" style="margin-top: 10px;"></div>
+        </div>
+
+        <div class="section">
+            <h3>📋 API Operations</h3>
+            <button onclick="getNotifications()">Lấy danh sách thông báo</button>
+            <button class="secondary" onclick="createTestNotification()">Tạo thông báo test</button>
+            <button class="secondary" onclick="markAllAsRead()">Đánh dấu tất cả đã đọc</button>
+            <button onclick="checkBackendStatus()">Kiểm tra Backend</button>
+        </div>
+
+        <div class="section">
+            <h3>📊 Kết quả:</h3>
+            <div id="response">Chưa có dữ liệu...</div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://localhost:3006/api/v1';
+        let currentToken = '';
+
+        // Save token
+        function saveToken() {
+            const token = document.getElementById('tokenInput').value.trim();
+            if (token) {
+                currentToken = token;
+                localStorage.setItem('testToken', token);
+                showStatus('✅ Token đã được lưu!', 'success');
+            } else {
+                showStatus('❌ Vui lòng nhập token!', 'error');
+            }
+        }
+
+        // Load token from localStorage (frontend)
+        function loadTokenFromStorage() {
+            const token = localStorage.getItem('accessToken');
+            if (token) {
+                currentToken = token;
+                document.getElementById('tokenInput').value = token;
+                showStatus('✅ Đã load token từ frontend!', 'success');
+            } else {
+                showStatus('❌ Không tìm thấy token trong localStorage!', 'error');
+            }
+        }
+
+        // Clear token
+        function clearToken() {
+            currentToken = '';
+            document.getElementById('tokenInput').value = '';
+            localStorage.removeItem('testToken');
+            showStatus('🗑️ Token đã được xóa!', 'success');
+        }
+
+        // Show status message
+        function showStatus(message, type) {
+            const statusDiv = document.getElementById('tokenStatus');
+            statusDiv.innerHTML = `<span class="${type}">${message}</span>`;
+        }
+
+        // Show response
+        function showResponse(data, type = 'info') {
+            const responseDiv = document.getElementById('response');
+            responseDiv.innerHTML = `<span class="${type}">${JSON.stringify(data, null, 2)}</span>`;
+        }
+
+        // Check backend status
+        async function checkBackendStatus() {
+            try {
+                showResponse('⏳ Đang kiểm tra backend...', 'info');
+                
+                const response = await fetch(`${API_BASE_URL}/health`, {
+                    method: 'GET',
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    showResponse({
+                        status: '✅ Backend đang hoạt động!',
+                        details: data
+                    }, 'success');
+                } else {
+                    showResponse({
+                        status: '❌ Backend không phản hồi đúng',
+                        statusCode: response.status
+                    }, 'error');
+                }
+            } catch (error) {
+                showResponse({
+                    status: '❌ Không thể kết nối đến backend!',
+                    error: error.message,
+                    tip: 'Hãy đảm bảo backend đang chạy ở http://localhost:3006'
+                }, 'error');
+            }
+        }
+
+        // Get notifications
+        async function getNotifications() {
+            if (!currentToken) {
+                showResponse('❌ Vui lòng nhập token trước!', 'error');
+                return;
+            }
+
+            try {
+                showResponse('⏳ Đang lấy danh sách thông báo...', 'info');
+                
+                const response = await fetch(`${API_BASE_URL}/notifications`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    if (data.success && Array.isArray(data.data)) {
+                        const notifications = data.data;
+                        const unreadCount = notifications.filter(n => !n.read).length;
+                        
+                        let html = `<div class="success">✅ Lấy thành công ${notifications.length} thông báo (${unreadCount} chưa đọc)</div><br>`;
+                        
+                        if (notifications.length === 0) {
+                            html += '<div>📭 Không có thông báo nào!</div>';
+                        } else {
+                            notifications.forEach((notif, index) => {
+                                const readClass = notif.read ? '' : 'unread';
+                                const badge = notif.read ? 
+                                    '<span class="badge badge-read">Đã đọc</span>' : 
+                                    '<span class="badge badge-unread">Chưa đọc</span>';
+                                
+                                html += `
+                                    <div class="notification-item ${readClass}">
+                                        <strong>${index + 1}. ${notif.title}</strong> ${badge}<br>
+                                        <small>📝 ${notif.message}</small><br>
+                                        <small>🆔 ID: ${notif.id}</small><br>
+                                        <small>📅 ${new Date(notif.created_at).toLocaleString('vi-VN')}</small><br>
+                                        <small>🏷️ Type: ${notif.type}</small>
+                                    </div>
+                                `;
+                            });
+                        }
+                        
+                        document.getElementById('response').innerHTML = html;
+                    } else {
+                        showResponse(data, 'info');
+                    }
+                } else {
+                    showResponse({
+                        status: '❌ Lỗi từ server',
+                        statusCode: response.status,
+                        response: data
+                    }, 'error');
+                }
+            } catch (error) {
+                showResponse({
+                    status: '❌ Lỗi khi gọi API!',
+                    error: error.message
+                }, 'error');
+            }
+        }
+
+        // Create test notification
+        async function createTestNotification() {
+            if (!currentToken) {
+                showResponse('❌ Vui lòng nhập token trước!', 'error');
+                return;
+            }
+
+            try {
+                showResponse('⏳ Đang tạo thông báo test...', 'info');
+                
+                // Create notification via admin endpoint or direct DB insert
+                // This is a workaround - normally notifications are created by system events
+                const response = await fetch(`${API_BASE_URL}/admin/test-notification`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        title: 'Thông báo test',
+                        message: 'Đây là thông báo test được tạo lúc ' + new Date().toLocaleString('vi-VN'),
+                        type: 'system'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    showResponse({
+                        status: '✅ Tạo thông báo thành công!',
+                        data: data
+                    }, 'success');
+                    
+                    // Auto refresh notifications
+                    setTimeout(() => getNotifications(), 1000);
+                } else {
+                    showResponse({
+                        status: '❌ Không thể tạo thông báo',
+                        statusCode: response.status,
+                        response: data,
+                        note: 'Có thể endpoint test chưa được tạo. Hãy kiểm tra backend logs.'
+                    }, 'error');
+                }
+            } catch (error) {
+                showResponse({
+                    status: '❌ Lỗi khi tạo thông báo!',
+                    error: error.message
+                }, 'error');
+            }
+        }
+
+        // Mark all as read
+        async function markAllAsRead() {
+            if (!currentToken) {
+                showResponse('❌ Vui lòng nhập token trước!', 'error');
+                return;
+            }
+
+            try {
+                showResponse('⏳ Đang đánh dấu tất cả đã đọc...', 'info');
+                
+                const response = await fetch(`${API_BASE_URL}/notifications/mark-all-read`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${currentToken}`,
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                const data = await response.json();
+
+                if (response.ok) {
+                    showResponse({
+                        status: '✅ Đã đánh dấu tất cả thông báo là đã đọc!',
+                        data: data
+                    }, 'success');
+                    
+                    // Auto refresh notifications
+                    setTimeout(() => getNotifications(), 1000);
+                } else {
+                    showResponse({
+                        status: '❌ Không thể đánh dấu đã đọc',
+                        statusCode: response.status,
+                        response: data
+                    }, 'error');
+                }
+            } catch (error) {
+                showResponse({
+                    status: '❌ Lỗi khi đánh dấu đã đọc!',
+                    error: error.message
+                }, 'error');
+            }
+        }
+
+        // Auto-load token on page load
+        window.onload = function() {
+            const savedToken = localStorage.getItem('testToken');
+            if (savedToken) {
+                currentToken = savedToken;
+                document.getElementById('tokenInput').value = savedToken;
+                showStatus('ℹ️ Đã load token đã lưu', 'info');
+            }
+            
+            // Try to load token from frontend storage
+            const frontendToken = localStorage.getItem('accessToken');
+            if (frontendToken && !savedToken) {
+                currentToken = frontendToken;
+                document.getElementById('tokenInput').value = frontendToken;
+                showStatus('ℹ️ Đã load token từ frontend', 'info');
+            }
+        };
+    </script>
+</body>
+</html>

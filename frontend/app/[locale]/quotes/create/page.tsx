@@ -91,8 +91,8 @@ export default function CreateQuotePage() {
 
   const [formData, setFormData] = useState({
     validUntil: '',
-    deliveryTerms: 'EX_WORKS',
-    paymentTerms: 'NET_30',
+    deliveryTerms: '',
+    paymentTerms: '',
     notes: '',
     currency: 'VND',
   });
@@ -249,6 +249,16 @@ export default function CreateQuotePage() {
       return;
     }
 
+    if (!formData.deliveryTerms) {
+      showError('Vui lòng chọn điều kiện giao hàng');
+      return;
+    }
+
+    if (!formData.paymentTerms) {
+      showError('Vui lòng chọn điều kiện thanh toán');
+      return;
+    }
+
     const invalidItems = quoteItems.filter(item => 
       item.unit_price <= 0
     );
@@ -335,9 +345,9 @@ export default function CreateQuotePage() {
   }
 
   return (
-    <div className="w-full min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800">
+    <div className="w-full min-h-screen bg-white dark:bg-slate-900">
       {/* Header - Full Width */}
-      <div className="bg-white dark:bg-slate-900 border-b shadow-sm sticky top-0 z-10">
+      <div className="bg-white dark:bg-slate-900 border-b shadow-sm">
         <div className="px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="p-2.5 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl shadow-md">
@@ -361,7 +371,7 @@ export default function CreateQuotePage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 p-6">
         {/* Left Column - RFQ Information (Sticky) */}
         <div className="lg:col-span-4 xl:col-span-3">
-          <div className="sticky top-24 space-y-4">
+          <div className="space-y-4">
             {rfqData && (
               <>
                 {/* RFQ Info Card */}
@@ -619,33 +629,44 @@ export default function CreateQuotePage() {
                       </div>
                     </div>
 
-                    {/* Optional Fields - Collapsible */}
-                    <div className="p-4 bg-slate-50 dark:bg-slate-900/50 rounded-lg border border-dashed">
-                      <div className="grid grid-cols-2 gap-3">
-                        <div className="space-y-1.5">
-                          <Label className="text-xs font-medium flex items-center gap-1 text-muted-foreground">
-                            <Calendar className="h-3 w-3" />
-                            Ngày có hàng
+                    {/* Optional Fields - Clear Labels & Better UI */}
+                    <div className="p-4 bg-gradient-to-br from-slate-50 to-blue-50/30 dark:from-slate-900/50 dark:to-blue-900/20 rounded-lg border-2 border-dashed border-blue-200 dark:border-blue-800">
+                      <div className="flex items-center gap-2 mb-3">
+                        <Info className="h-4 w-4 text-blue-500" />
+                        <span className="text-xs font-bold text-blue-700 dark:text-blue-400">THÔNG TIN BỔ SUNG (Tùy chọn)</span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label htmlFor={`availableDate-${index}`} className="text-sm font-semibold flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-green-600 dark:text-green-400" />
+                            <span>Ngày có hàng</span>
                           </Label>
                           <Input
+                            id={`availableDate-${index}`}
                             type="date"
                             value={item.availableDate || ''}
                             onChange={(e) => handleQuoteItemChange(index, 'availableDate', e.target.value)}
-                            className="h-9 text-sm"
+                            className="h-10 text-sm border-2"
+                            title="Chọn ngày container có thể giao"
                           />
+                          <p className="text-xs text-muted-foreground">Ngày sớm nhất có thể giao hàng</p>
                         </div>
 
-                        <div className="space-y-1.5">
-                          <Label className="text-xs font-medium flex items-center gap-1 text-muted-foreground">
-                            <Truck className="h-3 w-3" />
-                            Vị trí depot
+                        <div className="space-y-2">
+                          <Label htmlFor={`depotLocation-${index}`} className="text-sm font-semibold flex items-center gap-2">
+                            <Truck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                            <span>Vị trí depot/kho</span>
                           </Label>
                           <Input
-                            placeholder="VD: Depot Hà Nội"
+                            id={`depotLocation-${index}`}
+                            type="text"
+                            placeholder="VD: Depot Hải Phòng, Kho Cát Lái, HCMC..."
                             value={item.depotLocation || ''}
                             onChange={(e) => handleQuoteItemChange(index, 'depotLocation', e.target.value)}
-                            className="h-9 text-sm"
+                            className="h-10 text-sm border-2"
+                            title="Nhập vị trí depot hoặc kho chứa container"
                           />
+                          <p className="text-xs text-muted-foreground">Địa điểm lấy/giao container</p>
                         </div>
                       </div>
                     </div>
@@ -670,51 +691,69 @@ export default function CreateQuotePage() {
                 </div>
               </CardHeader>
               <CardContent className="pt-6 space-y-5">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="validUntil" className="text-sm font-semibold">
-                      <Clock className="h-4 w-4 inline mr-1" />
-                      Hiệu lực đến <span className="text-red-500">*</span>
-                    </Label>
-                    <Input
-                      id="validUntil"
-                      type="date"
-                      value={formData.validUntil}
-                      onChange={(e) => handleInputChange('validUntil', e.target.value)}
-                      required
-                      className="h-11"
-                    />
-                  </div>
+                <div className="space-y-4">
+                  <div className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="validUntil" className="text-sm font-semibold">
+                        <Clock className="h-4 w-4 inline mr-1" />
+                        Hiệu lực đến <span className="text-red-500">*</span>
+                      </Label>
+                      <Input
+                        id="validUntil"
+                        type="date"
+                        value={formData.validUntil}
+                        onChange={(e) => handleInputChange('validUntil', e.target.value)}
+                        required
+                        className="h-11 max-w-xs"
+                      />
+                    </div>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="deliveryTerms" className="text-sm font-semibold">Điều kiện giao hàng</Label>
-                    <Select value={formData.deliveryTerms} onValueChange={(value) => handleInputChange('deliveryTerms', value)}>
-                      <SelectTrigger className="h-11">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="ex_works">🏭 EX Works (Tại kho)</SelectItem>
-                        <SelectItem value="fob">🚢 FOB (Free on Board)</SelectItem>
-                        <SelectItem value="cif">📦 CIF (Cost, Insurance & Freight)</SelectItem>
-                        <SelectItem value="door_to_door">🚚 Door to Door</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="deliveryTerms" className="text-sm font-semibold ">
+                          <Truck className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                          Điều kiện giao hàng <span className="text-red-500">*</span>
+                        </Label>
+                        <Select value={formData.deliveryTerms} onValueChange={(value) => handleInputChange('deliveryTerms', value)}>
+                          <SelectTrigger className="h-11 max-w-xs">
+                            <SelectValue placeholder="Chọn điều kiện giao hàng..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="EX_WORKS">🏭 EX Works - Lấy tại kho người bán</SelectItem>
+                            <SelectItem value="FOB">🚢 FOB - Giao lên tàu (người bán chịu phí)</SelectItem>
+                            <SelectItem value="CIF">📦 CIF - Bao gồm vận chuyển & bảo hiểm</SelectItem>
+                            <SelectItem value="DOOR_TO_DOOR">🚚 Door to Door - Giao tận nơi</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {/* <p className="text-xs text-muted-foreground">
+                          💡 Quy định trách nhiệm vận chuyển và chi phí
+                        </p> */}
+                      </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="paymentTerms" className="text-sm font-semibold">Điều kiện thanh toán</Label>
-                  <Select value={formData.paymentTerms} onValueChange={(value) => handleInputChange('paymentTerms', value)}>
-                    <SelectTrigger className="h-11">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="100_advance">💵 100% trước</SelectItem>
-                      <SelectItem value="50_50">⚖️ 50% trước - 50% sau</SelectItem>
-                      <SelectItem value="30_70">📊 30% trước - 70% sau</SelectItem>
-                      <SelectItem value="cod">💰 COD (Thanh toán khi giao hàng)</SelectItem>
-                    </SelectContent>
-                  </Select>
+                      <div className="space-y-2">
+                        <Label htmlFor="paymentTerms" className="text-sm font-semibold">
+                          <DollarSign className="h-4 w-4 text-green-600 dark:text-green-400" />
+                          Điều kiện thanh toán <span className="text-red-500">*</span>
+                        </Label>
+                        <Select value={formData.paymentTerms} onValueChange={(value) => handleInputChange('paymentTerms', value)}>
+                          <SelectTrigger className="h-11 max-w-xs">
+                            <SelectValue placeholder="Chọn điều kiện thanh toán..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="NET_30">📅 Net 30 - Thanh toán trong 30 ngày</SelectItem>
+                            <SelectItem value="NET_15">⏱️ Net 15 - Thanh toán trong 15 ngày</SelectItem>
+                            <SelectItem value="100_ADVANCE">💵 100% trả trước - Thanh toán toàn bộ trước</SelectItem>
+                            <SelectItem value="50_50">⚖️ 50-50 - Trả 50% trước, 50% sau giao hàng</SelectItem>
+                            <SelectItem value="30_70">📊 30-70 - Trả 30% trước, 70% sau giao hàng</SelectItem>
+                            <SelectItem value="COD">💰 COD - Thanh toán khi nhận hàng</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        {/* <p className="text-xs text-muted-foreground">
+                          💡 Cách thức và thời hạn thanh toán
+                        </p> */}
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Notes */}

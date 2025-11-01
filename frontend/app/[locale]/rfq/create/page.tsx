@@ -15,6 +15,7 @@ import { Separator } from '@/components/ui/separator';
 import { Checkbox } from '@/components/ui/checkbox';
 import { useNotificationContext } from '@/components/providers/notification-provider';
 import { useAuth } from '@/components/providers/auth-context';
+import { getDealTypeDisplayName } from '@/lib/utils/dealType';
 import { 
   FileText, 
   Calendar,
@@ -46,7 +47,6 @@ export default function CreateRFQPage() {
   const [loadingListing, setLoadingListing] = useState(false);
   
   const [formData, setFormData] = useState({
-    purpose: 'sale' as 'sale' | 'rental',
     quantity: 1,
     needBy: '',
     services: {
@@ -149,7 +149,7 @@ export default function CreateRFQPage() {
       // Build payload according to backend API schema
       const payload = {
         listing_id: listingId,
-        purpose: formData.purpose,
+        purpose: listingInfo.deal_type === 'SALE' ? 'PURCHASE' : 'RENTAL', // Lấy từ listing
         quantity: formData.quantity,
         need_by: formData.needBy || undefined,
         services: formData.services,
@@ -186,106 +186,216 @@ export default function CreateRFQPage() {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-3xl font-bold flex items-center gap-2">
-            <FileText className="h-8 w-8 text-primary" />
-            Tạo yêu cầu báo giá (RFQ)
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Tạo yêu cầu báo giá cho container, nhà cung cấp sẽ gửi báo giá cho bạn
-          </p>
+    <div className="min-h-screen bg-white dark:bg-gray-900">
+      <div className="w-full px-4 md:px-6 lg:px-8 py-6">
+        {/* Breadcrumb */}
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 mb-6">
+          <div className="flex items-center space-x-2 text-sm text-gray-500 dark:text-gray-400">
+            <span className="hover:text-blue-600 cursor-pointer transition-colors">Trang chủ</span>
+            <span>/</span>
+            <span className="hover:text-blue-600 cursor-pointer transition-colors">RFQ</span>
+            <span>/</span>
+            <span className="text-gray-900 dark:text-gray-100 font-medium">Tạo yêu cầu báo giá</span>
+          </div>
         </div>
-        <Button variant="outline" onClick={() => router.back()}>
-          <ArrowLeft className="h-4 w-4 mr-2" />
-          Quay lại
-        </Button>
-      </div>
+
+        {/* Header */}
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 mb-6">
+          <div className="flex items-start justify-between flex-wrap gap-4">
+            <div className="flex-1">
+              <h1 className="text-2xl md:text-3xl font-bold flex items-center gap-3 text-gray-900 dark:text-white mb-2">
+                <div className="h-10 w-10 md:h-12 md:w-12 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
+                  <FileText className="h-5 w-5 md:h-6 md:w-6 text-white" />
+                </div>
+                Tạo yêu cầu báo giá (RFQ)
+              </h1>
+              <p className="text-gray-600 dark:text-gray-400 text-sm md:text-base">
+                Tạo yêu cầu báo giá cho container, nhà cung cấp sẽ gửi báo giá cho bạn
+              </p>
+            </div>
+            <Button 
+              variant="outline" 
+              onClick={() => router.back()}
+              className="flex-shrink-0"
+            >
+              <ArrowLeft className="h-4 w-4 mr-2" />
+              Quay lại
+            </Button>
+          </div>
+        </div>
 
       {/* Listing Info Card */}
       {loadingListing ? (
-        <Card>
-          <CardContent className="p-6">
-            <div className="animate-pulse space-y-2">
-              <div className="h-4 bg-gray-200 rounded w-3/4"></div>
-              <div className="h-4 bg-gray-200 rounded w-1/2"></div>
-            </div>
-          </CardContent>
-        </Card>
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-6 mb-6">
+          <div className="animate-pulse space-y-3">
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-3/4"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-1/2"></div>
+            <div className="h-4 bg-gray-200 dark:bg-gray-700 rounded w-2/3"></div>
+          </div>
+        </div>
       ) : listingInfo && (
-        <Card className="border-primary/20 bg-primary/5">
-          <CardHeader>
-            <div className="flex items-start justify-between">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Package className="h-5 w-5 text-primary" />
-                  {listingInfo.title}
-                </CardTitle>
-                <CardDescription className="mt-2">
-                  {listingInfo.description}
-                </CardDescription>
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 mb-6">
+          <div className="p-6">
+            <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4 mb-6">
+              <div className="flex-1">
+                <div className="flex items-center gap-2 mb-3 flex-wrap">
+                  <Badge 
+                    variant={listingInfo.deal_type === 'SALE' ? 'default' : 'secondary'}
+                    className="text-sm font-medium"
+                  >
+                    {getDealTypeDisplayName(listingInfo.deal_type)}
+                  </Badge>
+                  {listingInfo.status && (
+                    <Badge 
+                      variant={
+                        listingInfo.status === 'ACTIVE' ? 'default' : 
+                        listingInfo.status === 'DRAFT' ? 'secondary' : 
+                        listingInfo.status === 'PENDING' ? 'outline' : 
+                        'destructive'
+                      }
+                      className="text-xs uppercase"
+                    >
+                      {listingInfo.status === 'ACTIVE' ? 'Đang hoạt động' :
+                       listingInfo.status === 'DRAFT' ? 'Nháp' :
+                       listingInfo.status === 'PENDING' ? 'Chờ duyệt' :
+                       listingInfo.status === 'REJECTED' ? 'Từ chối' :
+                       listingInfo.status === 'EXPIRED' ? 'Hết hạn' :
+                       listingInfo.status}
+                    </Badge>
+                  )}
+                </div>
+                <div className="flex items-start gap-3 mb-3">
+                  <div className="h-10 w-10 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
+                    <Package className="h-5 w-5 text-white" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <h2 className="text-lg md:text-xl font-bold text-gray-900 dark:text-white break-words">
+                      {listingInfo.title}
+                    </h2>
+                    {listingInfo.description && (
+                      <p className="text-sm text-gray-600 dark:text-gray-400 mt-2 line-clamp-2">
+                        {listingInfo.description}
+                      </p>
+                    )}
+                  </div>
+                </div>
               </div>
-              <Badge variant="outline" className="text-lg px-3 py-1">
-                {new Intl.NumberFormat('vi-VN').format(parseFloat(listingInfo.price_amount || 0))} {listingInfo.price_currency}
-              </Badge>
+              <div className="flex flex-col items-start lg:items-end gap-1 flex-shrink-0">
+                <div className="bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg px-4 py-2">
+                  <div className="text-xl font-bold text-green-700 dark:text-green-400">
+                    {new Intl.NumberFormat('vi-VN').format(parseFloat(listingInfo.price_amount || 0))} {listingInfo.price_currency}
+                    {listingInfo.deal_type === 'RENTAL' && listingInfo.rental_unit && (
+                      <span className="text-sm font-normal">
+                        /{listingInfo.rental_unit === 'MONTH' ? 'tháng' : 
+                          listingInfo.rental_unit === 'WEEK' ? 'tuần' : 
+                          listingInfo.rental_unit === 'DAY' ? 'ngày' : 
+                          listingInfo.rental_unit}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              </div>
             </div>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-              {listingInfo.depots?.name && (
-                <div className="flex items-center gap-2">
-                  <MapPin className="h-4 w-4 text-muted-foreground" />
-                  <span>{listingInfo.depots.name}</span>
-                </div>
-              )}
-              {listingInfo.containers?.type && (
-                <div className="flex items-center gap-2">
-                  <Package className="h-4 w-4 text-muted-foreground" />
-                  <span>{listingInfo.containers.type} - {listingInfo.containers.size_ft}ft</span>
-                </div>
-              )}
-              {listingInfo.users?.display_name && (
-                <div className="flex items-center gap-2">
-                  <span className="text-muted-foreground">Seller:</span>
-                  <span className="font-medium">{listingInfo.users.display_name}</span>
-                </div>
-              )}
+            
+            <div className="border-t border-gray-200 dark:border-gray-700 pt-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                {listingInfo.depots?.name && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 font-medium">
+                      <MapPin className="h-3 w-3" />
+                      Vị trí
+                    </span>
+                    <span className="font-semibold text-gray-900 dark:text-white text-sm">
+                      {listingInfo.depots.name}
+                    </span>
+                  </div>
+                )}
+                {listingInfo.containers && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 flex items-center gap-1 font-medium">
+                      <Package className="h-3 w-3" />
+                      Container
+                    </span>
+                    <span className="font-semibold text-gray-900 dark:text-white text-sm">
+                      {listingInfo.containers.type} - {listingInfo.containers.size_ft}ft
+                    </span>
+                    {listingInfo.containers.condition && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        {listingInfo.containers.condition}
+                      </span>
+                    )}
+                  </div>
+                )}
+                {listingInfo.users?.display_name && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Seller</span>
+                    <span className="font-semibold text-gray-900 dark:text-white text-sm">
+                      {listingInfo.users.display_name}
+                    </span>
+                    {listingInfo.users.email && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400 truncate">
+                        {listingInfo.users.email}
+                      </span>
+                    )}
+                  </div>
+                )}
+                {(listingInfo.available_quantity || listingInfo.total_quantity) && (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-xs text-gray-500 dark:text-gray-400 font-medium">Số lượng</span>
+                    <span className="font-semibold text-gray-900 dark:text-white text-sm">
+                      {listingInfo.available_quantity || listingInfo.total_quantity} có sẵn
+                    </span>
+                    {listingInfo.total_quantity && listingInfo.available_quantity !== listingInfo.total_quantity && (
+                      <span className="text-xs text-gray-500 dark:text-gray-400">
+                        /{listingInfo.total_quantity} tổng
+                      </span>
+                    )}
+                  </div>
+                )}
+              </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
       )}
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Information */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Thông tin yêu cầu báo giá</CardTitle>
-            <CardDescription>Điền thông tin chi tiết cho yêu cầu báo giá của bạn</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="purpose">
-                  Mục đích <span className="text-red-500">*</span>
-                </Label>
-                <Select 
-                  value={formData.purpose} 
-                  onValueChange={(value) => handleInputChange('purpose', value)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Chọn mục đích" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="sale">Mua (Purchase)</SelectItem>
-                    <SelectItem value="rental">Thuê (Rental)</SelectItem>
-                  </SelectContent>
-                </Select>
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="border-b border-gray-200 dark:border-gray-700 p-6">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Thông tin yêu cầu báo giá</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Điền thông tin chi tiết cho yêu cầu báo giá của bạn
+            </p>
+          </div>
+          <div className="p-6 space-y-6">
+            {/* Hiển thị mục đích từ listing - không cho chỉnh sửa */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                Mục đích <span className="text-red-500">*</span>
+              </Label>
+              <div className="flex items-center gap-3 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-200 dark:border-blue-800">
+                <div className="h-10 w-10 rounded-lg bg-blue-600 flex items-center justify-center flex-shrink-0">
+                  <Package className="h-5 w-5 text-white" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <span className="font-semibold text-gray-900 dark:text-white text-sm md:text-base block">
+                    {listingInfo?.deal_type ? (
+                      listingInfo.deal_type === 'SALE' ? 'Mua (Purchase)' : 'Thuê (Rental)'
+                    ) : 'Đang tải...'}
+                  </span>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                    Mục đích được xác định từ loại giao dịch trong tin đăng
+                  </p>
+                </div>
+                <Badge variant="secondary" className="flex-shrink-0 hidden sm:flex">
+                  {listingInfo?.deal_type ? getDealTypeDisplayName(listingInfo.deal_type) : ''}
+                </Badge>
               </div>
+            </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <Label htmlFor="quantity">
+                <Label htmlFor="quantity" className="text-sm font-medium text-gray-700 dark:text-gray-300">
                   Số lượng container <span className="text-red-500">*</span>
                 </Label>
                 <Input
@@ -295,198 +405,252 @@ export default function CreateRFQPage() {
                   value={formData.quantity}
                   onChange={(e) => handleInputChange('quantity', parseInt(e.target.value) || 1)}
                   placeholder="Nhập số lượng"
+                  className="h-11 bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600"
                 />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Số lượng container bạn muốn yêu cầu báo giá
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="needBy" className="text-sm font-medium text-gray-700 dark:text-gray-300 flex items-center gap-1">
+                  <Calendar className="h-4 w-4" />
+                  Ngày cần hàng
+                </Label>
+                <Input
+                  id="needBy"
+                  type="date"
+                  value={formData.needBy}
+                  onChange={(e) => handleInputChange('needBy', e.target.value)}
+                  className="h-11 bg-white dark:bg-gray-900 border-gray-300 dark:border-gray-600"
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  Thời điểm bạn cần nhận container (không bắt buộc)
+                </p>
               </div>
             </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="needBy">
-                <Calendar className="h-4 w-4 inline mr-1" />
-                Ngày cần hàng
-              </Label>
-              <Input
-                id="needBy"
-                type="date"
-                value={formData.needBy}
-                onChange={(e) => handleInputChange('needBy', e.target.value)}
-              />
-              <p className="text-xs text-muted-foreground">
-                Thời điểm bạn cần nhận container (không bắt buộc)
-              </p>
-            </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Services */}
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CheckSquare className="h-5 w-5" />
-              Dịch vụ bổ sung
-            </CardTitle>
-            <CardDescription>Chọn các dịch vụ bạn muốn yêu cầu báo giá</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="inspection"
-                checked={formData.services.inspection}
-                onCheckedChange={(checked) => handleServiceChange('inspection', checked as boolean)}
-              />
-              <Label 
-                htmlFor="inspection" 
-                className="text-sm font-normal cursor-pointer"
-              >
-                Kiểm định (Inspection)
-              </Label>
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+          <div className="border-b border-gray-200 dark:border-gray-700 p-6">
+            <div className="flex items-center gap-3">
+              <div className="h-10 w-10 rounded-lg bg-purple-600 flex items-center justify-center flex-shrink-0">
+                <CheckSquare className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-gray-900 dark:text-white">Dịch vụ bổ sung</h2>
+                <p className="text-sm text-gray-600 dark:text-gray-400">
+                  Chọn các dịch vụ bạn muốn yêu cầu báo giá
+                </p>
+              </div>
             </div>
+          </div>
+          <div className="p-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <label 
+                htmlFor="inspection"
+                className="flex items-start space-x-3 p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-blue-300 dark:hover:border-blue-600 transition-colors cursor-pointer"
+              >
+                <Checkbox
+                  id="inspection"
+                  checked={formData.services.inspection}
+                  onCheckedChange={(checked) => handleServiceChange('inspection', checked as boolean)}
+                  className="mt-1"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-gray-900 dark:text-white block">
+                    Kiểm định (Inspection)
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Yêu cầu kiểm tra chất lượng container
+                  </p>
+                </div>
+              </label>
 
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="repair_estimate"
-                checked={formData.services.repair_estimate}
-                onCheckedChange={(checked) => handleServiceChange('repair_estimate', checked as boolean)}
-              />
-              <Label 
-                htmlFor="repair_estimate" 
-                className="text-sm font-normal cursor-pointer"
+              <label 
+                htmlFor="repair_estimate"
+                className="flex items-start space-x-3 p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-blue-300 dark:hover:border-blue-600 transition-colors cursor-pointer"
               >
-                Báo giá sửa chữa (Repair Estimate)
-              </Label>
-            </div>
+                <Checkbox
+                  id="repair_estimate"
+                  checked={formData.services.repair_estimate}
+                  onCheckedChange={(checked) => handleServiceChange('repair_estimate', checked as boolean)}
+                  className="mt-1"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-gray-900 dark:text-white block">
+                    Báo giá sửa chữa (Repair Estimate)
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Yêu cầu báo giá sửa chữa nếu cần
+                  </p>
+                </div>
+              </label>
 
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="certification"
-                checked={formData.services.certification}
-                onCheckedChange={(checked) => handleServiceChange('certification', checked as boolean)}
-              />
-              <Label 
-                htmlFor="certification" 
-                className="text-sm font-normal cursor-pointer"
+              <label 
+                htmlFor="certification"
+                className="flex items-start space-x-3 p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-blue-300 dark:hover:border-blue-600 transition-colors cursor-pointer"
               >
-                Chứng nhận (Certification)
-              </Label>
-            </div>
+                <Checkbox
+                  id="certification"
+                  checked={formData.services.certification}
+                  onCheckedChange={(checked) => handleServiceChange('certification', checked as boolean)}
+                  className="mt-1"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-gray-900 dark:text-white block">
+                    Chứng nhận (Certification)
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Yêu cầu các giấy chứng nhận cần thiết
+                  </p>
+                </div>
+              </label>
 
-            <div className="flex items-center space-x-2">
-              <Checkbox
-                id="delivery_estimate"
-                checked={formData.services.delivery_estimate}
-                onCheckedChange={(checked) => handleServiceChange('delivery_estimate', checked as boolean)}
-              />
-              <Label 
-                htmlFor="delivery_estimate" 
-                className="text-sm font-normal cursor-pointer"
+              <label 
+                htmlFor="delivery_estimate"
+                className="flex items-start space-x-3 p-4 rounded-lg border-2 border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 hover:border-blue-300 dark:hover:border-blue-600 transition-colors cursor-pointer"
               >
-                Báo giá vận chuyển (Delivery Estimate)
-              </Label>
+                <Checkbox
+                  id="delivery_estimate"
+                  checked={formData.services.delivery_estimate}
+                  onCheckedChange={(checked) => handleServiceChange('delivery_estimate', checked as boolean)}
+                  className="mt-1"
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="text-sm font-semibold text-gray-900 dark:text-white block">
+                    Báo giá vận chuyển (Delivery Estimate)
+                  </div>
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+                    Yêu cầu báo giá vận chuyển đến địa điểm
+                  </p>
+                </div>
+              </label>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Summary */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Tóm tắt yêu cầu</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-2">
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Mục đích:</span>
-                <span className="font-semibold">
-                  {formData.purpose === 'sale' ? 'Mua (Purchase)' : 'Thuê (Rental)'}
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg border-2 border-dashed border-gray-300 dark:border-gray-600">
+          <div className="border-b border-gray-200 dark:border-gray-700 p-6">
+            <h2 className="text-lg font-bold text-gray-900 dark:text-white">Tóm tắt yêu cầu</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+              Xem lại thông tin trước khi gửi yêu cầu
+            </p>
+          </div>
+          <div className="p-6">
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+                <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">Mục đích:</span>
+                <span className="font-bold text-gray-900 dark:text-white">
+                  {listingInfo?.deal_type ? (
+                    <>
+                      {listingInfo.deal_type === 'SALE' ? 'Mua' : 'Thuê'} 
+                      <span className="text-sm font-normal text-gray-500 dark:text-gray-400 ml-1">
+                        ({getDealTypeDisplayName(listingInfo.deal_type)})
+                      </span>
+                    </>
+                  ) : 'N/A'}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Số lượng container:</span>
-                <span className="font-semibold">{formData.quantity}</span>
+              
+              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+                <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">Số lượng container:</span>
+                <span className="font-bold text-gray-900 dark:text-white text-lg">{formData.quantity}</span>
               </div>
+              
               {formData.needBy && (
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Ngày cần hàng:</span>
-                  <span className="font-semibold">
+                <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2 p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+                  <span className="text-sm text-gray-600 dark:text-gray-400 font-medium">Ngày cần hàng:</span>
+                  <span className="font-bold text-gray-900 dark:text-white">
                     {new Date(formData.needBy).toLocaleDateString('vi-VN')}
                   </span>
                 </div>
               )}
-              <Separator className="my-2" />
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Dịch vụ yêu cầu:</span>
-                <div className="flex flex-wrap gap-1 justify-end">
+              
+              <Separator className="my-4" />
+              
+              <div className="p-4 bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
+                <span className="text-sm text-gray-600 dark:text-gray-400 font-medium block mb-3">Dịch vụ yêu cầu:</span>
+                <div className="flex flex-wrap gap-2">
                   {formData.services.inspection && (
-                    <Badge variant="secondary" className="text-xs">Kiểm định</Badge>
+                    <Badge variant="secondary" className="text-xs px-3 py-1">✓ Kiểm định</Badge>
                   )}
                   {formData.services.repair_estimate && (
-                    <Badge variant="secondary" className="text-xs">Sửa chữa</Badge>
+                    <Badge variant="secondary" className="text-xs px-3 py-1">✓ Sửa chữa</Badge>
                   )}
                   {formData.services.certification && (
-                    <Badge variant="secondary" className="text-xs">Chứng nhận</Badge>
+                    <Badge variant="secondary" className="text-xs px-3 py-1">✓ Chứng nhận</Badge>
                   )}
                   {formData.services.delivery_estimate && (
-                    <Badge variant="secondary" className="text-xs">Vận chuyển</Badge>
+                    <Badge variant="secondary" className="text-xs px-3 py-1">✓ Vận chuyển</Badge>
                   )}
                   {!Object.values(formData.services).some(v => v) && (
-                    <span className="text-sm text-muted-foreground">Không có</span>
+                    <span className="text-sm text-gray-500 dark:text-gray-400 italic">Không có dịch vụ bổ sung</span>
                   )}
                 </div>
               </div>
             </div>
-          </CardContent>
-        </Card>
+          </div>
+        </div>
 
         {/* Actions */}
-        <div className="flex justify-end gap-4">
+        <div className="flex flex-col sm:flex-row justify-between items-stretch sm:items-center gap-3 pt-2">
           <Button 
             type="button" 
             variant="outline"
             onClick={() => router.back()}
             disabled={isLoading}
+            className="h-12 text-base order-2 sm:order-1"
           >
+            <ArrowLeft className="h-4 w-4 mr-2" />
             Hủy
           </Button>
           <Button 
             type="submit" 
             disabled={isLoading}
-            className="min-w-[150px]"
+            className="h-12 text-base min-w-full sm:min-w-[200px] bg-blue-600 hover:bg-blue-700 order-1 sm:order-2"
           >
             {isLoading ? (
-              <div className="flex items-center">
-                <div className="animate-spin rounded-full h-4 w-4 border-2 border-white border-t-transparent mr-2" />
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent mr-2" />
                 Đang gửi...
               </div>
             ) : (
               <>
-                <Send className="h-4 w-4 mr-2" />
-                Gửi yêu cầu
+                <Send className="h-5 w-5 mr-2" />
+                Gửi yêu cầu báo giá
               </>
             )}
           </Button>
         </div>
       </form>
 
-      {/* Info Cards */}
-      <Card className="bg-blue-50 dark:bg-blue-950 border-blue-200 dark:border-blue-800">
-        <CardContent className="pt-6">
-          <div className="flex items-start gap-4">
-            <div className="h-10 w-10 rounded-full bg-blue-100 dark:bg-blue-900 flex items-center justify-center flex-shrink-0">
-              <AlertCircle className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-            </div>
-            <div>
-              <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                Lưu ý khi tạo RFQ
-              </h4>
-              <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                <li>• RFQ sẽ được gửi trực tiếp đến seller của listing này</li>
-                <li>• Bạn có thể yêu cầu thêm các dịch vụ như kiểm định, sửa chữa, vận chuyển</li>
-                <li>• Seller sẽ gửi báo giá cho bạn trong vòng 24-48 giờ</li>
-                <li>• RFQ có hiệu lực trong 7 ngày kể từ khi gửi</li>
-                <li>• Bạn có thể theo dõi và quản lý RFQ tại trang "RFQ đã gửi"</li>
-              </ul>
+        {/* Info Cards */}
+        <div className="mt-8 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg">
+          <div className="p-6">
+            <div className="flex items-start gap-4">
+              <div className="h-10 w-10 rounded-full bg-blue-600 flex items-center justify-center flex-shrink-0">
+                <AlertCircle className="h-5 w-5 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <h4 className="font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                  Lưu ý khi tạo RFQ
+                </h4>
+                <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1.5">
+                  <li>• RFQ sẽ được gửi trực tiếp đến seller của listing này</li>
+                  <li>• Bạn có thể yêu cầu thêm các dịch vụ như kiểm định, sửa chữa, vận chuyển</li>
+                  <li>• Seller sẽ gửi báo giá cho bạn trong vòng 24-48 giờ</li>
+                  <li>• RFQ có hiệu lực trong 7 ngày kể từ khi gửi</li>
+                  <li>• Bạn có thể theo dõi và quản lý RFQ tại trang "RFQ đã gửi"</li>
+                </ul>
+              </div>
             </div>
           </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 }

@@ -83,16 +83,35 @@ export function SimpleNotificationBell() {
   };
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diff = now.getTime() - date.getTime();
-    const hours = Math.floor(diff / (1000 * 60 * 60));
-    const days = Math.floor(hours / 24);
-    
-    if (hours < 1) return 'Vừa xong';
-    if (hours < 24) return `${hours} giờ trước`;
-    if (days < 7) return `${days} ngày trước`;
-    return date.toLocaleDateString('vi-VN', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    try {
+      // Parse date string as UTC (database stores in UTC)
+      const date = new Date(dateString);
+      const now = new Date();
+      
+      // Calculate difference in milliseconds
+      const diffInMs = now.getTime() - date.getTime();
+      const diffInMinutes = Math.floor(diffInMs / (1000 * 60));
+      const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+      const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+      
+      // Return relative time
+      if (diffInMinutes < 1) return 'Vừa xong';
+      if (diffInMinutes < 60) return `${diffInMinutes} phút trước`;
+      if (diffInHours < 24) return `${diffInHours} giờ trước`;
+      if (diffInDays < 7) return `${diffInDays} ngày trước`;
+      
+      // For older notifications, show the actual date
+      return date.toLocaleDateString('vi-VN', { 
+        day: '2-digit', 
+        month: '2-digit', 
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      console.error('Error formatting date:', error);
+      return 'Không xác định';
+    }
   };
 
   const markAsRead = async (notificationId: string) => {
