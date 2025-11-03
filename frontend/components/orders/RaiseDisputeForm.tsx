@@ -59,7 +59,7 @@ export function RaiseDisputeForm({ orderId, onSuccess, onCancel }: RaiseDisputeF
     setLoading(true);
 
     try {
-      const response = await fetch(`/api/orders/${orderId}/raise-dispute`, {
+      const response = await fetch(`/api/v1/orders/${orderId}/raise-dispute`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

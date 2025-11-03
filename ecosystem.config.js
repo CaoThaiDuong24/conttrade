@@ -22,8 +22,7 @@ module.exports = {
     },
     {
       name: 'lta-frontend',
-      script: 'node_modules/next/dist/bin/next',
-      args: 'start',
+      script: './.next/standalone/server.js',
       cwd: './frontend',
       instances: 1,
       exec_mode: 'cluster',

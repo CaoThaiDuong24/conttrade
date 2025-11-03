@@ -80,7 +80,7 @@ export default function AdminKYCPage() {
     try {
       setIsLoading(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/kyc/pending`, {
+      const response = await fetch('/api/v1/admin/kyc/pending', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -103,7 +103,8 @@ export default function AdminKYCPage() {
 
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/kyc/${submissionId}/approve`, {
+            
+      const response = await fetch(`/api/v1/admin/kyc/${submissionId}/approve`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -134,7 +135,8 @@ export default function AdminKYCPage() {
 
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/kyc/${submissionId}/reject`, {
+            
+      const response = await fetch(`/api/v1/admin/kyc/${submissionId}/reject`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

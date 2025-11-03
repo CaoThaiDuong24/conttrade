@@ -72,7 +72,7 @@ export default function OrdersTrackingPage() {
       }
       
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/orders/tracking`, {
+      const response = await fetch(`/api/v1/orders/tracking`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

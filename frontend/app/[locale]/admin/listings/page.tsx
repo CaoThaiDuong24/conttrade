@@ -82,7 +82,7 @@ export default function AdminListingsPage() {
         setIsLoading(true);
         
         // Use admin endpoint to get all listings
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+        const apiUrl = '/api/v1';
         
         // Get token from cookie
         const getCookie = (name: string) => {
@@ -96,7 +96,7 @@ export default function AdminListingsPage() {
         console.log('🔑 Using token from:', token ? (getCookie('accessToken') ? 'cookie' : 'localStorage') : 'none');
         
         // Fetch với phân trang - truyền page và limit
-        const response = await fetch(`${apiUrl}/api/v1/admin/listings?page=${currentPage}&limit=${itemsPerPage}`, {
+        const response = await fetch(`${apiUrl}/admin/listings?page=${currentPage}&limit=${itemsPerPage}`, {
           method: 'GET',
           credentials: 'include', // Important: send cookies
           headers: {
@@ -274,8 +274,8 @@ export default function AdminListingsPage() {
         return;
       }
       
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
-      const response = await fetch(`${apiUrl}/api/v1/admin/listings/${listingId}/status`, {
+      const apiUrl = '/api/v1';
+      const response = await fetch(`${apiUrl}/admin/listings/${listingId}/status`, {
         method: 'PUT',
         credentials: 'include',
         headers: {
@@ -343,8 +343,8 @@ export default function AdminListingsPage() {
         return;
       }
       
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
-      const response = await fetch(`${apiUrl}/api/v1/admin/listings/${listingId}/status`, {
+      const apiUrl = '/api/v1';
+      const response = await fetch(`${apiUrl}/admin/listings/${listingId}/status`, {
         method: 'PUT',
         credentials: 'include',
         headers: {
@@ -880,7 +880,7 @@ export default function AdminListingsPage() {
                     {selectedListing.images.map((image, index) => (
                       <div key={index} className="group relative overflow-hidden rounded-xl border-2 border-slate-200 hover:border-primary transition-all duration-300 shadow-sm hover:shadow-lg">
                         <img 
-                          src={image.startsWith('http') ? image : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}${image}`}
+                          src={image.startsWith('http') ? image : (process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}${image}` : image)}
                           alt={`${selectedListing.title} - ${index + 1}`}
                           className="w-full h-40 object-cover group-hover:scale-110 transition-transform duration-500"
                         />

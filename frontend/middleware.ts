@@ -2,6 +2,17 @@ import createMiddleware from 'next-intl/middleware';
 import { NextRequest, NextResponse } from 'next/server';
 import { jwtVerify } from 'jose';
 
+// ⚡ PERFORMANCE: In-memory cache for user permissions (TTL: 30 seconds)
+// This prevents calling /auth/me on EVERY request
+interface CachedPermissions {
+  roles: string[];
+  permissions: string[];
+  timestamp: number;
+}
+
+const permissionsCache = new Map<string, CachedPermissions>();
+const CACHE_TTL = 30000; // 30 seconds
+
 // Define route permissions mapping
 const ROUTE_PERMISSIONS = {
   // Public routes (no auth required)
@@ -204,92 +215,114 @@ export default async function middleware(request: NextRequest) {
     // Verify JWT token using jose (Edge Runtime compatible)
     console.log('🔐 VERIFYING JWT...');
 
-    const secret = new TextEncoder().encode('your-super-secret-jwt-key-change-in-production');
+    // Use JWT_SECRET from environment variable (matches backend secret)
+    const jwtSecret = process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production';
+    const secret = new TextEncoder().encode(jwtSecret);
     const { payload } = await jwtVerify(token, secret);
 
     console.log('✅ JWT VALID for user:', payload.userId, 'Role:', payload.role || payload.roles);
     console.log('🔍 JWT PAYLOAD:', JSON.stringify(payload, null, 2));
     
-    // ✅ REALTIME PERMISSIONS: Always query from database to get latest permissions
-    // This ensures admin can grant/revoke permissions and they take effect immediately
+    // ⚡ PERFORMANCE OPTIMIZATION: Use cached permissions with TTL
+    // This prevents calling /auth/me on EVERY request, reducing latency significantly
     let userRoles: string[] = [];
     let userPermissions: string[] = [];
     
-    try {
-      // Call backend API to get fresh user data with latest permissions
-      const backendUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
-      const meResponse = await fetch(`${backendUrl}/api/v1/auth/me`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
-        }
-      });
-      
-      if (meResponse.ok) {
-        const meData = await meResponse.json();
-        if (meData.success && meData.data?.user) {
-          const userData = meData.data.user;
-          
-          // Extract roles (can be array of strings OR array of objects with code)
-          if (Array.isArray(userData.roles)) {
-            userRoles = userData.roles.map((r: any) => 
-              typeof r === 'string' ? r : r.code
-            );
+    const userId = payload.userId as string;
+    const now = Date.now();
+    const cached = permissionsCache.get(userId);
+    
+    // Check if we have valid cache
+    if (cached && (now - cached.timestamp) < CACHE_TTL) {
+      userRoles = cached.roles;
+      userPermissions = cached.permissions;
+      console.log('⚡ Using CACHED permissions (fast path)');
+    } else {
+      // Cache miss or expired - fetch from API
+      try {
+        // Call backend API to get fresh user data with latest permissions
+        // Use internal Docker network URL when running in container
+        const backendUrl = process.env.API_URL_INTERNAL || 'http://lta-backend:3006';
+        console.log('🔍 Fetching user permissions from:', backendUrl);
+        const meResponse = await fetch(`${backendUrl}/api/v1/auth/me`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
           }
-          
-          // Extract permissions - flatten from all roles if permissions are nested in roles
-          const permissionSet = new Set<string>();
-          
-          // Case 1: permissions is a direct array of strings
-          if (Array.isArray(userData.permissions) && userData.permissions.length > 0) {
-            userData.permissions.forEach((p: any) => {
-              const permCode = typeof p === 'string' ? p : p.code;
-              if (permCode) permissionSet.add(permCode);
-            });
-          }
-          
-          // Case 2: permissions are nested in roles array
-          if (Array.isArray(userData.roles)) {
-            userData.roles.forEach((role: any) => {
-              if (role.permissions && Array.isArray(role.permissions)) {
-                role.permissions.forEach((p: any) => {
-                  const permCode = typeof p === 'string' ? p : p.code;
-                  if (permCode) permissionSet.add(permCode);
-                });
-              }
-            });
-          }
-          
-          userPermissions = Array.from(permissionSet);
-          
-          console.log('✅ Got REALTIME permissions from database via /auth/me');
-          console.log('🔑 USER ROLES:', userRoles);
-          console.log('🔑 USER PERMISSIONS:', userPermissions.length, 'permissions');
-          console.log('🔑 Sample permissions:', userPermissions.slice(0, 5).join(', '));
-        } else {
-          throw new Error('Invalid response from /auth/me');
-        }
-      } else {
-        throw new Error(`Failed to fetch user data: ${meResponse.status}`);
-      }
-    } catch (error) {
-      // Fallback to JWT-based permissions if API call fails
-      console.warn('⚠️ Failed to fetch realtime permissions, using JWT fallback:', error);
-      
-      userRoles = await getUserRoles(
-        payload.userId as string, 
-        payload.role as string | undefined, 
-        payload.roles as string[] | undefined,
-        payload.email as string | undefined
-      );
-      
-      userPermissions = (payload.permissions && Array.isArray(payload.permissions) && payload.permissions.length > 0)
-        ? payload.permissions as string[]
-        : await getUserPermissions(userRoles);
+        });
         
-      console.log('🔑 USER ROLES (fallback):', userRoles);
-      console.log('🔑 USER PERMISSIONS (fallback):', userPermissions);
+        if (meResponse.ok) {
+          const meData = await meResponse.json();
+          if (meData.success && meData.data?.user) {
+            const userData = meData.data.user;
+            
+            // Extract roles (can be array of strings OR array of objects with code)
+            if (Array.isArray(userData.roles)) {
+              userRoles = userData.roles.map((r: any) => 
+                typeof r === 'string' ? r : r.code
+              );
+            }
+            
+            // Extract permissions - flatten from all roles if permissions are nested in roles
+            const permissionSet = new Set<string>();
+            
+            // Case 1: permissions is a direct array of strings
+            if (Array.isArray(userData.permissions) && userData.permissions.length > 0) {
+              userData.permissions.forEach((p: any) => {
+                const permCode = typeof p === 'string' ? p : p.code;
+                if (permCode) permissionSet.add(permCode);
+              });
+            }
+            
+            // Case 2: permissions are nested in roles array
+            if (Array.isArray(userData.roles)) {
+              userData.roles.forEach((role: any) => {
+                if (role.permissions && Array.isArray(role.permissions)) {
+                  role.permissions.forEach((p: any) => {
+                    const permCode = typeof p === 'string' ? p : p.code;
+                    if (permCode) permissionSet.add(permCode);
+                  });
+                }
+              });
+            }
+            
+            userPermissions = Array.from(permissionSet);
+            
+            // ⚡ Cache the results
+            permissionsCache.set(userId, {
+              roles: userRoles,
+              permissions: userPermissions,
+              timestamp: now
+            });
+            
+            console.log('✅ Got REALTIME permissions from database via /auth/me (cached for 30s)');
+            console.log('🔑 USER ROLES:', userRoles);
+            console.log('🔑 USER PERMISSIONS:', userPermissions.length, 'permissions');
+          } else {
+            throw new Error('Invalid response from /auth/me');
+          }
+        } else {
+          throw new Error(`Failed to fetch user data: ${meResponse.status}`);
+        }
+      } catch (error) {
+        // Fallback to JWT-based permissions if API call fails
+        console.warn('⚠️ Failed to fetch realtime permissions, using JWT fallback:', error);
+        
+        userRoles = await getUserRoles(
+          payload.userId as string, 
+          payload.role as string | undefined, 
+          payload.roles as string[] | undefined,
+          payload.email as string | undefined
+        );
+        
+        userPermissions = (payload.permissions && Array.isArray(payload.permissions) && payload.permissions.length > 0)
+          ? payload.permissions as string[]
+          : await getUserPermissions(userRoles);
+          
+        console.log('🔑 USER ROLES (fallback):', userRoles);
+        console.log('🔑 USER PERMISSIONS (fallback):', userPermissions);
+      }
     }
     
     // Check if user has required permission
@@ -602,6 +635,18 @@ function hasPermission(userPermissions: string[], userRoles: string[], requiredP
 }
 
 export const config = {
-  // Match all routes except API routes and static files
-  matcher: ['/((?!api|_next/static|_next/image|favicon.ico).*)']
+  // ⚡ PERFORMANCE: Optimized matcher to skip more static files
+  // This reduces middleware execution significantly
+  matcher: [
+    /*
+     * Match all request paths except:
+     * - _next/static (static files)
+     * - _next/image (image optimization files)
+     * - _next/data (data fetching)
+     * - favicon.ico, sitemap.xml, robots.txt (static assets)
+     * - *.png, *.jpg, *.jpeg, *.svg, *.gif, *.webp (images)
+     * - *.css, *.js, *.woff, *.woff2, *.ttf, *.otf (assets)
+     */
+    '/((?!_next/static|_next/image|_next/data|favicon.ico|sitemap.xml|robots.txt|.*\\.(?:png|jpg|jpeg|svg|gif|webp|css|js|woff|woff2|ttf|otf)).*)',
+  ]
 };

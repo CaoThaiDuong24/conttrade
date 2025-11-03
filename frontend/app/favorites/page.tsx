@@ -36,7 +36,7 @@ export default function FavoritesPage() {
         return;
       }
 
-      const response = await fetch(`${API_URL}/api/v1/favorites`, {
+      const response = await fetch(`${API_URL}/favorites`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -66,7 +66,7 @@ export default function FavoritesPage() {
       const token = localStorage.getItem('token');
       if (!token) return;
 
-      const response = await fetch(`${API_URL}/api/v1/favorites/stats`, {
+      const response = await fetch(`${API_URL}/favorites/stats`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -88,7 +88,7 @@ export default function FavoritesPage() {
       if (!token) return;
 
       const response = await fetch(
-        `${API_URL}/api/v1/favorites/${listingId}`,
+        `${API_URL}/favorites/${listingId}`,
         {
           method: 'DELETE',
           headers: {

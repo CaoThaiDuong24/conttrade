@@ -109,7 +109,7 @@ export default function AdminReportsPage() {
     try {
       const token = localStorage.getItem('accessToken');
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/reports/generate`,
+        '/api/v1/admin/reports/generate',
         {
           method: 'POST',
           headers: {

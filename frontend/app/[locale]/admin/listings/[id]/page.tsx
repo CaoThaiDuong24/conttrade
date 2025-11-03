@@ -87,8 +87,8 @@ export default function AdminListingDetailPage() {
     const fetchListingDetail = async () => {
       try {
         setIsLoading(true);
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
-        const url = `${apiUrl}/api/v1/admin/listings/${listingId}`;
+        const apiUrl = '/api/v1';
+        const url = `${apiUrl}/admin/listings/${listingId}`;
         
         const token = localStorage.getItem('accessToken');
         
@@ -184,8 +184,8 @@ export default function AdminListingDetailPage() {
         return;
       }
       
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
-      const response = await fetch(`${apiUrl}/api/v1/admin/listings/${listingId}/status`, {
+      const apiUrl = '/api/v1';
+      const response = await fetch(`${apiUrl}/admin/listings/${listingId}/status`, {
         method: 'PUT',
         credentials: 'include',
         headers: {
@@ -246,8 +246,8 @@ export default function AdminListingDetailPage() {
         return;
       }
       
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
-      const response = await fetch(`${apiUrl}/api/v1/admin/listings/${listingId}/status`, {
+      const apiUrl = '/api/v1';
+      const response = await fetch(`${apiUrl}/admin/listings/${listingId}/status`, {
         method: 'PUT',
         credentials: 'include',
         headers: {
@@ -419,7 +419,7 @@ export default function AdminListingDetailPage() {
                     {listing.images.map((image, index) => (
                       <div key={index} className="group relative overflow-hidden rounded-lg border-2 border-slate-200 hover:border-blue-500 transition-all shadow-sm hover:shadow-lg">
                         <img 
-                          src={image.startsWith('http') ? image : `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}${image}`}
+                          src={image.startsWith('http') ? image : (process.env.NEXT_PUBLIC_API_URL ? `${process.env.NEXT_PUBLIC_API_URL}${image}` : image)}
                           alt={`${listing.title} - ${index + 1}`}
                           className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
                         />

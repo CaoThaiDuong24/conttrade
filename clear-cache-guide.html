@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🔧 Hướng dẫn xóa Cache Browser</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 900px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 40px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.3);
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+            font-size: 2.5em;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 40px;
+            font-size: 1.2em;
+        }
+        .alert {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+        }
+        .alert-danger {
+            background: #f8d7da;
+            border-left-color: #dc3545;
+        }
+        .alert-success {
+            background: #d4edda;
+            border-left-color: #28a745;
+        }
+        .method {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 25px;
+            margin: 20px 0;
+            border: 2px solid #e9ecef;
+        }
+        .method h3 {
+            color: #667eea;
+            margin-top: 0;
+            font-size: 1.5em;
+        }
+        .steps {
+            list-style: none;
+            counter-reset: step-counter;
+            padding-left: 0;
+        }
+        .steps li {
+            counter-increment: step-counter;
+            margin-bottom: 20px;
+            padding-left: 50px;
+            position: relative;
+            line-height: 1.6;
+        }
+        .steps li::before {
+            content: counter(step-counter);
+            position: absolute;
+            left: 0;
+            top: 0;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 1.2em;
+        }
+        .keyboard-shortcut {
+            background: #333;
+            color: white;
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            display: inline-block;
+            margin: 5px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 40px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 18px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 10px;
+            display: inline-block;
+        }
+        button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(102, 126, 234, 0.5);
+        }
+        .button-container {
+            text-align: center;
+            margin-top: 40px;
+        }
+        .browser-icons {
+            display: flex;
+            justify-content: space-around;
+            margin: 30px 0;
+            flex-wrap: wrap;
+        }
+        .browser-icon {
+            text-align: center;
+            padding: 15px;
+        }
+        .browser-icon img {
+            width: 60px;
+            height: 60px;
+            margin-bottom: 10px;
+        }
+        code {
+            background: #f4f4f4;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            color: #e83e8c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Xóa Cache Browser</h1>
+        <p class="subtitle">Để load code JavaScript mới nhất</p>
+
+        <div class="alert alert-danger">
+            <h3>⚠️ Vấn đề hiện tại:</h3>
+            <p><strong>Browser đang cache file JavaScript cũ!</strong></p>
+            <p>Code mới đã được deploy nhưng browser vẫn dùng file cũ: <code>page-5b2ffb736d2d027f.js</code></p>
+            <p>Bạn phải <strong>XÓA CACHE</strong> hoặc <strong>HARD REFRESH</strong> để load code mới.</p>
+        </div>
+
+        <!-- Method 1: Hard Refresh (Quickest) -->
+        <div class="method">
+            <h3>🚀 Phương án 1: Hard Refresh (Nhanh nhất)</h3>
+            <p>Làm mới trang và xóa cache bằng phím tắt:</p>
+            <ul class="steps">
+                <li>
+                    <strong>Windows/Linux:</strong> 
+                    <span class="keyboard-shortcut">Ctrl</span> + 
+                    <span class="keyboard-shortcut">Shift</span> + 
+                    <span class="keyboard-shortcut">R</span>
+                    <br>hoặc<br>
+                    <span class="keyboard-shortcut">Ctrl</span> + 
+                    <span class="keyboard-shortcut">F5</span>
+                </li>
+                <li>
+                    <strong>Mac:</strong> 
+                    <span class="keyboard-shortcut">Cmd</span> + 
+                    <span class="keyboard-shortcut">Shift</span> + 
+                    <span class="keyboard-shortcut">R</span>
+                </li>
+            </ul>
+        </div>
+
+        <!-- Method 2: Clear Cache in DevTools -->
+        <div class="method">
+            <h3>🛠️ Phương án 2: Xóa Cache trong DevTools</h3>
+            <ul class="steps">
+                <li>Nhấn <span class="keyboard-shortcut">F12</span> để mở DevTools</li>
+                <li>Click chuột phải vào nút Refresh (reload) trong browser</li>
+                <li>Chọn <strong>"Empty Cache and Hard Reload"</strong> (Chrome/Edge)</li>
+            </ul>
+            <div class="alert">
+                <strong>Lưu ý:</strong> Menu này chỉ xuất hiện khi DevTools đang mở.
+            </div>
+        </div>
+
+        <!-- Method 3: Clear All Cache -->
+        <div class="method">
+            <h3>🧹 Phương án 3: Xóa toàn bộ Cache (Triệt để nhất)</h3>
+            
+            <h4>📌 Chrome / Edge:</h4>
+            <ul class="steps">
+                <li>Nhấn <span class="keyboard-shortcut">Ctrl</span> + <span class="keyboard-shortcut">Shift</span> + <span class="keyboard-shortcut">Delete</span></li>
+                <li>Chọn <strong>Time range: All time</strong></li>
+                <li>Tích chọn:
+                    <ul style="margin-top: 10px;">
+                        <li>✅ Cached images and files</li>
+                        <li>✅ Cookies and other site data (optional)</li>
+                    </ul>
+                </li>
+                <li>Click <strong>"Clear data"</strong></li>
+            </ul>
+
+            <h4>📌 Firefox:</h4>
+            <ul class="steps">
+                <li>Nhấn <span class="keyboard-shortcut">Ctrl</span> + <span class="keyboard-shortcut">Shift</span> + <span class="keyboard-shortcut">Delete</span></li>
+                <li>Chọn <strong>Time range to clear: Everything</strong></li>
+                <li>Tích chọn <strong>Cache</strong></li>
+                <li>Click <strong>"Clear Now"</strong></li>
+            </ul>
+        </div>
+
+        <!-- Method 4: Incognito Mode -->
+        <div class="method">
+            <h3>🕵️ Phương án 4: Dùng Incognito/Private Mode</h3>
+            <ul class="steps">
+                <li><strong>Chrome/Edge:</strong> <span class="keyboard-shortcut">Ctrl</span> + <span class="keyboard-shortcut">Shift</span> + <span class="keyboard-shortcut">N</span></li>
+                <li><strong>Firefox:</strong> <span class="keyboard-shortcut">Ctrl</span> + <span class="keyboard-shortcut">Shift</span> + <span class="keyboard-shortcut">P</span></li>
+                <li>Mở trang web trong cửa sổ Incognito (không có cache)</li>
+            </ul>
+        </div>
+
+        <div class="alert alert-success">
+            <h3>✅ Sau khi xóa cache:</h3>
+            <ol>
+                <li>Làm mới trang: <code>https://iconttrade.ltacv.com/listings</code></li>
+                <li>Mở DevTools Console (F12)</li>
+                <li>Kiểm tra xem có message: <code>[API Client] Initialized with baseUrl</code></li>
+                <li>Kiểm tra file JavaScript mới được load (không còn <code>page-5b2ffb736d2d027f.js</code>)</li>
+            </ol>
+        </div>
+
+        <div class="button-container">
+            <button onclick="window.location.reload(true);">🔄 Refresh Trang Này</button>
+            <button onclick="window.open('https://iconttrade.ltacv.com/listings', '_blank');">🌐 Mở Trang Listings</button>
+        </div>
+
+        <div class="alert" style="margin-top: 40px;">
+            <h3>📋 Checklist sau khi xóa cache:</h3>
+            <ul style="list-style: none; padding-left: 0;">
+                <li>☐ Đã hard refresh (<kbd>Ctrl+Shift+R</kbd>)</li>
+                <li>☐ Đã xóa cache browser</li>
+                <li>☐ Đã mở DevTools Console</li>
+                <li>☐ Kiểm tra không còn lỗi "Failed to construct URL"</li>
+                <li>☐ Trang listings hiển thị dữ liệu</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        console.log('🎯 Build mới đã được deploy lúc: 11:49 AM');
+        console.log('📦 Standalone server running: /.next/standalone/server.js');
+        console.log('🔧 API_BASE_URL: https://iconttrade.ltacv.com');
+        console.log('⚠️ Nếu vẫn còn lỗi, hãy XÓA CACHE BROWSER!');
+    </script>
+</body>
+</html>

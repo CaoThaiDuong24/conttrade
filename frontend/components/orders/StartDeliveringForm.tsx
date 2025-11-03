@@ -38,7 +38,7 @@ export function StartDeliveringForm({ isOpen, orderId, onSuccess, onClose }: Sta
 
     try {
       const token = localStorage.getItem('accessToken');
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+      const API_URL = '/api/v1';
 
       // Combine date and time for estimatedDelivery
       let estimatedDelivery = undefined;
@@ -56,7 +56,7 @@ export function StartDeliveringForm({ isOpen, orderId, onSuccess, onClose }: Sta
       };
 
       // TODO: File upload sẽ được implement sau khi backend hỗ trợ multipart/form-data
-      const response = await fetch(`${API_URL}/api/v1/orders/${orderId}/start-delivering`, {
+      const response = await fetch(`${API_URL}/orders/${orderId}/start-delivering`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

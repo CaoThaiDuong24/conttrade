@@ -1,6 +1,6 @@
 // API client for all endpoints according to specification
-// Prefer relative base to use Next.js proxy rewrites in dev
-const API_BASE_URL = (process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006') + '/api/v1'
+// Use relative path for client-side, proxied through Nginx
+const API_BASE_URL = '/api/v1'
 
 export interface ApiResponse<T> {
   data?: T

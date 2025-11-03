@@ -92,7 +92,8 @@ export default function AdminUserDetailPage() {
     try {
       setIsLoading(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/users/${userId}`, {
+            
+      const response = await fetch(`/api/v1/admin/users/${userId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -112,7 +113,7 @@ export default function AdminUserDetailPage() {
   const fetchUserActivities = async () => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/users/${userId}/activities`, {
+      const response = await fetch(`/api/v1/admin/users/${userId}/activities`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -133,7 +134,7 @@ export default function AdminUserDetailPage() {
     setIsSaving(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/users/${userId}`, {
+      const response = await fetch(`/api/v1/admin/users/${userId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -169,7 +170,7 @@ export default function AdminUserDetailPage() {
       const hasRole = user.roles.includes(role);
       const endpoint = hasRole ? 'remove-role' : 'assign-role';
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/users/${userId}/${endpoint}`, {
+      const response = await fetch(`/api/v1/admin/users/${userId}/${endpoint}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -198,7 +199,7 @@ export default function AdminUserDetailPage() {
 
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/users/${userId}/status`, {
+      const response = await fetch(`/api/v1/admin/users/${userId}/status`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

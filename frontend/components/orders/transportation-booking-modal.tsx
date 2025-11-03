@@ -62,9 +62,9 @@ export default function TransportationBookingModal({ isOpen, onClose, orderId, o
     setOrderLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+      const API_URL = '/api/v1';
       
-      const response = await fetch(`${API_URL}/api/v1/orders/${orderId}`, {
+      const response = await fetch(`${API_URL}/orders/${orderId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -194,7 +194,8 @@ export default function TransportationBookingModal({ isOpen, onClose, orderId, o
         ? orderData?.listings?.depots?.address || 'Tự đến lấy tại depot'
         : `${formData.deliveryAddress}${formData.deliveryDistrict ? ', ' + formData.deliveryDistrict : ''}, ${formData.deliveryCity}`;
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/orders/${orderId}/book-transportation`, {
+            
+      const response = await fetch(`/api/v1/orders/${orderId}/book-transportation`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

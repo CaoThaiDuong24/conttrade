@@ -86,9 +86,9 @@ export default function RoleManagementPage() {
         throw new Error('Không tìm thấy token. Vui lòng đăng nhập lại.')
       }
       
-      console.log('📡 Sending request to:', 'http://localhost:3006/api/v1/admin/rbac/roles')
+      console.log('📡 Sending request to:', '/api/v1/admin/rbac/roles')
       
-      const response = await fetch('http://localhost:3006/api/v1/admin/rbac/roles', {
+      const response = await fetch('/api/v1/admin/rbac/roles', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -163,8 +163,8 @@ export default function RoleManagementPage() {
       const token = localStorage.getItem('token') || localStorage.getItem('accessToken')
       
       const url = editingRole
-        ? `http://localhost:3006/api/v1/admin/rbac/roles/${editingRole.id}`
-        : 'http://localhost:3006/api/v1/admin/rbac/roles'
+        ? `/api/v1/admin/rbac/roles/${editingRole.id}`
+        : '/api/v1/admin/rbac/roles'
 
       const method = editingRole ? 'PUT' : 'POST'
 
@@ -203,7 +203,7 @@ export default function RoleManagementPage() {
     try {
       const token = localStorage.getItem('token') || localStorage.getItem('accessToken')
       
-      const response = await fetch(`http://localhost:3006/api/v1/admin/rbac/roles/${roleToDelete.id}`, {
+      const response = await fetch(`/api/v1/admin/rbac/roles/${roleToDelete.id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

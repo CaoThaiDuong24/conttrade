@@ -86,7 +86,7 @@ export default function AdminUsersPage() {
         setIsLoading(true);
         
         // Try real API first
-        const response = await fetch('http://localhost:3006/api/v1/admin/users', {
+        const response = await fetch('/api/v1/admin/users', {
           headers: {
             'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             'Content-Type': 'application/json'

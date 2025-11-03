@@ -106,7 +106,7 @@ export function ConfirmReceiptForm({ isOpen, orderId, onSuccess, onClose }: Conf
       }
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/orders/${orderId}/confirm-receipt`,
+        `/api/v1/orders/${orderId}/confirm-receipt`,
         {
           method: 'POST',
           headers: {

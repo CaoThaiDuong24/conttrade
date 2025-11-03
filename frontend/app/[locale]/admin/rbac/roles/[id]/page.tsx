@@ -79,7 +79,7 @@ export default function RolePermissionsPage() {
       }
 
       // Fetch role details
-      const roleResponse = await fetch(`http://localhost:3006/api/v1/admin/rbac/roles/${roleId}`, {
+      const roleResponse = await fetch(`/api/v1/admin/rbac/roles/${roleId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -99,7 +99,7 @@ export default function RolePermissionsPage() {
       }
 
       // Fetch all permissions
-      const permissionsResponse = await fetch('http://localhost:3006/api/v1/admin/rbac/permissions', {
+      const permissionsResponse = await fetch('/api/v1/admin/rbac/permissions', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -140,7 +140,7 @@ export default function RolePermissionsPage() {
         scope: 'GLOBAL'
       })
 
-      const response = await fetch('http://localhost:3006/api/v1/admin/rbac/role-permissions/assign', {
+      const response = await fetch('/api/v1/admin/rbac/role-permissions/assign', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

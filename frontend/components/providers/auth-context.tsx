@@ -193,7 +193,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       console.log('🔄 fetchUser: Making API call to /auth/me...');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/me`, {
+      const response = await fetch('/api/v1/auth/me', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -319,9 +319,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
       console.log('🔑 Starting login process for:', email);
-      console.log('🔗 API URL:', process.env.NEXT_PUBLIC_API_URL);
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/login`, {
+      // Use Next.js API route instead of direct backend call
+      // This ensures proper cookie handling and server-side environment variables
+      const response = await fetch('/api/v1/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -362,7 +363,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Try to fetch full user data with permissions from /auth/me
           try {
             console.log('🔍 Calling /auth/me with token:', accessToken.substring(0, 20) + '...');
-            const meResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/me`, {
+            const meResponse = await fetch('/api/v1/auth/me', {
               headers: {
                 'Authorization': `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',

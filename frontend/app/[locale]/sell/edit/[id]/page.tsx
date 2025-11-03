@@ -322,7 +322,7 @@ export default function EditListingPage() {
       }
 
       // Delete immediately from backend
-      const response = await fetch(`http://localhost:3006/api/v1/media/${mediaId}`, {
+      const response = await fetch(`/api/v1/media/${mediaId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -367,7 +367,7 @@ export default function EditListingPage() {
         return;
       }
 
-      const response = await fetch(`http://localhost:3006/api/v1/listings/${listingId}`, {
+      const response = await fetch(`/api/v1/listings/${listingId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -520,7 +520,7 @@ export default function EditListingPage() {
       console.log('Update data:', JSON.stringify(updateData, null, 2));
       console.log('Price amount:', priceAmount, 'Type:', typeof priceAmount, 'Is valid:', !isNaN(priceAmount));
 
-      const response = await fetch(`http://localhost:3006/api/v1/listings/${listingId}`, {
+      const response = await fetch(`/api/v1/listings/${listingId}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -945,9 +945,10 @@ export default function EditListingPage() {
                         return null;
                       }
                       
-                      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3006";
+                      // Use NEXT_PUBLIC_API_URL or empty for relative path
+                      const baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
                       const mediaUrl = media.url || media.media_url || '';
-                      const imageUrl = mediaUrl.startsWith('http') ? mediaUrl : `${baseUrl}${mediaUrl}`;
+                      const imageUrl = mediaUrl.startsWith('http') ? mediaUrl : (baseUrl ? `${baseUrl}${mediaUrl}` : mediaUrl);
                       
                       return (
                         <div 

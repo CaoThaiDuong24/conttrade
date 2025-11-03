@@ -54,7 +54,7 @@ export default function AdminAnalyticsPage() {
       setIsLoading(true);
       const token = localStorage.getItem('accessToken');
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/admin/analytics?range=${dateRange}`,
+        `/api/v1/admin/analytics?range=${dateRange}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,

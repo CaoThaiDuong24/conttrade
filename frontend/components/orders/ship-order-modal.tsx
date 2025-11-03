@@ -94,7 +94,8 @@ export default function ShipOrderModal({ isOpen, onClose, orderId, onSuccess }: 
       }
 
       // Step 1: Create delivery record using API-G01: POST /api/v1/deliveries
-      const deliveryResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/deliveries`, {
+            
+      const deliveryResponse = await fetch('/api/v1/deliveries', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -131,8 +132,9 @@ export default function ShipOrderModal({ isOpen, onClose, orderId, onSuccess }: 
       }
 
       // Step 2: Update order status using API-F03: PUT /api/v1/orders/:id/status
-      const statusResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/orders/${orderId}/status`, {
-        method: 'PUT',
+            
+      const statusResponse = await fetch(`/api/v1/orders/${orderId}/status`, {
+        method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`

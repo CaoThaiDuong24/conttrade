@@ -94,7 +94,8 @@ export function DynamicSidebar() {
   const fetchNavigationMenu = async () => {
     try {
       const token = localStorage.getItem('accessToken')
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/auth/navigation`, {
+            
+      const response = await fetch('/api/v1/auth/navigation', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

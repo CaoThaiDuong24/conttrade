@@ -30,9 +30,9 @@ export function UpdateDeliveryStatusForm({ isOpen, orderId, onSuccess, onClose }
 
     try {
       const token = localStorage.getItem('accessToken');
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+      const API_URL = '/api/v1';
 
-      const response = await fetch(`${API_URL}/api/v1/orders/${orderId}/update-delivery-status`, {
+      const response = await fetch(`${API_URL}/orders/${orderId}/update-delivery-status`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

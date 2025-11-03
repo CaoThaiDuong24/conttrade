@@ -57,7 +57,7 @@ export default function MyListingsPage() {
         }
         
         // Fetch với limit=999999 để lấy tất cả listings không giới hạn
-        const response = await fetch('http://localhost:3006/api/v1/listings/my?limit=999999', {
+        const response = await fetch('/api/v1/listings/my?limit=999999', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -130,7 +130,7 @@ export default function MyListingsPage() {
         return;
       }
 
-      const response = await fetch(`http://localhost:3006/api/v1/listings/${listingId}`, {
+      const response = await fetch(`/api/v1/listings/${listingId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -183,7 +183,7 @@ export default function MyListingsPage() {
 
       const newStatus = (currentStatus === 'PAUSED' || currentStatus === 'paused') ? 'ACTIVE' : 'PAUSED';
 
-      const response = await fetch(`http://localhost:3006/api/v1/listings/${listingId}/status`, {
+      const response = await fetch(`/api/v1/listings/${listingId}/status`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,

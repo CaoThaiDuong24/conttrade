@@ -28,7 +28,8 @@ import { FavoriteButton } from './favorite-button';
 import { getDealTypeLabel } from '@/lib/utils/listingStatus';
 import { formatListingTitle } from '@/lib/utils/listingTitle';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+// Use relative path for API calls
+const API_URL = '/api/v1';
 
 export interface ListingCardProps {
   listing: {

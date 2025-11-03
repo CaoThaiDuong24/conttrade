@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Login Flow - Full Integration</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 900px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .success { background: #d4edda; color: #155724; }
+        .error { background: #f8d7da; color: #721c24; }
+        .info { background: #d1ecf1; color: #0c5460; }
+        .warning { background: #fff3cd; color: #856404; }
+        
+        button {
+            background: #0070f3;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover { background: #0051cc; }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .step {
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 4px solid #0070f3;
+            background: #f8f9fa;
+        }
+        
+        pre {
+            background: #f4f4f4;
+            padding: 15px;
+            border-radius: 4px;
+            overflow-x: auto;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Login → Dashboard Flow</h1>
+        <div class="info status">
+            Test đầy đủ luồng: Login → Set Cookie → Redirect → Verify JWT → Access Dashboard
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📝 Step 1: Login</h2>
+        <input type="email" id="email" value="admin@i-contexchange.vn" placeholder="Email">
+        <input type="password" id="password" value="admin123" placeholder="Password">
+        <button onclick="testLogin()">🚀 Login</button>
+        <div id="loginResult"></div>
+    </div>
+
+    <div class="container">
+        <h2>🍪 Step 2: Check Cookie</h2>
+        <button onclick="checkCookie()">🔍 Check Cookies</button>
+        <div id="cookieResult"></div>
+    </div>
+
+    <div class="container">
+        <h2>🏠 Step 3: Access Dashboard</h2>
+        <button onclick="accessDashboard()">🚪 Go to Dashboard</button>
+        <div id="dashboardResult"></div>
+    </div>
+
+    <div class="container">
+        <h2>📋 Full Test Flow</h2>
+        <button onclick="runFullTest()">▶️ Run Full Test (Auto)</button>
+        <div id="fullTestResult"></div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://45.122.244.231:3000';
+
+        async function testLogin() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const resultDiv = document.getElementById('loginResult');
+            
+            resultDiv.innerHTML = '<div class="info status">⏳ Logging in...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password }),
+                    credentials: 'include' // Important: include cookies
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <div class="success status">
+                            ✅ LOGIN THÀNH CÔNG!<br>
+                            User: ${data.data.user.email}<br>
+                            Display Name: ${data.data.user.display_name}<br>
+                            Roles: ${data.data.user.roles.join(', ')}
+                        </div>
+                        <pre>${JSON.stringify(data, null, 2)}</pre>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error status">
+                            ❌ LOGIN FAILED<br>
+                            ${data.message || 'Unknown error'}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error status">
+                        ❌ ERROR: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        function checkCookie() {
+            const resultDiv = document.getElementById('cookieResult');
+            const cookies = document.cookie;
+            
+            if (cookies.includes('accessToken')) {
+                resultDiv.innerHTML = `
+                    <div class="success status">
+                        ✅ COOKIE TỒN TẠI<br>
+                        Cookies: ${cookies}
+                    </div>
+                `;
+            } else {
+                resultDiv.innerHTML = `
+                    <div class="warning status">
+                        ⚠️ KHÔNG TÌM THẤY COOKIE accessToken<br>
+                        (HttpOnly cookies không hiển thị trong JavaScript, đây là bình thường nếu đã set httpOnly=true)<br><br>
+                        All cookies: ${cookies || '(none)'}
+                    </div>
+                `;
+            }
+        }
+
+        async function accessDashboard() {
+            const resultDiv = document.getElementById('dashboardResult');
+            resultDiv.innerHTML = '<div class="info status">⏳ Accessing dashboard...</div>';
+
+            try {
+                const response = await fetch(`${API_BASE}/vi/dashboard`, {
+                    credentials: 'include' // Include cookies
+                });
+
+                if (response.ok) {
+                    resultDiv.innerHTML = `
+                        <div class="success status">
+                            ✅ DASHBOARD ACCESS SUCCESS!<br>
+                            Status: ${response.status}<br>
+                            <a href="${API_BASE}/vi/dashboard" target="_blank">Open Dashboard</a>
+                        </div>
+                    `;
+                } else if (response.redirected) {
+                    resultDiv.innerHTML = `
+                        <div class="warning status">
+                            ⚠️ REDIRECTED<br>
+                            From: /vi/dashboard<br>
+                            To: ${response.url}<br>
+                            (Có thể do JWT verification failed hoặc không có cookie)
+                        </div>
+                    `;
+                } else {
+                    resultDiv.innerHTML = `
+                        <div class="error status">
+                            ❌ ACCESS DENIED<br>
+                            Status: ${response.status}
+                        </div>
+                    `;
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `
+                    <div class="error status">
+                        ❌ ERROR: ${error.message}
+                    </div>
+                `;
+            }
+        }
+
+        async function runFullTest() {
+            const resultDiv = document.getElementById('fullTestResult');
+            resultDiv.innerHTML = '<div class="info status">⏳ Running full test...</div>';
+
+            let log = [];
+
+            try {
+                // Step 1: Login
+                log.push('📝 Step 1: Login...');
+                const loginResponse = await fetch(`${API_BASE}/api/auth/login`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: document.getElementById('email').value,
+                        password: document.getElementById('password').value
+                    }),
+                    credentials: 'include'
+                });
+
+                const loginData = await loginResponse.json();
+                
+                if (!loginData.success) {
+                    log.push('❌ Login failed: ' + loginData.message);
+                    resultDiv.innerHTML = `<div class="error status">${log.join('<br>')}</div>`;
+                    return;
+                }
+
+                log.push('✅ Login successful');
+                log.push(`   User: ${loginData.data.user.email}`);
+
+                // Step 2: Wait a bit
+                log.push('⏳ Waiting 1 second...');
+                await new Promise(resolve => setTimeout(resolve, 1000));
+
+                // Step 3: Try to access dashboard
+                log.push('📝 Step 2: Accessing dashboard...');
+                const dashResponse = await fetch(`${API_BASE}/vi/dashboard`, {
+                    credentials: 'include',
+                    redirect: 'manual' // Don't auto-redirect
+                });
+
+                log.push(`   Response status: ${dashResponse.status}`);
+                log.push(`   Response type: ${dashResponse.type}`);
+
+                if (dashResponse.status === 200) {
+                    log.push('✅ DASHBOARD ACCESS SUCCESSFUL!');
+                    log.push('🎉 FULL TEST PASSED!');
+                    resultDiv.innerHTML = `
+                        <div class="success status">
+                            ${log.join('<br>')}
+                        </div>
+                    `;
+                } else if (dashResponse.status === 0 || dashResponse.type === 'opaqueredirect') {
+                    log.push('⚠️ Redirected (manual redirect mode)');
+                    log.push('   This might be OK - middleware may be redirecting');
+                    resultDiv.innerHTML = `
+                        <div class="warning status">
+                            ${log.join('<br>')}
+                        </div>
+                    `;
+                } else {
+                    log.push('❌ DASHBOARD ACCESS FAILED');
+                    log.push(`   Status: ${dashResponse.status}`);
+                    resultDiv.innerHTML = `
+                        <div class="error status">
+                            ${log.join('<br>')}
+                        </div>
+                    `;
+                }
+
+            } catch (error) {
+                log.push('❌ ERROR: ' + error.message);
+                resultDiv.innerHTML = `
+                    <div class="error status">
+                        ${log.join('<br>')}
+                    </div>
+                `;
+            }
+        }
+    </script>
+</body>
+</html>

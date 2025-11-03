@@ -185,7 +185,7 @@ export default function OrderDetailPage() {
       if (!token) return;
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/reviews/order/${orderId}`,
+        `/api/v1/reviews/order/${orderId}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -218,7 +218,7 @@ export default function OrderDetailPage() {
         return;
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/orders/${orderId}`, {
+      const response = await fetch(`/api/v1/orders/${orderId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -255,7 +255,7 @@ export default function OrderDetailPage() {
       }
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/orders/${orderId}/payment-verify`,
+        `/api/v1/orders/${orderId}/payment-verify`,
         {
           method: 'POST',
           headers: {

@@ -32,7 +32,8 @@ import { getStandardLabel } from '@/lib/utils/qualityStandard';
 import { getTypeLabel } from '@/lib/utils/containerType';
 import { formatListingTitle } from '@/lib/utils/listingTitle';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+// Use relative path for API calls
+const API_URL = '/api/v1';
 
 export default function ListingDetailPage() {
   const params = useParams();
@@ -55,7 +56,7 @@ export default function ListingDetailPage() {
   const fetchListingDetail = async () => {
     setIsLoading(true);
     try {
-      const response = await fetch(`${API_URL}/api/v1/listings/${listingId}`);
+      const response = await fetch(`${API_URL}/listings/${listingId}`);
       const result = await response.json();
 
       if (response.ok && result.success) {
@@ -78,7 +79,7 @@ export default function ListingDetailPage() {
 
   const incrementViewCount = async () => {
     try {
-      await fetch(`${API_URL}/api/v1/listings/${listingId}/view`, {
+      await fetch(`${API_URL}/listings/${listingId}/view`, {
         method: 'POST',
       });
     } catch (error) {
@@ -109,7 +110,7 @@ export default function ListingDetailPage() {
 
     setIsSubmittingRfq(true);
     try {
-      const response = await fetch(`${API_URL}/api/v1/rfqs`, {
+      const response = await fetch(`${API_URL}/rfqs`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

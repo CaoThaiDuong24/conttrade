@@ -27,9 +27,9 @@ export default async function dashboardRoutes(fastify: FastifyInstance) {
         GROUP BY status
       `;
 
-      const totalListings = myListings.reduce((sum, l) => sum + l.count, 0);
-      const activeListings = myListings.find(l => l.status === 'ACTIVE')?.count || 0;
-      const pendingListings = myListings.find(l => l.status === 'PENDING_REVIEW')?.count || 0;
+      const totalListings = myListings.reduce((sum: number, l: any) => sum + l.count, 0);
+      const activeListings = myListings.find((l: any) => l.status === 'ACTIVE')?.count || 0;
+      const pendingListings = myListings.find((l: any) => l.status === 'PENDING_REVIEW')?.count || 0;
 
       // Get user's RFQs (sent)
       const myRfqsSent = await prisma.$queryRaw<Array<{ status: string; count: number }>>`
@@ -39,8 +39,8 @@ export default async function dashboardRoutes(fastify: FastifyInstance) {
         GROUP BY status
       `;
 
-      const totalRfqsSent = myRfqsSent.reduce((sum, r) => sum + r.count, 0);
-      const pendingRfqs = myRfqsSent.filter(r => r.status === 'SUBMITTED' || r.status === 'DRAFT').reduce((sum, r) => sum + r.count, 0);
+      const totalRfqsSent = myRfqsSent.reduce((sum: number, r: any) => sum + r.count, 0);
+      const pendingRfqs = myRfqsSent.filter((r: any) => r.status === 'SUBMITTED' || r.status === 'DRAFT').reduce((sum: number, r: any) => sum + r.count, 0);
 
       // Get user's RFQs (received) - RFQs on my listings
       const myRfqsReceived = await prisma.$queryRaw<Array<{ count: number }>>`
@@ -60,10 +60,10 @@ export default async function dashboardRoutes(fastify: FastifyInstance) {
         GROUP BY status
       `;
 
-      const totalOrdersAsBuyer = myOrdersAsBuyer.reduce((sum, o) => sum + o.count, 0);
-      const pendingPaymentOrders = myOrdersAsBuyer.filter(o => o.status === 'PENDING_PAYMENT' || o.status === 'CREATED').reduce((sum, o) => sum + o.count, 0);
-      const processingOrders = myOrdersAsBuyer.filter(o => o.status === 'PAID' || o.status === 'PROCESSING' || o.status === 'PREPARING_DELIVERY').reduce((sum, o) => sum + o.count, 0);
-      const completedOrders = myOrdersAsBuyer.filter(o => o.status === 'COMPLETED' || o.status === 'DELIVERED').reduce((sum, o) => sum + o.count, 0);
+      const totalOrdersAsBuyer = myOrdersAsBuyer.reduce((sum: number, o: any) => sum + o.count, 0);
+      const pendingPaymentOrders = myOrdersAsBuyer.filter((o: any) => o.status === 'PENDING_PAYMENT' || o.status === 'CREATED').reduce((sum: number, o: any) => sum + o.count, 0);
+      const processingOrders = myOrdersAsBuyer.filter((o: any) => o.status === 'PAID' || o.status === 'PROCESSING' || o.status === 'PREPARING_DELIVERY').reduce((sum: number, o: any) => sum + o.count, 0);
+      const completedOrders = myOrdersAsBuyer.filter((o: any) => o.status === 'COMPLETED' || o.status === 'DELIVERED').reduce((sum: number, o: any) => sum + o.count, 0);
 
       // Get user's orders as seller
       const myOrdersAsSeller = await prisma.$queryRaw<Array<{ status: string; count: number }>>`
@@ -73,7 +73,7 @@ export default async function dashboardRoutes(fastify: FastifyInstance) {
         GROUP BY status
       `;
 
-      const totalOrdersAsSeller = myOrdersAsSeller.reduce((sum, o) => sum + o.count, 0);
+      const totalOrdersAsSeller = myOrdersAsSeller.reduce((sum: number, o: any) => sum + o.count, 0);
 
       // Get deliveries for user's orders
       const myDeliveries = await prisma.$queryRaw<Array<{ status: string; count: number }>>`
@@ -84,9 +84,9 @@ export default async function dashboardRoutes(fastify: FastifyInstance) {
         GROUP BY d.status
       `;
 
-      const totalDeliveries = myDeliveries.reduce((sum, d) => sum + d.count, 0);
-      const inTransitDeliveries = myDeliveries.filter(d => d.status === 'IN_TRANSIT' || d.status === 'BOOKED').reduce((sum, d) => sum + d.count, 0);
-      const deliveredDeliveries = myDeliveries.find(d => d.status === 'DELIVERED')?.count || 0;
+      const totalDeliveries = myDeliveries.reduce((sum: number, d: any) => sum + d.count, 0);
+      const inTransitDeliveries = myDeliveries.filter((d: any) => d.status === 'IN_TRANSIT' || d.status === 'BOOKED').reduce((sum: number, d: any) => sum + d.count, 0);
+      const deliveredDeliveries = myDeliveries.find((d: any) => d.status === 'DELIVERED')?.count || 0;
 
       // Get recent activities
       const recentListings = await prisma.listings.findMany({

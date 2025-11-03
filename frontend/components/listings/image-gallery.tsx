@@ -16,7 +16,8 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+// Use NEXT_PUBLIC_API_URL for image paths
+const API_URL = process.env.NEXT_PUBLIC_API_URL || '';
 
 export interface ImageGalleryImage {
   id: string;

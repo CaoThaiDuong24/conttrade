@@ -3,7 +3,8 @@
  * Client-side utilities để fetch master data
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+// Use relative path for API calls (proxied through Nginx)
+const API_BASE_URL = '/api/v1';
 
 console.log('🔧 MasterDataAPI - API_BASE_URL:', API_BASE_URL);
 console.log('🔧 MasterDataAPI - NEXT_PUBLIC_API_URL:', process.env.NEXT_PUBLIC_API_URL);
@@ -19,17 +20,21 @@ export class MasterDataAPI {
    * Generic fetch method
    */
   private static async fetch<T>(endpoint: string, params?: Record<string, string>): Promise<T> {
-    const url = new URL(`${API_BASE_URL}/api/v1/master-data/${endpoint}`);
+    // Construct URL properly - use relative path or absolute URL based on environment
+    let urlString = `${API_BASE_URL}/master-data/${endpoint}`;
     
-    console.log('🌐 Fetching:', url.toString());
-    
+    // If we have query params, build URL with searchParams
     if (params) {
+      const queryParams = new URLSearchParams();
       Object.entries(params).forEach(([key, value]) => {
-        url.searchParams.append(key, value);
+        queryParams.append(key, value);
       });
+      urlString = `${urlString}?${queryParams.toString()}`;
     }
+    
+    console.log('🌐 Fetching:', urlString);
 
-    const response = await fetch(url.toString());
+    const response = await fetch(urlString);
     const result: MasterDataResponse<T> = await response.json();
     
     if (!result.success) {

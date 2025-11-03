@@ -21,7 +21,8 @@ import {
 } from 'lucide-react';
 import { Link } from '@/i18n/routing';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+// Use relative path for API calls
+const API_URL = '/api/v1';
 
 interface Conversation {
   id: string;
@@ -73,7 +74,7 @@ export default function MessagesPage() {
         return;
       }
 
-      const response = await fetch(`http://localhost:3006/api/v1/messages/conversations`, {
+      const response = await fetch(`/api/v1/messages/conversations`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'

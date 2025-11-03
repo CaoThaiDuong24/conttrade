@@ -17,9 +17,8 @@ export async function uploadMedia(file: File): Promise<MediaUploadResponse> {
   const formData = new FormData();
   formData.append('file', file);
 
-  // Get the base URL from apiClient
-  const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:3006";
-  const uploadUrl = `${baseUrl}/api/v1/media/upload`;
+  // Use relative path for API calls (proxied through Nginx)
+  const uploadUrl = '/api/v1/media/upload';
   
   const token = localStorage.getItem('accessToken');
   

@@ -65,7 +65,7 @@ export function NotificationBell() {
         return;
       }
 
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/notifications`;
+      const apiUrl = `/api/v1/notifications`;
       console.log('🔔 Fetching notifications from:', apiUrl);
       console.log('🔑 Using token:', token.substring(0, 20) + '...');
 
@@ -144,7 +144,7 @@ export function NotificationBell() {
         return;
       }
       
-      const apiUrl = `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/notifications/${notificationId}/read`;
+      const apiUrl = `/api/v1/notifications/${notificationId}/read`;
       console.log('📍 Marking as read:', apiUrl);
       
       const response = await fetch(apiUrl, {
@@ -182,7 +182,7 @@ export function NotificationBell() {
       const token = localStorage.getItem('accessToken');
       if (!token) return;
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/notifications/mark-all-read`, {
+      const response = await fetch('/api/v1/notifications/mark-all-read', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -207,7 +207,7 @@ export function NotificationBell() {
       const token = localStorage.getItem('accessToken');
       if (!token) return;
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/notifications/${notificationId}`, {
+      const response = await fetch(`/api/v1/notifications/${notificationId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -6,7 +6,8 @@ import { Heart } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+// Use relative path for API calls
+const API_URL = '/api/v1';
 
 export interface FavoriteButtonProps {
   listingId: string;
@@ -46,7 +47,7 @@ export function FavoriteButton({
       }
 
       const response = await fetch(
-        `${API_URL}/api/v1/favorites/check/${listingId}`,
+        `${API_URL}/favorites/check/${listingId}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -87,7 +88,7 @@ export function FavoriteButton({
       if (isFavorited) {
         // Remove from favorites
         const response = await fetch(
-          `${API_URL}/api/v1/favorites/${listingId}`,
+          `${API_URL}/favorites/${listingId}`,
           {
             method: 'DELETE',
             headers: {
@@ -111,7 +112,7 @@ export function FavoriteButton({
       } else {
         // Add to favorites
         const response = await fetch(
-          `${API_URL}/api/v1/favorites`,
+          `${API_URL}/favorites`,
           {
             method: 'POST',
             headers: {

@@ -76,7 +76,8 @@ export default function AccountSettingsPage() {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/account/settings/notifications`, {
+            
+      const response = await fetch('/api/v1/account/settings/notifications', {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -114,7 +115,8 @@ export default function AccountSettingsPage() {
     setIsLoading(true);
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/account/change-password`, {
+            
+      const response = await fetch('/api/v1/account/change-password', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -27,7 +27,8 @@ import {
   FileText
 } from 'lucide-react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+// Use relative path for API calls
+const API_URL = '/api/v1';
 
 export default function CreateOrderPage() {
   const t = useTranslations();
@@ -161,7 +162,7 @@ export default function CreateOrderPage() {
         return;
       }
 
-      const response = await fetch(`${API_URL}/api/v1/orders/from-listing`, {
+      const response = await fetch(`${API_URL}/orders/from-listing`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

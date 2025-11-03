@@ -136,8 +136,8 @@ export default function CreateQuotePage() {
   const fetchRFQData = async (id: string) => {
     try {
       const token = getToken();
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
-      const response = await fetch(`${apiUrl}/api/v1/rfqs/${id}`, {
+      const apiUrl = '/api/v1';
+      const response = await fetch(`${apiUrl}/rfqs/${id}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -272,7 +272,7 @@ export default function CreateQuotePage() {
 
     try {
       const token = getToken();
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+      const apiUrl = '/api/v1';
       
       // Prepare items in correct backend format
       const formattedItems = quoteItems.map(item => ({
@@ -301,7 +301,7 @@ export default function CreateQuotePage() {
 
       console.log('Creating quote with data:', JSON.stringify(requestBody, null, 2));
 
-      const response = await fetch(`${apiUrl}/api/v1/quotes`, {
+      const response = await fetch(`${apiUrl}/quotes`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

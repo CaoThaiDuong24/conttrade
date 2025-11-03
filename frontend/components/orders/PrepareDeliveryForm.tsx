@@ -78,9 +78,9 @@ export function PrepareDeliveryForm({ orderId, onSuccess, onCancel }: PrepareDel
 
       // TODO: Implement file upload to S3/CloudStorage
       // For now, we'll send without files
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+      const API_URL = '/api/v1';
       
-      const response = await fetch(`${API_URL}/api/v1/orders/${orderId}/prepare-delivery`, {
+      const response = await fetch(`${API_URL}/orders/${orderId}/prepare-delivery`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

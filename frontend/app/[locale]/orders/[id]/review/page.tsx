@@ -57,7 +57,7 @@ export default function WriteReviewPage() {
       const token = localStorage.getItem('accessToken');
       
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/orders/${orderId}`,
+        `/api/v1/orders/${orderId}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -135,7 +135,7 @@ export default function WriteReviewPage() {
       const token = localStorage.getItem('accessToken');
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/reviews`,
+        `/api/v1/reviews`,
         {
           method: 'POST',
           headers: {

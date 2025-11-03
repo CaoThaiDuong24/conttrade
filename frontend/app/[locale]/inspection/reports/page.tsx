@@ -52,7 +52,7 @@ export default function InspectionReportsPage() {
       setIsLoading(true);
       const token = localStorage.getItem('accessToken');
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/inspections/reports`,
+        `/api/v1/inspections/reports`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,

@@ -55,9 +55,9 @@ export function MarkReadyForm({ orderId, onSuccess, onCancel }: MarkReadyFormPro
       setOrderLoading(true);
       try {
         const token = localStorage.getItem('accessToken');
-        const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+        const API_URL = '/api/v1';
         
-        const response = await fetch(`${API_URL}/api/v1/orders/${orderId}`, {
+        const response = await fetch(`${API_URL}/orders/${orderId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
           },
@@ -192,9 +192,9 @@ export function MarkReadyForm({ orderId, onSuccess, onCancel }: MarkReadyFormPro
         return;
       }
       
-      const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+      const API_URL = '/api/v1';
       
-      const response = await fetch(`${API_URL}/api/v1/orders/${orderId}/mark-ready`, {
+      const response = await fetch(`${API_URL}/orders/${orderId}/mark-ready`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

@@ -1,5 +1,7 @@
 export type HttpMethod = "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
 
+import { API_BASE_URL } from '../config';
+
 export interface ApiClientConfig {
   baseUrl?: string;
   getToken?: () => Promise<string | null> | string | null;
@@ -33,16 +35,63 @@ export class ApiClient {
   private getToken?: ApiClientConfig["getToken"];
 
   constructor(config?: ApiClientConfig) {
-    this.baseUrl = config?.baseUrl ?? process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://localhost:3006";
+    // Use API_BASE_URL from config (which uses NEXT_PUBLIC_API_URL)
+    // This ensures the env var is properly injected at build time
+    this.baseUrl = config?.baseUrl ?? API_BASE_URL ?? (typeof window !== 'undefined' ? window.location.origin : '');
     this.getToken = config?.getToken;
-    console.log('[API Client] Initialized with baseUrl:', this.baseUrl);
+    console.log('[API Client] Initialized with baseUrl:', this.baseUrl, 'API_BASE_URL:', API_BASE_URL);
   }
 
   async request<TResponse = unknown, TBody = unknown>(options: ApiRequestOptions<TBody>): Promise<TResponse> {
     const { method = "GET", path, query, body, headers, locale, idempotencyKey } = options;
 
-    const url = new URL(path, this.baseUrl);
-    console.log('[API Client] Constructing URL:', path, 'with base:', this.baseUrl, 'result:', url.toString());
+    // Construct URL properly - handle both absolute and relative paths
+    let url: URL;
+    
+    // Ensure we always have a valid base URL
+    let effectiveBaseUrl = this.baseUrl;
+    
+    // If baseUrl is empty or invalid, use fallback based on environment
+    if (!effectiveBaseUrl || effectiveBaseUrl.trim() === '') {
+      if (typeof window !== 'undefined') {
+        // Client-side: use window.location.origin
+        effectiveBaseUrl = window.location.origin;
+        console.log('[API Client] Client-side: using window.location.origin:', effectiveBaseUrl);
+      } else {
+        // Server-side: use relative URLs (Next.js rewrites will handle this)
+        // For SSR, we need a dummy base URL just to construct the URL object
+        effectiveBaseUrl = 'http://localhost:3000';
+        console.log('[API Client] Server-side: using dummy base for URL construction');
+      }
+    }
+    
+    try {
+      // Check if path is absolute URL
+      if (path.startsWith('http://') || path.startsWith('https://')) {
+        url = new URL(path);
+      } else {
+        // Ensure base URL is valid for URL constructor
+        // If it's a relative path, prepend with effective base
+        const normalizedPath = path.startsWith('/') ? path : `/${path}`;
+        
+        // Try to create URL with base
+        try {
+          url = new URL(normalizedPath, effectiveBaseUrl);
+        } catch (e) {
+          // If still fails, it means effectiveBaseUrl might be invalid
+          // Use window.location or fallback
+          const fallbackBase = typeof window !== 'undefined' 
+            ? window.location.origin 
+            : 'http://localhost:3000';
+          console.warn('[API Client] Falling back to:', fallbackBase);
+          url = new URL(normalizedPath, fallbackBase);
+        }
+      }
+      console.log('[API Client] Constructed URL:', url.toString(), 'from path:', path, 'base:', effectiveBaseUrl);
+    } catch (error) {
+      console.error('[API Client] URL construction failed:', error, 'path:', path, 'base:', effectiveBaseUrl);
+      throw new ApiError('Invalid URL construction', 0, 'URL_CONSTRUCTION_ERROR', { path, baseUrl: effectiveBaseUrl });
+    }
     if (query) {
       console.log('[API Client] Query object:', query);  // DEBUG
       Object.entries(query).forEach(([key, value]) => {

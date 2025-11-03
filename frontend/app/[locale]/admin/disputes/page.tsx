@@ -75,7 +75,7 @@ export default function AdminDisputesPage() {
         if (statusFilter !== 'all') params.append('status', statusFilter.toUpperCase());
         if (priorityFilter !== 'all') params.append('priority', priorityFilter.toUpperCase());
         
-        const url = `http://localhost:3006/api/v1/admin/disputes?${params.toString()}`;
+        const url = `/api/v1/admin/disputes?${params.toString()}`;
         console.log('🔍 Fetching disputes from:', url);
         console.log('🔑 Using token:', token.substring(0, 30) + '...');
         

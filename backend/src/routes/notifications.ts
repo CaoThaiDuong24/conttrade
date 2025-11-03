@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { NotificationService } from '../lib/notifications/notification-service.js';
 
 export default async function notificationRoutes(fastify: FastifyInstance) {
   // GET /notifications - Get user notifications
@@ -14,7 +15,6 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
     const userId = (request.user as any).userId;
     
     try {
-      const { NotificationService } = await import('../lib/notifications/notification-service');
       const result = await NotificationService.getNotifications(userId, 20);
       
       return reply.send({
@@ -45,7 +45,6 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
     const { id } = request.params;
     
     try {
-      const { NotificationService } = await import('../lib/notifications/notification-service');
       const result = await NotificationService.markAsRead(userId, id);
       
       return reply.send({
@@ -75,7 +74,6 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
     const userId = (request.user as any).userId;
     
     try {
-      const { NotificationService } = await import('../lib/notifications/notification-service');
       const result = await NotificationService.markAllAsRead(userId);
       
       return reply.send({
@@ -106,7 +104,6 @@ export default async function notificationRoutes(fastify: FastifyInstance) {
     const { id } = request.params;
     
     try {
-      const { NotificationService } = await import('../lib/notifications/notification-service');
       const result = await NotificationService.deleteNotification(userId, id);
       
       return reply.send({

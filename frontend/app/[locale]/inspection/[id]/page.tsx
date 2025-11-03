@@ -114,7 +114,7 @@ export default function InspectionDetailPage() {
       setIsLoading(true);
       const token = localStorage.getItem('accessToken');
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/inspections/${inspectionId}`,
+        `/api/v1/inspections/${inspectionId}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,

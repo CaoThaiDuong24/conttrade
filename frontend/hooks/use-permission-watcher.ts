@@ -24,7 +24,7 @@ export function usePermissionWatcher() {
           return; // Not logged in
         }
 
-        const response = await fetch('http://localhost:3006/api/v1/auth/check-version', {
+        const response = await fetch('/api/v1/auth/check-version', {
           method: 'GET',
           headers: {
             'Authorization': `Bearer ${token}`,

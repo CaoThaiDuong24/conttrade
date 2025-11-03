@@ -26,7 +26,8 @@ import {
   ArrowLeft
 } from 'lucide-react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+// Use relative path for API calls
+const API_URL = '/api/v1';
 
 interface Order {
   id: string;
@@ -120,7 +121,7 @@ export default function OrderPaymentPage({ params }: { params: { id: string } })
         return;
       }
 
-      const response = await fetch(`${API_URL}/api/v1/orders/${params.id}`, {
+      const response = await fetch(`${API_URL}/orders/${params.id}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -159,7 +160,7 @@ export default function OrderPaymentPage({ params }: { params: { id: string } })
       console.log('Payment fee:', paymentDetails.paymentFee);
       console.log('Total amount:', paymentDetails.total);
 
-      const response = await fetch(`${API_URL}/api/v1/orders/${order.id}/pay`, {
+      const response = await fetch(`${API_URL}/orders/${order.id}/pay`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -25,7 +25,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+// Use relative path for API calls
+const API_URL = '/api/v1';
 
 interface DeliveryUpdate {
   status: 'scheduled' | 'in_transit' | 'arrived' | 'delivered' | 'failed';
@@ -194,7 +195,7 @@ export default function DeliveryTracking({
         formData.append(`photo_${index}`, photo);
       });
 
-      const response = await fetch(`${API_URL}/api/v1/orders/${orderId}/delivery/update`, {
+      const response = await fetch(`${API_URL}/orders/${orderId}/delivery/update`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`

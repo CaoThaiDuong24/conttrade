@@ -83,7 +83,7 @@ export default function PermissionMatrixPage() {
       setLoading(true)
       const token = localStorage.getItem('token') || localStorage.getItem('accessToken')
       
-      const response = await fetch('http://localhost:3006/api/v1/admin/rbac/permission-matrix', {
+      const response = await fetch('/api/v1/admin/rbac/permission-matrix', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -163,7 +163,7 @@ export default function PermissionMatrixPage() {
       for (const assignment of assignments) {
         console.log('📦 Saving assignment for role:', assignment.roleId, 'permissions:', assignment.permissionIds.length)
         
-        const response = await fetch('http://localhost:3006/api/v1/admin/rbac/role-permissions/assign', {
+        const response = await fetch('/api/v1/admin/rbac/role-permissions/assign', {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

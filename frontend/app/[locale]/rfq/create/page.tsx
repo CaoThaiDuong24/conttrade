@@ -28,7 +28,7 @@ import {
 } from 'lucide-react';
 
 export default function CreateRFQPage() {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+  const API_URL = '/api/v1';
   const t = useTranslations();
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -80,7 +80,7 @@ export default function CreateRFQPage() {
     setLoadingListing(true);
     try {
       const token = getToken();
-      const url = `${API_URL}/api/v1/listings/${id}`;
+      const url = `${API_URL}/listings/${id}`;
       console.log('Fetching listing info from:', url);
       
       const response = await fetch(url, {
@@ -156,7 +156,7 @@ export default function CreateRFQPage() {
       };
       console.log('Creating RFQ with payload:', payload);
       
-      const response = await fetch(`${API_URL}/api/v1/rfqs`, {
+      const response = await fetch(`${API_URL}/rfqs`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

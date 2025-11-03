@@ -35,7 +35,8 @@ export function SimpleNotificationBell() {
       }
 
       console.log('🔄 Fetching notifications...');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/notifications`, {
+            
+      const response = await fetch('/api/v1/notifications', {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -120,7 +121,7 @@ export function SimpleNotificationBell() {
       if (!token) return;
 
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/notifications/${notificationId}/read`,
+        '/api/v1/notifications/${notificationId}/read',
         {
           method: 'POST',
           headers: {

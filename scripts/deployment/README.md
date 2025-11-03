@@ -1,45 +1,44 @@
-# Deployment Scripts
+# 🚀 Deployment Scripts
 
-> **📖 Xem hướng dẫn đầy đủ tại:** [`DEPLOYMENT-GUIDE.md`](../../DEPLOYMENT-GUIDE.md)
+> **Bộ scripts tự động hóa deploy và fix issues cho LTA ConTrade Platform**
 
-Thư mục này chứa các script tự động hóa để deploy ứng dụng trên Ubuntu Server.
+---
 
-## 📦 Danh Sách Scripts
+## 📋 Danh Sách Scripts
+
+### 🔥 Scripts Mới (Khuyến nghị - Nov 2025)
+
+| Script | Mô Tả | Thời gian | Sử Dụng |
+|--------|-------|-----------|---------|
+| **`one-click-deploy.sh`** | 🎯 Menu tổng hợp | 1-10 phút | `bash one-click-deploy.sh` |
+| **`full-backend-deploy.sh`** | 🔧 Deploy toàn bộ backend | 5-10 phút | `bash full-backend-deploy.sh` |
+| **`fix-display-issues.sh`** | 🩹 Sửa lỗi hiển thị | 3-5 phút | `bash fix-display-issues.sh` |
+| **`check-all-routes.sh`** | 🔍 Kiểm tra routes | 1-2 phút | `bash check-all-routes.sh` |
+
+### 📦 Scripts Gốc (Legacy)
 
 | Script | Mô Tả | Sử Dụng |
 |--------|-------|---------|
-| `ubuntu-deploy.sh` | Deploy lần đầu (tự động hóa hoàn toàn) | `sudo ./ubuntu-deploy.sh` |
-| `quick-setup.sh` | Setup nhanh đơn giản | `sudo ./quick-setup.sh` |
-| `update-app.sh` | Cập nhật ứng dụng (zero-downtime) | `sudo ./update-app.sh` |
-| `rollback.sh` | Rollback về version cũ | `sudo ./rollback.sh` |
-| `monitor.sh` | Giám sát hệ thống | `sudo ./monitor.sh` |
-| `database.sh` | Quản lý database | `sudo ./database.sh` |
-| `setup-ssl.sh` | Cài đặt SSL/HTTPS | `sudo ./setup-ssl.sh` |
-| `.env.template` | Template cho environment variables | - |
+| `ubuntu-deploy.sh` | Deploy lần đầu | `sudo ./ubuntu-deploy.sh` |
+| `update-app.sh` | Update app | `sudo ./update-app.sh` |
+| `monitor.sh` | Monitor | `sudo ./monitor.sh` |
+| `database.sh` | Database | `sudo ./database.sh` |
 
-## 🚀 Quick Start
+---
+
+## 🎯 Quick Start
 
 ```bash
-# Upload scripts lên server
-scp -r scripts/deployment/* user@your-server:/tmp/
-
-# SSH vào server
-ssh user@your-server
-
-# Cấp quyền và chạy
-cd /tmp/deployment
-sudo chmod +x *.sh
-sudo ./ubuntu-deploy.sh
+cd /home/lta/pj/conttrade
+bash scripts/deployment/one-click-deploy.sh
 ```
 
-## 📖 Xem Hướng Dẫn Đầy Đủ
+---
 
-**Toàn bộ hướng dẫn chi tiết có trong file:** [`DEPLOYMENT-GUIDE.md`](../../DEPLOYMENT-GUIDE.md)
+## 📖 Documentation
 
-Bao gồm:
-- ✅ Chuẩn bị deploy từ A-Z
-- ✅ Hướng dẫn deploy lần đầu  
-- ✅ Cập nhật và rollback
-- ✅ Quản lý database
-- ✅ Giám sát và troubleshooting
-- ✅ Best practices
+**Chi tiết:** [`../../DEPLOY-FIX-GUIDE.md`](../../DEPLOY-FIX-GUIDE.md)
+
+---
+
+**Version:** 1.0.0 | **Updated:** Nov 3, 2025

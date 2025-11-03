@@ -5,7 +5,8 @@
 
 import { useState } from 'react';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006/api/v1';
+// Use relative path for API calls
+const API_URL = '/api/v1';
 
 interface RefreshPermissionsResponse {
   success: boolean;

@@ -57,7 +57,7 @@ interface RFQ {
 }
 
 export default function RFQSentPage() {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+  const API_URL = '/api/v1';
   const t = useTranslations();
   const [rfqs, setRfqs] = useState<RFQ[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -85,9 +85,9 @@ export default function RFQSentPage() {
     try {
       setIsLoading(true);
       const token = getToken();
-      console.log('Fetching RFQs from:', `${API_URL}/api/v1/rfqs?view=sent`);
+      console.log('Fetching RFQs from:', `${API_URL}/rfqs?view=sent`);
       
-      const response = await fetch(`${API_URL}/api/v1/rfqs?view=sent`, {
+      const response = await fetch(`${API_URL}/rfqs?view=sent`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

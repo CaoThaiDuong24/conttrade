@@ -70,7 +70,7 @@ export default function CompareQuotesPage() {
       setIsLoading(true);
       const token = localStorage.getItem('accessToken');
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/api/v1/quotes/compare?ids=${quoteIds.join(',')}`,
+        `/api/v1/quotes/compare?ids=${quoteIds.join(',')}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,

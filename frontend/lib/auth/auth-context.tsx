@@ -51,7 +51,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       });
       
       // Use Next.js API route instead of direct backend call
-      const response = await fetch('/api/auth/login', {
+      const response = await fetch('/api/v1/auth/login', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -135,7 +135,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const logout = async (): Promise<void> => {
     try {
       // Call logout API to clear httpOnly cookies
-      await fetch('/api/auth/logout', {
+      await fetch('/api/v1/auth/logout', {
         method: 'POST',
       });
     } catch (error) {
@@ -155,7 +155,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('No refresh token available');
       }
 
-      const response = await fetch('http://localhost:3006/api/v1/auth/refresh', {
+      const response = await fetch('/api/v1/auth/refresh', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -196,7 +196,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         return;
       }
 
-      const response = await fetch('http://localhost:3006/api/v1/auth/me', {
+      const response = await fetch('/api/v1/auth/me', {
         headers: {
           'Authorization': `Bearer ${token}`,
         },
@@ -233,7 +233,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           await refreshToken();
           // Retry fetching user data with new token
-          const retryResponse = await fetch('http://localhost:3006/auth/me', {
+          const retryResponse = await fetch('/api/v1/auth/me', {
             headers: {
               'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
             },

@@ -139,7 +139,7 @@ export default function AdminDisputeDetailPage() {
       }
 
       const response = await fetch(
-        `http://localhost:3006/api/v1/admin/disputes/${disputeId}`,
+        `/api/v1/admin/disputes/${disputeId}`,
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -173,7 +173,7 @@ export default function AdminDisputeDetailPage() {
       setIsResolving(true);
       const token = localStorage.getItem('accessToken');
       const response = await fetch(
-        `http://localhost:3006/api/v1/admin/disputes/${disputeId}/resolve`,
+        `/api/v1/admin/disputes/${disputeId}/resolve`,
         {
           method: 'PUT',
           headers: {
@@ -218,7 +218,7 @@ export default function AdminDisputeDetailPage() {
       setIsSendingMessage(true);
       const token = localStorage.getItem('accessToken');
       const response = await fetch(
-        `http://localhost:3006/api/v1/admin/disputes/${disputeId}/messages`,
+        `/api/v1/admin/disputes/${disputeId}/messages`,
         {
           method: 'POST',
           headers: {

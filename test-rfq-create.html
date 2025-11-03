@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test RFQ Create</title>
+</head>
+<body>
+    <h1>Test RFQ Creation - Debug 401 Error</h1>
+    <div id="results"></div>
+    
+    <script>
+    async function testRFQCreate() {
+        const results = document.getElementById('results');
+        
+        // Step 1: Get token from cookies
+        const getCookie = (name) => {
+            const value = `; ${document.cookie}`;
+            const parts = value.split(`; ${name}=`);
+            if (parts.length === 2) return parts.pop().split(';').shift();
+            return null;
+        };
+        
+        const token = getCookie('accessToken');
+        results.innerHTML += `<p><strong>Step 1 - Token Check:</strong></p>`;
+        results.innerHTML += `<p>Token found: ${token ? 'YES ✅' : 'NO ❌'}</p>`;
+        results.innerHTML += `<p>Token length: ${token ? token.length : 0}</p>`;
+        results.innerHTML += `<p>Token preview: ${token ? token.substring(0, 50) + '...' : 'N/A'}</p>`;
+        
+        if (!token) {
+            results.innerHTML += `<p style="color: red;">❌ No token found! Please login first.</p>`;
+            return;
+        }
+        
+        // Step 2: Prepare RFQ payload
+        const payload = {
+            listing_id: '6e3c3bf3-7db9-4b6f-acb3-192d0192bedb',
+            purpose: 'PURCHASE',
+            quantity: 1,
+            need_by: '2025-11-05',
+            services: {}
+        };
+        
+        results.innerHTML += `<p><strong>Step 2 - Payload:</strong></p>`;
+        results.innerHTML += `<pre>${JSON.stringify(payload, null, 2)}</pre>`;
+        
+        // Step 3: Test API call
+        results.innerHTML += `<p><strong>Step 3 - API Call:</strong></p>`;
+        
+        try {
+            const url = 'https://icontrade.itacy.com.vn/api/v1/rfqs';
+            results.innerHTML += `<p>URL: ${url}</p>`;
+            results.innerHTML += `<p>Method: POST</p>`;
+            results.innerHTML += `<p>Headers: Authorization: Bearer ${token.substring(0, 20)}...</p>`;
+            
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            results.innerHTML += `<p><strong>Response Status:</strong> ${response.status} ${response.statusText}</p>`;
+            results.innerHTML += `<p><strong>Response Headers:</strong></p>`;
+            results.innerHTML += `<pre>${JSON.stringify(Object.fromEntries(response.headers.entries()), null, 2)}</pre>`;
+            
+            const data = await response.json();
+            results.innerHTML += `<p><strong>Response Body:</strong></p>`;
+            results.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+            
+            if (response.ok) {
+                results.innerHTML += `<p style="color: green; font-weight: bold;">✅ SUCCESS!</p>`;
+            } else {
+                results.innerHTML += `<p style="color: red; font-weight: bold;">❌ FAILED!</p>`;
+            }
+            
+        } catch (error) {
+            results.innerHTML += `<p style="color: red;"><strong>Error:</strong> ${error.message}</p>`;
+            console.error('Full error:', error);
+        }
+    }
+    
+    // Auto-run test
+    testRFQCreate();
+    </script>
+</body>
+</html>

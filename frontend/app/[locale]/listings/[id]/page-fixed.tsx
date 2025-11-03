@@ -73,8 +73,9 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
             images: apiListing.listing_media?.length > 0 
               ? apiListing.listing_media.map((m: any) => {
                   // Temporarily hardcode the base URL
-                  const baseUrl = "http://localhost:3006";
-                  const fullUrl = m.media_url ? `${baseUrl}${m.media_url}` : null;
+                  // Use NEXT_PUBLIC_API_URL or relative path
+                  const baseUrl = process.env.NEXT_PUBLIC_API_URL || "";
+                  const fullUrl = m.media_url ? (baseUrl ? `${baseUrl}${m.media_url}` : m.media_url) : null;
                   console.log('🖼️ IMAGE URL DEBUG:', {
                     mediaUrl: m.media_url,
                     baseUrl: baseUrl,

@@ -68,7 +68,7 @@ export default function OrdersPage() {
       }
 
       // Direct API call to backend
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/orders?role=${userRole}`, {
+      const response = await fetch(`/api/v1/orders?role=${userRole}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json'
@@ -286,7 +286,7 @@ export default function OrdersPage() {
         return;
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/orders/${orderId}/confirm-receipt`, {
+      const response = await fetch(`/api/v1/orders/${orderId}/confirm-receipt`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

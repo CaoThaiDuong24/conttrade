@@ -102,7 +102,7 @@ export default function NewReviewPage() {
       setLoading(true);
       
       // Call real API first
-      const response = await fetch(`http://localhost:3006/api/v1/orders/${orderId}`, {
+      const response = await fetch(`/api/v1/orders/${orderId}`, {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
           'Content-Type': 'application/json'

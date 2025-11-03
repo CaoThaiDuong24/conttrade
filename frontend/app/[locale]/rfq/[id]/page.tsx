@@ -195,7 +195,7 @@ export default function RFQDetailPage() {
           return;
         }
         
-        const userResponse = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/users/me`, {
+        const userResponse = await fetch('/api/v1/users/me', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json',
@@ -246,7 +246,7 @@ export default function RFQDetailPage() {
       }
       
       // Call real API
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/rfqs/${rfqId}`, {
+      const response = await fetch(`/api/v1/rfqs/${rfqId}`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -317,7 +317,7 @@ export default function RFQDetailPage() {
       }
       
       // Call API to accept/reject quote
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/quotes/${quoteId}/${action}`, {
+      const response = await fetch(`/api/v1/quotes/${quoteId}/${action}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

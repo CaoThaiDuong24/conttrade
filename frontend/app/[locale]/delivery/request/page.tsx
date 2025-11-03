@@ -74,7 +74,8 @@ export default function DeliveryRequestPage() {
 
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/delivery/request`, {
+            
+      const response = await fetch('/api/v1/delivery/request', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

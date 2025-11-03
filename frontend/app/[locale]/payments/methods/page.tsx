@@ -53,7 +53,7 @@ export default function PaymentMethodsPage() {
     try {
       setIsLoading(true);
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/payments/methods`, {
+      const response = await fetch(`/api/v1/payments/methods`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
@@ -74,7 +74,7 @@ export default function PaymentMethodsPage() {
   const handleSetDefault = async (methodId: string) => {
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/payments/methods/${methodId}/set-default`, {
+      const response = await fetch(`/api/v1/payments/methods/${methodId}/set-default`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -99,7 +99,7 @@ export default function PaymentMethodsPage() {
 
     try {
       const token = localStorage.getItem('accessToken');
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/v1/payments/methods/${methodId}`, {
+      const response = await fetch(`/api/v1/payments/methods/${methodId}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,

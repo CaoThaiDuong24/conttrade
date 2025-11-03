@@ -134,7 +134,7 @@ export default function DashboardPage() {
 
       try {
         console.log('📡 Dashboard: Fetching from API...');
-        const response = await fetch('http://localhost:3006/api/v1/dashboard/stats', {
+        const response = await fetch('/api/v1/dashboard/stats', {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

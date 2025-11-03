@@ -22,7 +22,8 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+// Use relative path for API calls
+const API_URL = '/api/v1';
 
 interface PaymentMethodOption {
   id: string;
@@ -186,7 +187,7 @@ export default function EscrowPaymentForm({
         }
       };
 
-      const response = await fetch(`${API_URL}/api/v1/orders/${orderId}/pay`, {
+      const response = await fetch(`${API_URL}/orders/${orderId}/pay`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

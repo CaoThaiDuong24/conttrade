@@ -50,8 +50,8 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
         console.log('Listing detail API response:', res);
         
         // Increment view count asynchronously (don't wait for result)
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
-        fetch(`${apiUrl}/api/v1/listings/${params.id}/view`, { 
+        const apiUrl = '/api/v1';
+        fetch(`${apiUrl}/listings/${params.id}/view`, { 
           method: 'POST',
           headers: { 'Content-Type': 'application/json' }
         }).catch(() => {
@@ -104,8 +104,9 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
             renewalPriceAdjustment: apiListing.renewal_price_adjustment ? parseFloat(apiListing.renewal_price_adjustment) : 0,
             images: apiListing.listing_media?.length > 0 
               ? apiListing.listing_media.map((m: any) => {
-                  const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
-                  const fullUrl = m.media_url ? `${apiUrl}${m.media_url}` : null;
+                  // Use NEXT_PUBLIC_API_URL if available, otherwise relative path
+                  const apiUrl = process.env.NEXT_PUBLIC_API_URL || '';
+                  const fullUrl = m.media_url ? (apiUrl ? `${apiUrl}${m.media_url}` : m.media_url) : null;
                   return {
                     id: m.id,
                     url: fullUrl,
@@ -152,9 +153,9 @@ export default function ListingDetailPage({ params }: { params: { id: string } }
       try {
         if (!listing) return;
         
-        const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+        const apiUrl = '/api/v1';
         const response = await fetch(
-          `${apiUrl}/api/v1/listings?limit=3&status=ACTIVE&exclude=${params.id}`
+          `${apiUrl}/listings?limit=3&status=ACTIVE&exclude=${params.id}`
         );
         const result = await response.json();
         

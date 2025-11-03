@@ -110,7 +110,7 @@ export default function NewInspectionPage() {
     try {
       setLoading(true);
       
-      const response = await fetch(`http://localhost:3006/api/v1/listings/${listingId}`);
+      const response = await fetch(`/api/v1/listings/${listingId}`);
       const data = await response.json();
       
       console.log('Inspection - Listing API response:', data);

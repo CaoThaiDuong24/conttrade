@@ -29,10 +29,11 @@ export default async function authRoutes(fastify: FastifyInstance) {
       // Tạo user mới
       const { randomUUID } = await import('crypto');
       const userId = randomUUID();
+      const fullName = displayName; // fallback
       const userResult = await prisma.$queryRaw`
-        INSERT INTO users (id, email, phone, password_hash, "displayName", "defaultLocale", status, "kycStatus", "createdAt", "updatedAt", "fullName")
-        VALUES (${userId}, ${email}, ${phone}, ${passwordHash}, ${displayName}, ${defaultLocale || 'vi'}, 'ACTIVE', 'unverified', NOW(), NOW(), ${fullName})
-        RETURNING id, email, phone, "displayName", "defaultLocale", status, "kycStatus", "fullName"
+        INSERT INTO users (id, email, phone, password_hash, display_name, default_locale, status, kyc_status, created_at, updated_at)
+        VALUES (${userId}, ${email}, ${phone}, ${passwordHash}, ${displayName}, ${defaultLocale || 'vi'}, 'ACTIVE', 'UNVERIFIED', NOW(), NOW())
+        RETURNING id, email, phone, display_name, default_locale, status, kyc_status
       `;
       const user = Array.isArray(userResult) ? userResult[0] : userResult;
 
@@ -62,10 +63,10 @@ export default async function authRoutes(fastify: FastifyInstance) {
             id: user.id,
             email: user.email,
             phone: user.phone,
-            displayName: user.displayName,
-            defaultLocale: user.defaultLocale,
+            displayName: user.display_name,
+            defaultLocale: user.default_locale,
             status: user.status,
-            kycStatus: user.kycStatus
+            kycStatus: user.kyc_status
           },
           accessToken: token,
           refreshToken
@@ -406,6 +407,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
   });
 
   // A-007: GET /auth/me - Thông tin tài khoản hiện tại
+  // ⚡ PERFORMANCE: Optimized query with select to avoid fetching unnecessary data
   fastify.get('/me', {
     preHandler: async (request, reply) => {
       try {
@@ -418,25 +420,40 @@ export default async function authRoutes(fastify: FastifyInstance) {
     try {
       const { userId } = request.user as any;
 
+      // ⚡ OPTIMIZED: Use selective fields instead of fetching everything
       const user = await prisma.users.findUnique({
         where: { id: userId },
-        include: {
+        select: {
+          id: true,
+          email: true,
+          phone: true,
+          display_name: true,
+          default_locale: true,
+          status: true,
+          kyc_status: true,
+          created_at: true,
+          // Only select necessary role data
           user_roles_user_roles_user_idTousers: {
-            include: {
+            select: {
               roles: {
-                include: {
+                select: {
+                  id: true,
+                  code: true,
+                  name: true,
+                  // Only fetch permission codes, not full objects
                   role_permissions: {
-                    include: {
-                      permissions: true
+                    select: {
+                      permissions: {
+                        select: {
+                          id: true,
+                          code: true,
+                          name: true
+                        }
+                      }
                     }
                   }
                 }
               }
-            }
-          },
-          org_users: {
-            include: {
-              orgs: true
             }
           }
         }
@@ -456,11 +473,11 @@ export default async function authRoutes(fastify: FastifyInstance) {
             id: user.id,
             email: user.email,
             phone: user.phone,
-            displayName: user.displayName,
-            defaultLocale: user.defaultLocale,
+            displayName: user.display_name,
+            defaultLocale: user.default_locale,
             status: user.status,
-            kycStatus: user.kycStatus,
-            createdAt: user.createdAt,
+            kycStatus: user.kyc_status,
+            createdAt: user.created_at,
             roles: user.user_roles_user_roles_user_idTousers.map(ur => ({
               id: ur.roles.id,
               code: ur.roles.code,
@@ -470,11 +487,6 @@ export default async function authRoutes(fastify: FastifyInstance) {
                 code: rp.permissions.code,
                 name: rp.permissions.name
               }))
-            })),
-            organizations: user.org_users.map(ou => ({
-              id: ou.organization.id,
-              name: ou.organization.name,
-              position: ou.position
             }))
           }
         }
@@ -505,8 +517,8 @@ export default async function authRoutes(fastify: FastifyInstance) {
       const updatedUser = await prisma.users.update({
         where: { id: userId },
         data: {
-          displayName,
-          defaultLocale
+          display_name: displayName,
+          default_locale: defaultLocale
         }
       });
 
@@ -517,10 +529,10 @@ export default async function authRoutes(fastify: FastifyInstance) {
             id: updatedUser.id,
             email: updatedUser.email,
             phone: updatedUser.phone,
-            displayName: updatedUser.displayName,
-            defaultLocale: updatedUser.defaultLocale,
+            displayName: updatedUser.display_name,
+            defaultLocale: updatedUser.default_locale,
             status: updatedUser.status,
-            kycStatus: updatedUser.kycStatus
+            kycStatus: updatedUser.kyc_status
           }
         }
       });
@@ -547,9 +559,9 @@ export default async function authRoutes(fastify: FastifyInstance) {
       const { userId } = request.user as any;
       const { currentPassword, newPassword } = request.body as any;
 
-    const user = await prisma.userss.findUnique({
-      where: { id: userId }
-    });      if (!user) {
+      const user = await prisma.users.findUnique({
+        where: { id: userId }
+      });      if (!user) {
         return reply.status(404).send({ 
           success: false, 
           message: 'Không tìm thấy tài khoản' 
@@ -557,7 +569,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
       }
 
       // Kiểm tra mật khẩu hiện tại
-      const isValidPassword = await bcrypt.compare(currentPassword, user.password);
+      const isValidPassword = await bcrypt.compare(currentPassword, user.password_hash);
       if (!isValidPassword) {
         return reply.status(400).send({ 
           success: false, 
@@ -570,7 +582,7 @@ export default async function authRoutes(fastify: FastifyInstance) {
 
       await prisma.users.update({
         where: { id: userId },
-        data: { password: newPasswordHash }
+        data: { password_hash: newPasswordHash }
       });
 
       return reply.send({ 

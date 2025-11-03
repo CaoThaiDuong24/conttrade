@@ -4,9 +4,13 @@ const withNextIntl = createNextIntlPlugin();
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Disable standalone output during development to avoid pre-rendering issues
-  // Enable it back for production deployment
-  // output: 'standalone',
+  // Enable standalone output for production deployment
+  output: 'standalone',
+  
+  // Expose JWT_SECRET to Edge Runtime at build time
+  env: {
+    JWT_SECRET: process.env.JWT_SECRET,
+  },
   
   images: {
     domains: ['localhost'],
@@ -17,7 +21,7 @@ const nextConfig = {
     return [
       {
         source: '/api/v1/:path*',
-        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006/api/v1'}/:path*`,
+        destination: `${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006'}/api/v1/:path*`,
       },
     ];
   },

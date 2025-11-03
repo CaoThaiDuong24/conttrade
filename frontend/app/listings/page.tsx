@@ -19,7 +19,8 @@ import {
   PaginationPrevious,
 } from '@/components/ui/pagination';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+// Use relative path for API calls
+const API_URL = '/api/v1';
 
 export default function BrowseListingsPage() {
   const [listings, setListings] = useState<any[]>([]);
@@ -70,7 +71,7 @@ export default function BrowseListingsPage() {
       if (filters.sortBy) params.append('sortBy', filters.sortBy);
       if (filters.sortOrder) params.append('sortOrder', filters.sortOrder);
 
-      const response = await fetch(`${API_URL}/api/v1/listings?${params}`);
+      const response = await fetch(`${API_URL}/listings?${params}`);
       const result = await response.json();
 
       if (response.ok && result.success) {

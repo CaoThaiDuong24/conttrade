@@ -76,9 +76,9 @@ export default function RFQReceivedPage() {
       }
 
       // Fallback for API URL if env not set
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3006';
+      const apiUrl = '/api/v1';
 
-      const response = await fetch(`${apiUrl}/api/v1/rfqs?view=received`, {
+      const response = await fetch(`${apiUrl}/rfqs?view=received`, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',

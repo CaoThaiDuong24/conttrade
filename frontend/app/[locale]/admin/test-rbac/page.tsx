@@ -21,7 +21,7 @@ export default function TestRBACPage() {
         return
       }
       
-      const url = 'http://localhost:3006/api/v1/admin/rbac/roles'
+      const url = '/api/v1/admin/rbac/roles'
       console.log('📡 Fetching:', url)
       
       const response = await fetch(url, {
@@ -84,7 +84,7 @@ export default function TestRBACPage() {
       <div className="mt-4 bg-yellow-50 p-4 rounded border border-yellow-200">
         <h3 className="font-semibold mb-2">🔍 Debug Info:</h3>
         <p>• Token in localStorage: {!!(localStorage.getItem('token') || localStorage.getItem('accessToken')) ? 'Yes ✅' : 'No ❌'}</p>
-        <p>• Backend URL: http://localhost:3006/api/v1/admin/rbac/roles</p>
+        <p>• Backend URL: /api/v1/admin/rbac/roles</p>
         <p>• Check browser console (F12) for detailed logs</p>
       </div>
     </div>

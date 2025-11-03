@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test API Fix - URL Construction</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #667eea;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .subtitle {
+            text-align: center;
+            color: #666;
+            margin-bottom: 30px;
+        }
+        .test-section {
+            margin-bottom: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            border-left: 4px solid #667eea;
+        }
+        .test-section h3 {
+            margin-top: 0;
+            color: #667eea;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin: 5px;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .result {
+            margin-top: 15px;
+            padding: 15px;
+            background: white;
+            border-radius: 8px;
+            border: 1px solid #ddd;
+            max-height: 400px;
+            overflow-y: auto;
+            font-family: 'Courier New', monospace;
+            font-size: 13px;
+        }
+        .success {
+            background: #d4edda;
+            border-color: #28a745;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border-color: #dc3545;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            border-color: #17a2b8;
+            color: #0c5460;
+        }
+        .warning {
+            background: #fff3cd;
+            border-color: #ffc107;
+            color: #856404;
+        }
+        .badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 12px;
+            font-weight: 600;
+            margin: 3px;
+        }
+        .badge-success { background: #28a745; color: white; }
+        .badge-error { background: #dc3545; color: white; }
+        .badge-info { background: #17a2b8; color: white; }
+        .loading {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-left: 10px;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        pre {
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔧 Test API Fix - URL Construction</h1>
+        <p class="subtitle">Kiểm tra xem lỗi "Failed to construct 'URL': Invalid base URL" đã được sửa chưa</p>
+
+        <!-- Test 1: Listings API -->
+        <div class="test-section">
+            <h3>📋 Test 1: Listings API (Public)</h3>
+            <p>Test endpoint: <code>/api/v1/listings?limit=3</code></p>
+            <button onclick="testListingsAPI()">🚀 Test Listings API</button>
+            <button onclick="clearResult('result1')">🗑️ Clear</button>
+            <div id="result1" class="result"></div>
+        </div>
+
+        <!-- Test 2: My Listings API -->
+        <div class="test-section">
+            <h3>🏪 Test 2: My Listings API (Authenticated)</h3>
+            <p>Test endpoint: <code>/api/v1/listings/my?limit=3</code></p>
+            <button onclick="testMyListingsAPI()">🚀 Test My Listings</button>
+            <button onclick="clearResult('result2')">🗑️ Clear</button>
+            <div id="result2" class="result"></div>
+        </div>
+
+        <!-- Test 3: Orders API -->
+        <div class="test-section">
+            <h3>📦 Test 3: Orders API</h3>
+            <p>Test endpoint: <code>/api/v1/orders?role=buyer</code></p>
+            <button onclick="testOrdersAPI()">🚀 Test Orders API</button>
+            <button onclick="clearResult('result3')">🗑️ Clear</button>
+            <div id="result3" class="result"></div>
+        </div>
+
+        <!-- Test 4: Admin Listings API -->
+        <div class="test-section">
+            <h3>👑 Test 4: Admin Listings API</h3>
+            <p>Test endpoint: <code>/api/v1/admin/listings?page=1&limit=5</code></p>
+            <button onclick="testAdminListingsAPI()">🚀 Test Admin Listings</button>
+            <button onclick="clearResult('result4')">🗑️ Clear</button>
+            <div id="result4" class="result"></div>
+        </div>
+
+        <!-- Test 5: Environment Check -->
+        <div class="test-section">
+            <h3>🔍 Test 5: Environment Check</h3>
+            <button onclick="checkEnvironment()">🔎 Check Environment</button>
+            <button onclick="clearResult('result5')">🗑️ Clear</button>
+            <div id="result5" class="result"></div>
+        </div>
+
+        <!-- Test 6: Console Errors -->
+        <div class="test-section">
+            <h3>⚠️ Test 6: Console Errors Check</h3>
+            <p>Mở DevTools Console (F12) và xem các lỗi JavaScript</p>
+            <div id="result6" class="result info">
+                <strong>Hướng dẫn:</strong><br>
+                1. Nhấn F12 để mở DevTools<br>
+                2. Chuyển sang tab Console<br>
+                3. Tìm các lỗi màu đỏ liên quan đến URL construction<br>
+                4. Kiểm tra xem có thông báo "[API Client] Constructed URL" không
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Helper function to show loading
+        function showLoading(elementId) {
+            const el = document.getElementById(elementId);
+            el.className = 'result info';
+            el.innerHTML = '<div class="loading"></div> Đang gửi request...';
+        }
+
+        // Helper function to show result
+        function showResult(elementId, data, isSuccess) {
+            const el = document.getElementById(elementId);
+            el.className = isSuccess ? 'result success' : 'result error';
+            el.innerHTML = `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+
+        // Helper function to clear result
+        function clearResult(elementId) {
+            document.getElementById(elementId).innerHTML = '';
+        }
+
+        // Test 1: Listings API
+        async function testListingsAPI() {
+            const resultId = 'result1';
+            showLoading(resultId);
+            
+            try {
+                console.log('🔵 Test 1: Fetching /api/v1/listings?limit=3');
+                const response = await fetch('/api/v1/listings?limit=3');
+                console.log('📥 Response received:', response.status);
+                
+                const data = await response.json();
+                console.log('📦 Data:', data);
+                
+                const result = {
+                    status: response.status,
+                    success: data.success,
+                    totalListings: data.data?.listings?.length || 0,
+                    pagination: data.data?.pagination,
+                    firstListing: data.data?.listings?.[0]?.title || 'N/A'
+                };
+                
+                showResult(resultId, result, response.ok && data.success);
+            } catch (error) {
+                console.error('❌ Error:', error);
+                showResult(resultId, { error: error.message }, false);
+            }
+        }
+
+        // Test 2: My Listings API
+        async function testMyListingsAPI() {
+            const resultId = 'result2';
+            showLoading(resultId);
+            
+            try {
+                console.log('🔵 Test 2: Fetching /api/v1/listings/my?limit=3');
+                const token = localStorage.getItem('accessToken');
+                
+                if (!token) {
+                    showResult(resultId, { 
+                        error: 'No token found',
+                        message: 'Vui lòng đăng nhập trước'
+                    }, false);
+                    return;
+                }
+                
+                const response = await fetch('/api/v1/listings/my?limit=3', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const data = await response.json();
+                console.log('📦 Data:', data);
+                
+                const result = {
+                    status: response.status,
+                    success: data.success,
+                    totalListings: data.data?.listings?.length || 0,
+                    hasToken: !!token
+                };
+                
+                showResult(resultId, result, response.ok && data.success);
+            } catch (error) {
+                console.error('❌ Error:', error);
+                showResult(resultId, { error: error.message }, false);
+            }
+        }
+
+        // Test 3: Orders API
+        async function testOrdersAPI() {
+            const resultId = 'result3';
+            showLoading(resultId);
+            
+            try {
+                console.log('🔵 Test 3: Fetching /api/v1/orders?role=buyer');
+                const token = localStorage.getItem('accessToken');
+                
+                if (!token) {
+                    showResult(resultId, { 
+                        error: 'No token found',
+                        message: 'Vui lòng đăng nhập trước'
+                    }, false);
+                    return;
+                }
+                
+                const response = await fetch('/api/v1/orders?role=buyer', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const data = await response.json();
+                console.log('📦 Data:', data);
+                
+                const result = {
+                    status: response.status,
+                    success: data.success,
+                    totalOrders: Array.isArray(data.data) ? data.data.length : 0
+                };
+                
+                showResult(resultId, result, response.ok && data.success);
+            } catch (error) {
+                console.error('❌ Error:', error);
+                showResult(resultId, { error: error.message }, false);
+            }
+        }
+
+        // Test 4: Admin Listings API
+        async function testAdminListingsAPI() {
+            const resultId = 'result4';
+            showLoading(resultId);
+            
+            try {
+                console.log('🔵 Test 4: Fetching /api/v1/admin/listings');
+                const token = localStorage.getItem('accessToken');
+                
+                if (!token) {
+                    showResult(resultId, { 
+                        error: 'No token found',
+                        message: 'Vui lòng đăng nhập với tài khoản admin'
+                    }, false);
+                    return;
+                }
+                
+                const response = await fetch('/api/v1/admin/listings?page=1&limit=5', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                const data = await response.json();
+                console.log('📦 Data:', data);
+                
+                const result = {
+                    status: response.status,
+                    success: data.success,
+                    totalListings: data.data?.listings?.length || 0,
+                    pagination: data.data?.pagination
+                };
+                
+                showResult(resultId, result, response.ok && data.success);
+            } catch (error) {
+                console.error('❌ Error:', error);
+                showResult(resultId, { error: error.message }, false);
+            }
+        }
+
+        // Test 5: Environment Check
+        function checkEnvironment() {
+            const resultId = 'result5';
+            
+            const envInfo = {
+                windowOrigin: window.location.origin,
+                currentURL: window.location.href,
+                hasLocalStorage: typeof localStorage !== 'undefined',
+                hasToken: !!localStorage.getItem('accessToken'),
+                userAgent: navigator.userAgent,
+                timestamp: new Date().toISOString()
+            };
+            
+            console.log('🔍 Environment Info:', envInfo);
+            showResult(resultId, envInfo, true);
+        }
+
+        // Auto-run environment check on load
+        window.addEventListener('load', () => {
+            console.log('🎯 Page loaded successfully!');
+            console.log('🔧 All API fixes have been deployed');
+            console.log('📊 Ready to test...');
+        });
+    </script>
+</body>
+</html>

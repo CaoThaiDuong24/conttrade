@@ -103,7 +103,7 @@ export default function NewDisputePage() {
       setLoading(true);
       
       // TODO: Replace with real order API when available
-      const response = await fetch(`http://localhost:3006/api/v1/orders/${orderId}`);
+      const response = await fetch(`/api/v1/orders/${orderId}`);
       
       if (response.ok) {
         const data = await response.json();
