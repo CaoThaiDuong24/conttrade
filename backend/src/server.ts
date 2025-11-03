@@ -124,7 +124,7 @@ try {
 
 // Helpers
 function signAccessToken(payload: any) {
-	return app.jwt.sign(payload, { expiresIn: '15m' })
+	return app.jwt.sign(payload, { expiresIn: '2h' }) // Increased from 15m to 2h for better UX
 }
 function signRefreshToken(payload: any) {
 	return app.jwt.sign(payload, { expiresIn: '7d' })

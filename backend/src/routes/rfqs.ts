@@ -260,8 +260,23 @@ export default async function rfqRoutes(fastify: FastifyInstance) {
     preHandler: async (request, reply) => {
       try {
         await request.jwtVerify();
-      } catch (err) {
-        return reply.status(401).send({ success: false, message: 'Unauthorized' });
+      } catch (err: any) {
+        console.error('JWT Verification failed for RFQ creation:', {
+          error: err.message,
+          hasAuthHeader: !!request.headers.authorization,
+          authHeaderPreview: request.headers.authorization?.substring(0, 20),
+          hasCookie: !!request.cookies?.accessToken,
+          cookiePreview: request.cookies?.accessToken?.substring(0, 20),
+          url: request.url,
+          method: request.method
+        });
+        
+        return reply.status(401).send({ 
+          success: false, 
+          message: 'Unauthorized',
+          error: 'TOKEN_INVALID_OR_EXPIRED',
+          details: process.env.NODE_ENV === 'development' ? err.message : undefined
+        });
       }
     }
   }, async (request, reply) => {

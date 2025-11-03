@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test RFQ Creation with Token Debug</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+        .section {
+            background: #f5f5f5;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 5px;
+        }
+        .error { color: red; }
+        .success { color: green; }
+        .warning { color: orange; }
+        button {
+            background: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        pre {
+            background: #fff;
+            padding: 10px;
+            border: 1px solid #ddd;
+            overflow-x: auto;
+            max-height: 400px;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 8px;
+            margin: 5px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test RFQ Creation - Token Debug</h1>
+    
+    <div class="section">
+        <h2>1. Check Current Token Status</h2>
+        <button onclick="checkTokenStatus()">Check Token Status</button>
+        <pre id="tokenStatus">Click button to check...</pre>
+    </div>
+
+    <div class="section">
+        <h2>2. Login (Get New Token)</h2>
+        <input type="email" id="loginEmail" placeholder="Email" value="buyer@test.com">
+        <input type="password" id="loginPassword" placeholder="Password" value="123456">
+        <button onclick="doLogin()">Login</button>
+        <pre id="loginResult">Enter credentials and click Login...</pre>
+    </div>
+
+    <div class="section">
+        <h2>3. Create RFQ</h2>
+        <input type="text" id="listingId" placeholder="Listing ID" value="08e8cb92-afae-49f2-9faf-be42773d0885">
+        <input type="text" id="purpose" placeholder="Purpose (RENTAL or PURCHASE)" value="RENTAL">
+        <input type="number" id="quantity" placeholder="Quantity" value="50">
+        <input type="date" id="needBy" placeholder="Need By Date" value="2025-11-10">
+        <button onclick="createRFQ()">Create RFQ</button>
+        <pre id="rfqResult">Fill form and click Create RFQ...</pre>
+    </div>
+
+    <div class="section">
+        <h2>4. Full Debug Log</h2>
+        <button onclick="clearLog()">Clear Log</button>
+        <pre id="debugLog"></pre>
+    </div>
+
+    <script>
+        const API_URL = 'https://icontrade.itacy.com.vn';
+        let debugLog = [];
+
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEntry = `[${timestamp}] ${type.toUpperCase()}: ${message}`;
+            debugLog.push(logEntry);
+            document.getElementById('debugLog').textContent = debugLog.join('\n');
+            console.log(logEntry);
+        }
+
+        function checkTokenStatus() {
+            const accessToken = localStorage.getItem('accessToken');
+            const refreshToken = localStorage.getItem('refreshToken');
+            
+            const status = {
+                hasAccessToken: !!accessToken,
+                accessTokenLength: accessToken?.length || 0,
+                accessTokenPreview: accessToken ? accessToken.substring(0, 50) + '...' : 'null',
+                hasRefreshToken: !!refreshToken,
+                refreshTokenLength: refreshToken?.length || 0,
+                cookies: document.cookie,
+                localStorage: {
+                    accessToken: accessToken ? 'EXISTS' : 'NULL',
+                    refreshToken: refreshToken ? 'EXISTS' : 'NULL'
+                }
+            };
+
+            // Try to decode JWT if exists
+            if (accessToken) {
+                try {
+                    const payload = JSON.parse(atob(accessToken.split('.')[1]));
+                    status.tokenPayload = {
+                        userId: payload.userId,
+                        email: payload.email,
+                        exp: new Date(payload.exp * 1000).toLocaleString(),
+                        isExpired: Date.now() > payload.exp * 1000
+                    };
+                } catch (e) {
+                    status.tokenDecodeError = e.message;
+                }
+            }
+
+            document.getElementById('tokenStatus').textContent = JSON.stringify(status, null, 2);
+            log('Token status checked', 'info');
+        }
+
+        async function doLogin() {
+            const email = document.getElementById('loginEmail').value;
+            const password = document.getElementById('loginPassword').value;
+            
+            log(`Attempting login for: ${email}`, 'info');
+
+            try {
+                const response = await fetch(`${API_URL}/api/v1/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    const accessToken = data.data.accessToken || data.data.token;
+                    const refreshToken = data.data.refreshToken;
+                    
+                    if (accessToken) {
+                        localStorage.setItem('accessToken', accessToken);
+                        log('✅ Access token saved to localStorage', 'success');
+                    }
+                    
+                    if (refreshToken) {
+                        localStorage.setItem('refreshToken', refreshToken);
+                        log('✅ Refresh token saved to localStorage', 'success');
+                    }
+                    
+                    document.getElementById('loginResult').innerHTML = 
+                        `<span class="success">✅ Login successful!</span>\n${JSON.stringify(data, null, 2)}`;
+                } else {
+                    log(`❌ Login failed: ${data.message}`, 'error');
+                    document.getElementById('loginResult').innerHTML = 
+                        `<span class="error">❌ Login failed</span>\n${JSON.stringify(data, null, 2)}`;
+                }
+            } catch (error) {
+                log(`❌ Login error: ${error.message}`, 'error');
+                document.getElementById('loginResult').innerHTML = 
+                    `<span class="error">❌ Error: ${error.message}</span>`;
+            }
+        }
+
+        async function createRFQ() {
+            const listingId = document.getElementById('listingId').value;
+            const purpose = document.getElementById('purpose').value;
+            const quantity = parseInt(document.getElementById('quantity').value);
+            const needBy = document.getElementById('needBy').value;
+            
+            const accessToken = localStorage.getItem('accessToken');
+            
+            log(`Creating RFQ for listing: ${listingId}`, 'info');
+            log(`Token exists: ${!!accessToken}`, 'info');
+            log(`Token length: ${accessToken?.length || 0}`, 'info');
+            
+            if (!accessToken) {
+                document.getElementById('rfqResult').innerHTML = 
+                    '<span class="error">❌ No access token found! Please login first.</span>';
+                log('❌ No access token - cannot create RFQ', 'error');
+                return;
+            }
+
+            const payload = {
+                listing_id: listingId,
+                purpose: purpose,
+                quantity: quantity,
+                need_by: needBy,
+                services: {}
+            };
+
+            log(`Request payload: ${JSON.stringify(payload)}`, 'info');
+
+            try {
+                const response = await fetch(`${API_URL}/api/v1/rfqs`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${accessToken}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                log(`Response status: ${response.status}`, response.ok ? 'success' : 'error');
+
+                const data = await response.json();
+                
+                if (response.ok) {
+                    document.getElementById('rfqResult').innerHTML = 
+                        `<span class="success">✅ RFQ created successfully!</span>\n${JSON.stringify(data, null, 2)}`;
+                    log('✅ RFQ created successfully', 'success');
+                } else {
+                    document.getElementById('rfqResult').innerHTML = 
+                        `<span class="error">❌ RFQ creation failed (${response.status})</span>\n${JSON.stringify(data, null, 2)}`;
+                    log(`❌ RFQ creation failed: ${response.status} - ${JSON.stringify(data)}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ RFQ creation error: ${error.message}`, 'error');
+                document.getElementById('rfqResult').innerHTML = 
+                    `<span class="error">❌ Error: ${error.message}</span>`;
+            }
+        }
+
+        function clearLog() {
+            debugLog = [];
+            document.getElementById('debugLog').textContent = '';
+        }
+
+        // Auto-check token status on load
+        window.onload = () => {
+            checkTokenStatus();
+            log('Page loaded', 'info');
+        };
+    </script>
+</body>
+</html>

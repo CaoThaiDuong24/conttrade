@@ -33,6 +33,7 @@ export class ApiError extends Error {
 export class ApiClient {
   private baseUrl: string;
   private getToken?: ApiClientConfig["getToken"];
+  private refreshPromise: Promise<string | null> | null = null;
 
   constructor(config?: ApiClientConfig) {
     // Use API_BASE_URL from config (which uses NEXT_PUBLIC_API_URL)
@@ -43,6 +44,34 @@ export class ApiClient {
   }
 
   async request<TResponse = unknown, TBody = unknown>(options: ApiRequestOptions<TBody>): Promise<TResponse> {
+    try {
+      return await this.executeRequest<TResponse, TBody>(options);
+    } catch (error) {
+      // If 401 and not a refresh/login request, try to refresh token
+      if (error instanceof ApiError && error.status === 401) {
+        const { path } = options;
+        // Don't retry for auth endpoints to avoid infinite loops
+        if (!path.includes('/auth/login') && !path.includes('/auth/refresh') && !path.includes('/auth/register')) {
+          console.log('[API Client] Got 401, attempting token refresh...');
+          const newToken = await this.refreshToken();
+          if (newToken) {
+            console.log('[API Client] Token refreshed, retrying request...');
+            // Retry the request with new token
+            return await this.executeRequest<TResponse, TBody>(options);
+          } else {
+            console.log('[API Client] Token refresh failed, redirecting to login...');
+            // Redirect to login if refresh fails
+            if (typeof window !== 'undefined') {
+              window.location.href = '/auth/login';
+            }
+          }
+        }
+      }
+      throw error;
+    }
+  }
+
+  private async executeRequest<TResponse = unknown, TBody = unknown>(options: ApiRequestOptions<TBody>): Promise<TResponse> {
     const { method = "GET", path, query, body, headers, locale, idempotencyKey } = options;
 
     // Construct URL properly - handle both absolute and relative paths
@@ -107,6 +136,13 @@ export class ApiClient {
     }
 
     const token = this.getToken ? await this.getToken() : null;
+    console.log('[API Client] Token retrieved:', {
+      hasGetToken: !!this.getToken,
+      tokenExists: !!token,
+      tokenLength: token?.length || 0,
+      tokenPreview: token ? token.substring(0, 30) + '...' : 'null',
+      path: path
+    });
 
     const fetchHeaders: HeadersInit = {
       "Content-Type": "application/json",
@@ -153,6 +189,61 @@ export class ApiClient {
     });
 
     return data as TResponse;
+  }
+
+  private async refreshToken(): Promise<string | null> {
+    // If already refreshing, wait for that promise
+    if (this.refreshPromise) {
+      return this.refreshPromise;
+    }
+
+    this.refreshPromise = (async () => {
+      try {
+        const refreshToken = this.getRefreshToken();
+        if (!refreshToken) {
+          console.log('[API Client] No refresh token found');
+          return null;
+        }
+
+        console.log('[API Client] Attempting to refresh token...');
+        const response = await fetch(`${this.baseUrl}/api/v1/auth/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refreshToken })
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          const newAccessToken = data.data?.accessToken || data.accessToken;
+          
+          if (newAccessToken) {
+            // Save new token
+            if (typeof window !== 'undefined') {
+              localStorage.setItem('accessToken', newAccessToken);
+              console.log('[API Client] New access token saved');
+            }
+            return newAccessToken;
+          }
+        }
+        
+        console.error('[API Client] Token refresh failed:', response.status);
+        return null;
+      } catch (error) {
+        console.error('[API Client] Token refresh error:', error);
+        return null;
+      } finally {
+        this.refreshPromise = null;
+      }
+    })();
+
+    return this.refreshPromise;
+  }
+
+  private getRefreshToken(): string | null {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('refreshToken');
+    }
+    return null;
   }
 }
 

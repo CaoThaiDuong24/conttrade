@@ -66,7 +66,7 @@ export default async function listingRoutes(fastify: FastifyInstance) {
       console.log('User from JWT:', request.user);
       
       const {
-        dealType,
+        dealType: rawDealType,
         title,
         description,
         priceAmount,
@@ -92,11 +92,17 @@ export default async function listingRoutes(fastify: FastifyInstance) {
         renewalPriceAdjustment
       } = request.body as any;
 
+      // ✅ FIX: Map "LEASE" to "RENTAL" for Prisma compatibility
+      // Prisma enum DealType only supports: SALE, RENTAL
+      // But frontend/UI may use "LEASE" for long-term rental
+      const dealType = rawDealType === 'LEASE' ? 'RENTAL' : rawDealType;
+
       const userId = (request.user as any).userId;
       console.log('User ID:', userId);
       console.log('Rental Unit:', rentalUnit);
       console.log('=== RECEIVED DATA ===');
-      console.log('Deal Type:', dealType);
+      console.log('Raw Deal Type:', rawDealType);
+      console.log('Mapped Deal Type:', dealType);
       console.log('Quantity fields:', {
         totalQuantity,
         availableQuantity,
@@ -423,7 +429,9 @@ export default async function listingRoutes(fastify: FastifyInstance) {
         }
       }
 
-      if (dealType) where.deal_type = dealType;
+      // ✅ FIX: Map "LEASE" to "RENTAL" for filtering
+      const mappedDealType = dealType === 'LEASE' ? 'RENTAL' : dealType;
+      if (mappedDealType) where.deal_type = mappedDealType;
       if (locationDepotId) where.location_depot_id = locationDepotId;
       
       if (minPrice || maxPrice) {
