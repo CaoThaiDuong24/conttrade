@@ -1,9 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
+
     console.log('=== RFQ API DEBUG ===');
     console.log('Received payload:', body);
     console.log('Required fields check:');
@@ -68,31 +69,66 @@ export async function POST(request: NextRequest) {
 }
 
 export async function GET(request: NextRequest) {
-  const { searchParams } = new URL(request.url);
-  const view = searchParams.get('view') || 'sent';
+  try {
+    const { searchParams } = new URL(request.url);
+    const view = searchParams.get('view') || 'sent';
+    const showAll = searchParams.get('show_all');
 
-  console.log('GET RFQs, view:', view);
+    console.log('GET RFQs, view:', view, 'show_all:', showAll);
 
-  // Mock RFQ data
-  const mockRfqs = [
-    {
-      id: 'rfq-1',
-      listing_id: 'listing-1',
-      buyer_id: 'buyer-1',
-      purpose: 'sale',
-      quantity: 2,
-      status: 'submitted',
-      submitted_at: new Date().toISOString(),
-      listings: {
-        title: 'Container 20ft - Test',
-        priceAmount: 50000000,
-        priceCurrency: 'VND'
-      }
+    // Get token from header or cookie
+    const authHeader = request.headers.get('authorization');
+    const cookieStore = cookies();
+    const cookieToken = cookieStore.get('accessToken')?.value;
+
+    const token = authHeader?.replace('Bearer ', '') || cookieToken;
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: 'Authorization required' },
+        { status: 401 }
+      );
     }
-  ];
 
-  return NextResponse.json({
-    success: true,
-    data: mockRfqs
-  });
+    // Use internal Docker network URL for server-side API calls
+    const API_URL = process.env.API_URL_INTERNAL || process.env.BACKEND_URL || 'http://localhost:3006';
+
+    // Build query string
+    const queryParams = new URLSearchParams({ view });
+    if (showAll === 'true') {
+      queryParams.append('show_all', 'true');
+    }
+
+    // Backend route is registered with prefix /api/v1/rfqs
+    const backendUrl = `${API_URL}/api/v1/rfqs?${queryParams.toString()}`;
+
+    console.log('🔧 Forwarding RFQ request to backend:', backendUrl);
+
+    // Forward request to backend
+    const response = await fetch(backendUrl, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+      signal: AbortSignal.timeout(30000), // 30 second timeout
+    });
+
+    const data = await response.json();
+
+    console.log('✅ Backend response status:', response.status);
+    console.log('✅ Backend data count:', Array.isArray(data.data) ? data.data.length : 'not an array');
+
+    if (!response.ok) {
+      return NextResponse.json(data, { status: response.status });
+    }
+
+    return NextResponse.json(data);
+  } catch (error: any) {
+    console.error('Error in RFQ GET API:', error);
+    return NextResponse.json(
+      { success: false, message: 'Internal server error', error: error.message },
+      { status: 500 }
+    );
+  }
 }
