@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Test Create Listing Permission</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #4CAF50;
+            padding-bottom: 10px;
+        }
+        .section {
+            margin: 20px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-left: 4px solid #2196F3;
+            border-radius: 4px;
+        }
+        .section h3 {
+            margin-top: 0;
+            color: #2196F3;
+        }
+        input, textarea, select {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-sizing: border-box;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            padding: 12px 24px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        button.secondary {
+            background: #2196F3;
+        }
+        button.secondary:hover {
+            background: #0b7dda;
+        }
+        button.danger {
+            background: #f44336;
+        }
+        button.danger:hover {
+            background: #da190b;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            background: #fff;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            font-family: 'Courier New', monospace;
+            font-size: 14px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .success {
+            background: #d4edda;
+            border-color: #c3e6cb;
+            color: #155724;
+        }
+        .error {
+            background: #f8d7da;
+            border-color: #f5c6cb;
+            color: #721c24;
+        }
+        .warning {
+            background: #fff3cd;
+            border-color: #ffeaa7;
+            color: #856404;
+        }
+        .info {
+            background: #d1ecf1;
+            border-color: #bee5eb;
+            color: #0c5460;
+        }
+        .token-info {
+            word-break: break-all;
+            font-size: 12px;
+        }
+        label {
+            font-weight: bold;
+            color: #555;
+            display: block;
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧪 Test Create Listing Permission</h1>
+        
+        <div class="section">
+            <h3>📝 Bước 1: Đăng nhập</h3>
+            <label>Email:</label>
+            <input type="email" id="email" placeholder="buyer@example.com">
+            <label>Password:</label>
+            <input type="password" id="password" placeholder="password">
+            <button onclick="login()">🔐 Login</button>
+            <button class="danger" onclick="logout()">🚪 Logout</button>
+        </div>
+
+        <div class="section">
+            <h3>🎫 Token hiện tại</h3>
+            <div id="tokenInfo" class="result info">Chưa có token</div>
+            <button class="secondary" onclick="checkToken()">🔍 Kiểm tra Token</button>
+        </div>
+
+        <div class="section">
+            <h3>📋 Bước 2: Tạo Listing</h3>
+            <label>Title:</label>
+            <input type="text" id="title" value="Test Container 20ft">
+            <label>Deal Type:</label>
+            <select id="dealType">
+                <option value="SALE">SALE - Bán</option>
+                <option value="RENTAL">RENTAL - Cho thuê</option>
+            </select>
+            <label>Price Amount:</label>
+            <input type="number" id="priceAmount" value="50000000">
+            <label>Price Currency:</label>
+            <input type="text" id="priceCurrency" value="VND">
+            <label>Depot ID:</label>
+            <input type="text" id="depotId" placeholder="depot-xxx">
+            <button onclick="createListing()">✨ Tạo Listing</button>
+            <button class="secondary" onclick="getDepots()">📍 Lấy danh sách Depot</button>
+        </div>
+
+        <div class="section">
+            <h3>📊 Kết quả</h3>
+            <div id="result" class="result">Chưa có kết quả</div>
+        </div>
+    </div>
+
+    <script>
+        const API_URL = 'http://localhost:3006/api/v1';
+
+        function showResult(message, type = 'info') {
+            const resultDiv = document.getElementById('result');
+            resultDiv.textContent = message;
+            resultDiv.className = 'result ' + type;
+        }
+
+        function showToken() {
+            const token = localStorage.getItem('token');
+            const tokenDiv = document.getElementById('tokenInfo');
+            
+            if (!token) {
+                tokenDiv.textContent = 'Chưa có token';
+                tokenDiv.className = 'result warning';
+                return;
+            }
+
+            try {
+                // Decode JWT (simple base64 decode)
+                const parts = token.split('.');
+                const payload = JSON.parse(atob(parts[1]));
+                
+                const info = `Token Info:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+User ID: ${payload.userId}
+Email: ${payload.email}
+Roles: ${JSON.stringify(payload.roles, null, 2)}
+Permissions (${payload.permissions?.length || 0}):
+${payload.permissions?.map(p => '  ✓ ' + p).join('\n') || '  (none)'}
+
+HAS CREATE_LISTING: ${payload.permissions?.includes('CREATE_LISTING') ? '✅ YES' : '❌ NO'}
+
+Token issued at: ${new Date(payload.iat * 1000).toLocaleString('vi-VN')}
+Token expires at: ${new Date(payload.exp * 1000).toLocaleString('vi-VN')}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━`;
+
+                tokenDiv.textContent = info;
+                tokenDiv.className = 'result ' + (payload.permissions?.includes('CREATE_LISTING') ? 'success' : 'error');
+            } catch (e) {
+                tokenDiv.textContent = 'Token: ' + token.substring(0, 100) + '...';
+                tokenDiv.className = 'result info';
+            }
+        }
+
+        function checkToken() {
+            showToken();
+        }
+
+        async function login() {
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            if (!email || !password) {
+                showResult('Vui lòng nhập email và password!', 'error');
+                return;
+            }
+
+            try {
+                showResult('Đang đăng nhập...', 'info');
+                
+                const response = await fetch(`${API_URL}/auth/login`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ email, password })
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    localStorage.setItem('token', data.data.accessToken);
+                    showResult(`✅ Đăng nhập thành công!\n\n${JSON.stringify(data, null, 2)}`, 'success');
+                    showToken();
+                } else {
+                    showResult(`❌ Đăng nhập thất bại!\n\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult(`❌ Lỗi: ${error.message}`, 'error');
+            }
+        }
+
+        function logout() {
+            localStorage.removeItem('token');
+            showResult('✅ Đã logout!', 'success');
+            showToken();
+        }
+
+        async function getDepots() {
+            try {
+                const response = await fetch(`${API_URL}/depots`);
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    const depots = data.data || [];
+                    if (depots.length > 0) {
+                        document.getElementById('depotId').value = depots[0].id;
+                        showResult(`✅ Tìm thấy ${depots.length} depot(s)\n\n${JSON.stringify(depots.map(d => ({id: d.id, name: d.name})), null, 2)}`, 'success');
+                    } else {
+                        showResult('⚠️ Không tìm thấy depot nào', 'warning');
+                    }
+                } else {
+                    showResult(`❌ Lỗi lấy depots: ${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult(`❌ Lỗi: ${error.message}`, 'error');
+            }
+        }
+
+        async function createListing() {
+            const token = localStorage.getItem('token');
+            
+            if (!token) {
+                showResult('❌ Bạn chưa đăng nhập! Vui lòng login trước.', 'error');
+                return;
+            }
+
+            const title = document.getElementById('title').value;
+            const dealType = document.getElementById('dealType').value;
+            const priceAmount = document.getElementById('priceAmount').value;
+            const priceCurrency = document.getElementById('priceCurrency').value;
+            const depotId = document.getElementById('depotId').value;
+
+            if (!title || !priceAmount || !depotId) {
+                showResult('❌ Vui lòng điền đầy đủ thông tin!', 'error');
+                return;
+            }
+
+            const listingData = {
+                title,
+                dealType,
+                priceAmount: parseFloat(priceAmount),
+                priceCurrency,
+                locationDepotId: depotId,
+                description: 'Test listing từ debug page'
+            };
+
+            try {
+                showResult('Đang tạo listing...', 'info');
+                
+                const response = await fetch(`${API_URL}/listings`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${token}`
+                    },
+                    body: JSON.stringify(listingData)
+                });
+
+                const data = await response.json();
+                
+                if (response.ok && data.success) {
+                    showResult(`✅ TẠO LISTING THÀNH CÔNG!\n\n${JSON.stringify(data, null, 2)}`, 'success');
+                } else if (response.status === 403) {
+                    showResult(`❌ PERMISSION DENIED - Không có quyền!\n\n${JSON.stringify(data, null, 2)}\n\n🔧 GIẢI PHÁP:\n1. Admin vào /admin/rbac/roles\n2. Gán permission CREATE_LISTING cho role buyer\n3. User LOGOUT và LOGIN LẠI\n4. Thử lại`, 'error');
+                } else if (response.status === 401 && data.code === 'PERMISSIONS_UPDATED') {
+                    showResult(`⚠️ TOKEN CŨ - Permissions đã được cập nhật!\n\n${JSON.stringify(data, null, 2)}\n\n🔧 Vui lòng LOGOUT và LOGIN LẠI!`, 'warning');
+                } else {
+                    showResult(`❌ Lỗi:\n\nStatus: ${response.status}\n\n${JSON.stringify(data, null, 2)}`, 'error');
+                }
+            } catch (error) {
+                showResult(`❌ Lỗi kết nối: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto load token info on page load
+        window.onload = function() {
+            showToken();
+        };
+    </script>
+</body>
+</html>

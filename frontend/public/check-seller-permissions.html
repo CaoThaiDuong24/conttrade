@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Check Seller Permissions</title>
+    <style>
+        body { font-family: monospace; padding: 20px; }
+        .info { background: #e3f2fd; padding: 10px; margin: 10px 0; }
+        .error { background: #ffebee; padding: 10px; margin: 10px 0; }
+        .success { background: #e8f5e9; padding: 10px; margin: 10px 0; }
+        pre { background: #f5f5f5; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Check Seller Permissions & Menu</h1>
+    
+    <div id="output"></div>
+    
+    <script>
+        const output = document.getElementById('output');
+        
+        async function checkPermissions() {
+            try {
+                // Get current user info
+                const token = localStorage.getItem('access_token');
+                if (!token) {
+                    output.innerHTML += '<div class="error">❌ No access_token in localStorage. Please login first.</div>';
+                    return;
+                }
+                
+                output.innerHTML += '<div class="info">✅ Found access_token</div>';
+                
+                // Decode JWT token (simple base64 decode)
+                const parts = token.split('.');
+                if (parts.length !== 3) {
+                    output.innerHTML += '<div class="error">❌ Invalid JWT token format</div>';
+                    return;
+                }
+                
+                const payload = JSON.parse(atob(parts[1]));
+                
+                output.innerHTML += '<div class="success"><h3>📋 Token Payload:</h3><pre>' + 
+                    JSON.stringify(payload, null, 2) + '</pre></div>';
+                
+                // Check roles
+                output.innerHTML += '<div class="info"><strong>Roles:</strong> ' + 
+                    (payload.roles || []).join(', ') + '</div>';
+                
+                // Check permissions
+                const permissions = payload.permissions || [];
+                output.innerHTML += '<div class="info"><strong>Total Permissions:</strong> ' + 
+                    permissions.length + '</div>';
+                
+                const hasCreateListing = permissions.includes('CREATE_LISTING');
+                output.innerHTML += '<div class="' + (hasCreateListing ? 'success' : 'error') + '">' +
+                    '<strong>Has CREATE_LISTING:</strong> ' + hasCreateListing + '</div>';
+                
+                if (permissions.length > 0) {
+                    output.innerHTML += '<div class="success"><h3>📝 All Permissions:</h3><pre>' + 
+                        permissions.join('\n') + '</pre></div>';
+                }
+                
+                // Test API call to get user info
+                output.innerHTML += '<div class="info">🔄 Fetching user info from API...</div>';
+                
+                const response = await fetch('http://localhost:3006/api/users/me', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`API Error: ${response.status} ${response.statusText}`);
+                }
+                
+                const userData = await response.json();
+                output.innerHTML += '<div class="success"><h3>👤 User Data from API:</h3><pre>' + 
+                    JSON.stringify(userData, null, 2) + '</pre></div>';
+                
+                // Check if permissions_updated_at exists
+                if (userData.permissions_updated_at) {
+                    const tokenIat = new Date(payload.iat * 1000);
+                    const permUpdated = new Date(userData.permissions_updated_at);
+                    
+                    output.innerHTML += '<div class="info"><strong>Token Issued At:</strong> ' + 
+                        tokenIat.toLocaleString() + '</div>';
+                    output.innerHTML += '<div class="info"><strong>Permissions Updated At:</strong> ' + 
+                        permUpdated.toLocaleString() + '</div>';
+                    
+                    if (tokenIat < permUpdated) {
+                        output.innerHTML += '<div class="error">⚠️ Token is OUTDATED! Permissions were updated after token was issued. Please logout and login again.</div>';
+                    } else {
+                        output.innerHTML += '<div class="success">✅ Token is VALID (issued after last permission update)</div>';
+                    }
+                }
+                
+            } catch (error) {
+                output.innerHTML += '<div class="error">❌ Error: ' + error.message + '</div>';
+                console.error(error);
+            }
+        }
+        
+        checkPermissions();
+    </script>
+</body>
+</html>

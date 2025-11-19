@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test RFQ API - Frontend</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #2c3e50;
+      border-bottom: 3px solid #3498db;
+      padding-bottom: 10px;
+    }
+    .test-section {
+      margin: 20px 0;
+      padding: 15px;
+      background: #ecf0f1;
+      border-radius: 5px;
+    }
+    button {
+      background: #3498db;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      background: #2c3e50;
+      color: #ecf0f1;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .error {
+      background: #e74c3c;
+      color: white;
+    }
+    .success {
+      background: #27ae60;
+      color: white;
+    }
+    .info {
+      background: #3498db;
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      margin: 10px 0;
+    }
+    input {
+      width: 100%;
+      padding: 10px;
+      margin: 10px 0;
+      border: 1px solid #bdc3c7;
+      border-radius: 5px;
+      font-size: 14px;
+    }
+    .token-section {
+      background: #fff3cd;
+      padding: 15px;
+      border-radius: 5px;
+      border-left: 4px solid #ffc107;
+      margin: 20px 0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🧪 Test RFQ API - Frontend Debug Tool</h1>
+    
+    <div class="info">
+      <strong>📌 Mục đích:</strong> Kiểm tra API <code>/api/v1/rfqs?view=received</code> có trả về đầy đủ dữ liệu không
+    </div>
+
+    <div class="token-section">
+      <h3>🔑 Access Token</h3>
+      <p>Nhập token từ cookies hoặc localStorage (hoặc để trống để tự động lấy):</p>
+      <input type="text" id="tokenInput" placeholder="Bearer token (optional - auto-detect from cookies/localStorage)">
+      <button onclick="detectToken()">🔍 Tự động phát hiện token</button>
+    </div>
+
+    <div class="test-section">
+      <h3>🚀 Test Actions</h3>
+      <button onclick="testApi()">1️⃣ Test API /api/v1/rfqs?view=received</button>
+      <button onclick="checkCookies()">2️⃣ Kiểm tra Cookies</button>
+      <button onclick="checkLocalStorage()">3️⃣ Kiểm tra LocalStorage</button>
+      <button onclick="clearResults()">🗑️ Xóa kết quả</button>
+    </div>
+
+    <div id="results"></div>
+  </div>
+
+  <script>
+    const resultsDiv = document.getElementById('results');
+    const tokenInput = document.getElementById('tokenInput');
+
+    function log(message, type = 'info') {
+      const resultDiv = document.createElement('div');
+      resultDiv.className = `result ${type}`;
+      resultDiv.textContent = message;
+      resultsDiv.appendChild(resultDiv);
+    }
+
+    function clearResults() {
+      resultsDiv.innerHTML = '';
+    }
+
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
+      return null;
+    }
+
+    function detectToken() {
+      clearResults();
+      log('🔍 Đang tìm kiếm token...', 'info');
+      
+      // Try cookies
+      const cookieToken = getCookie('accessToken');
+      if (cookieToken) {
+        log(`✅ Tìm thấy token trong cookies:\n${cookieToken.substring(0, 50)}...`, 'success');
+        tokenInput.value = cookieToken;
+        return cookieToken;
+      }
+      
+      // Try localStorage
+      const lsToken = localStorage.getItem('token') || localStorage.getItem('accessToken');
+      if (lsToken) {
+        log(`✅ Tìm thấy token trong localStorage:\n${lsToken.substring(0, 50)}...`, 'success');
+        tokenInput.value = lsToken;
+        return lsToken;
+      }
+      
+      log('❌ Không tìm thấy token trong cookies hoặc localStorage', 'error');
+      return null;
+    }
+
+    function checkCookies() {
+      clearResults();
+      log('=== 🍪 COOKIES ===\n', 'info');
+      
+      const cookies = document.cookie.split(';');
+      if (cookies.length === 0 || document.cookie === '') {
+        log('❌ Không có cookies', 'error');
+      } else {
+        cookies.forEach(cookie => {
+          const [name, ...valueParts] = cookie.split('=');
+          const value = valueParts.join('=').trim();
+          log(`${name.trim()}: ${value.substring(0, 100)}${value.length > 100 ? '...' : ''}`, 'info');
+        });
+      }
+    }
+
+    function checkLocalStorage() {
+      clearResults();
+      log('=== 💾 LOCAL STORAGE ===\n', 'info');
+      
+      if (localStorage.length === 0) {
+        log('❌ LocalStorage trống', 'error');
+      } else {
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          const value = localStorage.getItem(key);
+          log(`${key}: ${value.substring(0, 100)}${value.length > 100 ? '...' : ''}`, 'info');
+        }
+      }
+    }
+
+    async function testApi() {
+      clearResults();
+      log('🚀 Bắt đầu test API...', 'info');
+      
+      // Get token
+      let token = tokenInput.value.trim();
+      if (!token) {
+        token = getCookie('accessToken') || localStorage.getItem('token') || localStorage.getItem('accessToken');
+      }
+      
+      if (!token) {
+        log('❌ Không tìm thấy token! Vui lòng nhập token hoặc đăng nhập trước.', 'error');
+        return;
+      }
+      
+      log(`✅ Sử dụng token: ${token.substring(0, 30)}...`, 'success');
+      
+      // Call API
+      const apiUrl = '/api/v1/rfqs?view=received';
+      log(`\n📡 Đang gọi API: ${apiUrl}`, 'info');
+      
+      try {
+        const response = await fetch(apiUrl, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        log(`\n📊 Response Status: ${response.status} ${response.statusText}`, 
+          response.ok ? 'success' : 'error');
+        
+        log('\n📋 Response Headers:', 'info');
+        for (const [key, value] of response.headers.entries()) {
+          log(`  ${key}: ${value}`, 'info');
+        }
+        
+        const responseText = await response.text();
+        let data;
+        try {
+          data = JSON.parse(responseText);
+        } catch (e) {
+          log('\n❌ Response không phải JSON:', 'error');
+          log(responseText, 'error');
+          return;
+        }
+        
+        if (response.ok) {
+          log('\n✅ API SUCCESS!', 'success');
+          log(`\n📦 Response Data (${JSON.stringify(data).length} bytes):`, 'info');
+          log(JSON.stringify(data, null, 2), 'info');
+          
+          if (data.data && Array.isArray(data.data)) {
+            log(`\n📊 Tổng số RFQs: ${data.data.length}`, 'success');
+            
+            if (data.data.length > 0) {
+              log('\n🔍 Chi tiết RFQ đầu tiên:', 'info');
+              const firstRfq = data.data[0];
+              
+              log(`\nRFQ ID: ${firstRfq.id}`, 'info');
+              log(`Status: ${firstRfq.status}`, 'info');
+              log(`Buyer ID: ${firstRfq.buyer_id}`, 'info');
+              log(`Listing: ${firstRfq.listings?.title || 'N/A'}`, 'info');
+              
+              if (firstRfq.users) {
+                log(`\n✅ users object tồn tại:`, 'success');
+                log(`  - email: ${firstRfq.users.email}`, 'info');
+                log(`  - display_name: ${firstRfq.users.display_name || 'null'}`, 'info');
+              } else {
+                log(`\n❌ users object là NULL/undefined!`, 'error');
+                log('Đây chính là lý do hiển thị "Người mua không rõ"', 'error');
+              }
+              
+              log(`\nPurpose: ${firstRfq.purpose || 'null'}`, 'info');
+              log(`Quantity: ${firstRfq.quantity || 'null'}`, 'info');
+              log(`Quotes count: ${firstRfq.quotes?.length || 0}`, 'info');
+            }
+          }
+        } else {
+          log('\n❌ API ERROR!', 'error');
+          log(JSON.stringify(data, null, 2), 'error');
+        }
+        
+      } catch (error) {
+        log('\n❌ FETCH ERROR:', 'error');
+        log(error.toString(), 'error');
+        log(error.stack, 'error');
+      }
+    }
+  </script>
+</body>
+</html>

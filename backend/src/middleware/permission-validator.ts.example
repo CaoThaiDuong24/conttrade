@@ -1,0 +1,231 @@
+/**
+ * Real-time Permission Validator Middleware
+ * Purpose: Validate user permissions from database on EVERY API request
+ * Security: Prevents users from using cached/old permissions after admin changes
+ */
+
+import { FastifyRequest, FastifyReply } from 'fastify';
+import { PrismaClient } from '@prisma/client';
+import jwt from 'jsonwebtoken';
+
+const prisma = new PrismaClient();
+
+interface JWTPayload {
+  userId: string;
+  email: string;
+  roles: string[];
+  roleVersions?: Record<string, number>; // { 'admin': 5, 'seller': 3 }
+  iat: number;
+  exp: number;
+}
+
+/**
+ * Validate permissions in real-time from database
+ * This is the FIRST LAYER of defense - backend validation
+ */
+export const validatePermissions = (requiredPermissions: string[]) => {
+  return async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      // 1. Extract token from Authorization header
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'No token provided'
+        });
+      }
+
+      const token = authHeader.split(' ')[1];
+      
+      // 2. Verify JWT token
+      const decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production'
+      ) as JWTPayload;
+
+      // 3. Fetch FRESH permissions from database
+      const userWithRoles = await prisma.users.findUnique({
+        where: { id: decoded.userId },
+        select: {
+          user_id: true,
+          email: true,
+          user_roles: {
+            select: {
+              role: {
+                select: {
+                  role_id: true,
+                  role_code: true,
+                  role_version: true, // Check version
+                  role_permissions: {
+                    select: {
+                      permission: {
+                        select: {
+                          permission_code: true
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (!userWithRoles) {
+        return res.status(401).json({
+          error: 'Unauthorized',
+          message: 'User not found'
+        });
+      }
+
+      // 4. Check role versions - SECOND LAYER of defense
+      const currentRoleVersions: Record<string, number> = {};
+      userWithRoles.user_roles.forEach(ur => {
+        currentRoleVersions[ur.role.role_code] = ur.role.role_version;
+      });
+
+      // If token has roleVersions, compare with database
+      if (decoded.roleVersions) {
+        for (const [roleCode, tokenVersion] of Object.entries(decoded.roleVersions)) {
+          const dbVersion = currentRoleVersions[roleCode];
+          if (dbVersion && dbVersion > tokenVersion) {
+            // Role permissions changed! Force re-authentication
+            return res.status(403).json({
+              error: 'Permissions Changed',
+              message: 'Your permissions have been updated. Please login again.',
+              code: 'PERMISSION_VERSION_MISMATCH',
+              requireReauth: true
+            });
+          }
+        }
+      }
+
+      // 5. Extract all current permissions from database
+      const userPermissions = new Set<string>();
+      userWithRoles.user_roles.forEach(userRole => {
+        userRole.role.role_permissions.forEach(rp => {
+          userPermissions.add(rp.permission.permission_code);
+        });
+      });
+
+      // 6. Validate required permissions
+      const hasAllPermissions = requiredPermissions.every(perm => 
+        userPermissions.has(perm)
+      );
+
+      if (!hasAllPermissions) {
+        const missingPermissions = requiredPermissions.filter(perm => 
+          !userPermissions.has(perm)
+        );
+
+        return res.status(403).json({
+          error: 'Forbidden',
+          message: 'You do not have the required permissions',
+          missingPermissions,
+          code: 'INSUFFICIENT_PERMISSIONS'
+        });
+      }
+
+      // 7. Attach user info to request for downstream use
+      req.user = {
+        userId: decoded.userId,
+        email: decoded.email,
+        roles: userWithRoles.user_roles.map(ur => ur.role.role_code),
+        permissions: Array.from(userPermissions),
+        roleVersions: currentRoleVersions
+      };
+
+      next();
+    } catch (error: any) {
+      if (error.name === 'JsonWebTokenError') {
+        return res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Invalid token'
+        });
+      }
+      if (error.name === 'TokenExpiredError') {
+        return res.status(401).json({
+          error: 'Unauthorized',
+          message: 'Token expired',
+          code: 'TOKEN_EXPIRED'
+        });
+      }
+
+      console.error('Permission validation error:', error);
+      return res.status(500).json({
+        error: 'Internal Server Error',
+        message: 'Failed to validate permissions'
+      });
+    }
+  };
+};
+
+/**
+ * Validate role hierarchy (for admin operations)
+ */
+export const validateRoleHierarchy = (minimumLevel: number) => {
+  return async (req: FastifyRequest, reply: FastifyReply) => {
+    try {
+      const authHeader = req.headers.authorization;
+      if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return reply.status(401).send({
+          error: 'Unauthorized',
+          message: 'No token provided'
+        });
+      }
+
+      const token = authHeader.split(' ')[1];
+      const decoded = jwt.verify(
+        token,
+        process.env.JWT_SECRET || 'your-super-secret-jwt-key-change-in-production'
+      ) as JWTPayload;
+
+      // Fetch user's role hierarchy level
+      const userWithRoles = await prisma.users.findUnique({
+        where: { id: decoded.userId },
+        select: {
+          user_roles_user_roles_user_idTousers: {
+            select: {
+              roles: {
+                select: {
+                  code: true,
+                  hierarchy_level: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (!userWithRoles || userWithRoles.user_roles_user_roles_user_idTousers.length === 0) {
+        return reply.status(403).send({
+          error: 'Forbidden',
+          message: 'No roles assigned'
+        });
+      }
+
+      // Get highest hierarchy level
+      const maxLevel = Math.max(
+        ...userWithRoles.user_roles_user_roles_user_idTousers.map((ur: any) => ur.roles.hierarchy_level)
+      );
+
+      if (maxLevel < minimumLevel) {
+        return reply.status(403).send({
+          error: 'Forbidden',
+          message: `Requires role level ${minimumLevel} or higher. Your level: ${maxLevel}`
+        });
+      }
+
+      return; // Continue
+    } catch (error) {
+      console.error('Role hierarchy validation error:', error);
+      return reply.status(500).send({
+        error: 'Internal Server Error',
+        message: 'Failed to validate role hierarchy'
+      });
+    }
+  };
+};
+
+// Note: Fastify doesn't need global Express types extension

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Test RBAC Roles API</title>
+    <style>
+        body { font-family: Arial; padding: 20px; }
+        button { padding: 10px 20px; margin: 10px; font-size: 16px; }
+        #output { white-space: pre-wrap; background: #f5f5f5; padding: 15px; border-radius: 5px; margin-top: 20px; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>🧪 Test RBAC Roles API</h1>
+    
+    <div>
+        <button onclick="testLogin()">1. Login as Admin</button>
+        <button onclick="testGetRoles()">2. Get Roles</button>
+        <button onclick="clearOutput()">Clear</button>
+    </div>
+
+    <div id="output"></div>
+
+    <script>
+        let token = '';
+
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const time = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : (type === 'success' ? 'success' : '');
+            output.innerHTML += `<div class="${className}">[${time}] ${message}</div>`;
+        }
+
+        function clearOutput() {
+            document.getElementById('output').innerHTML = '';
+        }
+
+        async function testLogin() {
+            try {
+                log('🔐 Logging in as admin@i-contexchange.vn...');
+                
+                const response = await fetch('http://localhost:3006/api/v1/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: 'admin@i-contexchange.vn',
+                        password: 'admin123'
+                    })
+                });
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    token = data.data.token;
+                    log(`✅ Login successful!`, 'success');
+                    log(`Token: ${token.substring(0, 30)}...`);
+                    localStorage.setItem('accessToken', token);
+                } else {
+                    log(`❌ Login failed: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        async function testGetRoles() {
+            try {
+                if (!token) {
+                    token = localStorage.getItem('accessToken');
+                    if (!token) {
+                        log('❌ No token! Please login first.', 'error');
+                        return;
+                    }
+                }
+
+                log('📋 Fetching roles...');
+                
+                const response = await fetch('http://localhost:3006/api/v1/admin/rbac/roles', {
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    }
+                });
+
+                log(`Response status: ${response.status} ${response.statusText}`);
+
+                const data = await response.json();
+                
+                if (data.success) {
+                    log(`✅ Got ${data.data.length} roles:`, 'success');
+                    data.data.forEach(role => {
+                        log(`  • ${role.code}: ${role.name} (Level ${role.level}, ${role.permissionCount} perms, ${role.userCount} users)`);
+                    });
+                    log('\nFull data:');
+                    log(JSON.stringify(data.data, null, 2));
+                } else {
+                    log(`❌ Failed: ${data.message}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Error: ${error.message}`, 'error');
+            }
+        }
+
+        // Auto-load token if exists
+        window.onload = () => {
+            const savedToken = localStorage.getItem('accessToken');
+            if (savedToken) {
+                token = savedToken;
+                log(`ℹ️  Found saved token: ${token.substring(0, 30)}...`);
+            }
+        };
+    </script>
+</body>
+</html>

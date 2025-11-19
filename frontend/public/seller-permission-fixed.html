@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>✅ Seller Permission Fixed - Test Page</title>
+    <style>
+        body { font-family: Arial, sans-serif; padding: 20px; max-width: 1000px; margin: 0 auto; }
+        .section { background: #f5f5f5; padding: 15px; margin: 15px 0; border-radius: 5px; }
+        .info { background: #e3f2fd; }
+        .error { background: #ffebee; }
+        .success { background: #e8f5e9; }
+        .warning { background: #fff3e0; }
+        button { padding: 10px 20px; margin: 5px; cursor: pointer; font-size: 14px; border: none; border-radius: 3px; }
+        .btn-primary { background: #2196F3; color: white; }
+        .btn-success { background: #4CAF50; color: white; }
+        .btn-warning { background: #FF9800; color: white; }
+        pre { background: white; padding: 10px; overflow-x: auto; font-size: 12px; border: 1px solid #ddd; }
+        h2 { color: #333; }
+        .fix-list { background: white; padding: 15px; }
+        .fix-list li { margin: 10px 0; }
+    </style>
+</head>
+<body>
+    <h1>✅ Seller Permission - FIXED!</h1>
+    
+    <div class="section success">
+        <h2>🎯 ĐÃ SỬA:</h2>
+        <div class="fix-list">
+            <ol>
+                <li><strong>Backend (listings.ts):</strong> Seller role tự động có quyền tạo listing, không cần permission CREATE_LISTING</li>
+                <li><strong>Frontend (sidebar):</strong> Seller luôn thấy menu "Đăng tin mới", không cần check permission</li>
+                <li><strong>Logic mới:</strong> 
+                    <ul>
+                        <li>✅ Seller role → Tự động có quyền đăng tin</li>
+                        <li>✅ Buyer + CREATE_LISTING permission → Được đăng tin</li>
+                        <li>❌ Buyer không có permission → KHÔNG được đăng tin</li>
+                    </ul>
+                </li>
+            </ol>
+        </div>
+    </div>
+
+    <div class="section info">
+        <h2>🔍 Test 1: Check Token & Roles</h2>
+        <button class="btn-primary" onclick="checkToken()">Check My Token</button>
+        <div id="tokenResult"></div>
+    </div>
+
+    <div class="section warning">
+        <h2>🧪 Test 2: Create Listing API</h2>
+        <button class="btn-success" onclick="testCreateListing()">Test Create Listing (Seller)</button>
+        <div id="apiResult"></div>
+    </div>
+
+    <div class="section info">
+        <h2>📋 Expected Results:</h2>
+        <ul>
+            <li>✅ Seller user: Có thể tạo listing ngay lập tức (không cần permission)</li>
+            <li>✅ Seller user: Thấy menu "Đăng tin mới" trong sidebar</li>
+            <li>✅ Buyer + CREATE_LISTING permission: Cũng có thể tạo listing</li>
+            <li>❌ Buyer không có permission: Bị chặn 403</li>
+        </ul>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3006/api/v1';
+        
+        function checkToken() {
+            const output = document.getElementById('tokenResult');
+            output.innerHTML = '<p>⏳ Checking...</p>';
+            
+            try {
+                const token = localStorage.getItem('access_token');
+                
+                if (!token) {
+                    output.innerHTML = '<div class="error">❌ No token found. Please login first.</div>';
+                    return;
+                }
+                
+                // Decode JWT
+                const parts = token.split('.');
+                const payload = JSON.parse(atob(parts[1]));
+                
+                const roles = payload.roles || [];
+                const permissions = payload.permissions || [];
+                const isSeller = roles.includes('seller');
+                const hasCreateListingPerm = permissions.includes('CREATE_LISTING');
+                
+                let html = '<div class="' + (isSeller ? 'success' : 'info') + '">';
+                html += '<h3>📋 Your Token Info:</h3>';
+                html += '<pre>';
+                html += 'Email: ' + payload.email + '\\n';
+                html += 'User ID: ' + payload.userId + '\\n';
+                html += 'Roles: ' + roles.join(', ') + '\\n';
+                html += '\\n--- ACCESS CHECK ---\\n';
+                html += 'Is Seller: ' + (isSeller ? '✅ YES' : '❌ NO') + '\\n';
+                html += 'Has CREATE_LISTING permission: ' + (hasCreateListingPerm ? '✅ YES' : '❌ NO') + '\\n';
+                html += '\\n--- RESULT ---\\n';
+                html += 'Can Create Listing: ' + (isSeller || hasCreateListingPerm ? '✅ YES' : '❌ NO') + '\\n';
+                html += '(Seller role OR has permission)';
+                html += '</pre>';
+                
+                if (permissions.length > 0) {
+                    html += '<details><summary>All Permissions (' + permissions.length + ')</summary><pre>';
+                    html += permissions.sort().join('\\n');
+                    html += '</pre></details>';
+                }
+                
+                html += '</div>';
+                output.innerHTML = html;
+                
+            } catch (error) {
+                output.innerHTML = '<div class="error">❌ Error: ' + error.message + '</div>';
+            }
+        }
+        
+        async function testCreateListing() {
+            const output = document.getElementById('apiResult');
+            output.innerHTML = '<p>⏳ Testing API...</p>';
+            
+            try {
+                const token = localStorage.getItem('access_token');
+                
+                if (!token) {
+                    output.innerHTML = '<div class="error">❌ No token. Please login first.</div>';
+                    return;
+                }
+                
+                const testData = {
+                    dealType: 'SALE',
+                    title: 'Test Listing - ' + new Date().toLocaleString('vi-VN'),
+                    description: 'Test listing created by seller permission test',
+                    priceAmount: 1000,
+                    priceCurrency: 'VND',
+                    locationDepotId: 1,
+                    facets: {}
+                };
+                
+                const response = await fetch(`${API_BASE}/listings`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(testData)
+                });
+                
+                const result = await response.json();
+                
+                let html = '<div class="' + (response.ok ? 'success' : 'error') + '">';
+                html += '<h3>📡 API Response:</h3>';
+                html += '<p><strong>Status:</strong> ' + response.status + ' ' + response.statusText + '</p>';
+                
+                if (response.ok) {
+                    html += '<p><strong>✅ SUCCESS!</strong> Seller can create listing without CREATE_LISTING permission!</p>';
+                    html += '<p>Listing ID: ' + (result.data?.listing?.id || 'N/A') + '</p>';
+                } else {
+                    html += '<p><strong>❌ FAILED!</strong></p>';
+                    html += '<p>Message: ' + (result.message || 'Unknown error') + '</p>';
+                    
+                    if (response.status === 403) {
+                        html += '<p><strong>⚠️ Still 403!</strong> Backend code might not be updated yet. Please:</p>';
+                        html += '<ol><li>Make sure backend was rebuilt (npm run build)</li>';
+                        html += '<li>Make sure backend was restarted</li>';
+                        html += '<li>Check backend logs</li></ol>';
+                    }
+                }
+                
+                html += '<details><summary>Full Response</summary><pre>';
+                html += JSON.stringify(result, null, 2);
+                html += '</pre></details>';
+                html += '</div>';
+                
+                output.innerHTML = html;
+                
+            } catch (error) {
+                output.innerHTML = '<div class="error">❌ Network Error: ' + error.message + '</div>';
+            }
+        }
+        
+        // Auto check on load
+        window.addEventListener('load', checkToken);
+    </script>
+</body>
+</html>

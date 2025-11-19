@@ -1,0 +1,487 @@
+/* Custom Driver.js Styles */
+/* Tùy chỉnh giao diện tour cho phù hợp với theme dự án */
+
+@import 'driver.js/dist/driver.css';
+
+:root {
+  --driver-z-index: 10000;
+  --driver-overlay-color: rgba(0, 0, 0, 0.5); /* ✅ Lighter overlay like example */
+  --driver-active-element-color: #ffffff; /* ✅ White background for highlighted area */
+  --driver-popover-bg-color: #ffffff;
+  --driver-popover-text-color: #1f2937;
+  --driver-popover-border-radius: 12px;
+  --driver-popover-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --driver-btn-bg-color: #3b82f6;
+  --driver-btn-text-color: #ffffff;
+  --driver-btn-hover-bg-color: #2563eb;
+  --driver-close-btn-color: #6b7280;
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --driver-popover-bg-color: #1f2937;
+    --driver-popover-text-color: #f3f4f6;
+    --driver-close-btn-color: #9ca3af;
+  }
+}
+
+/* Popover custom styles - FIXED POSITIONING */
+.driver-popover {
+  background: var(--driver-popover-bg-color) !important;
+  border-radius: var(--driver-popover-border-radius) !important;
+  box-shadow: var(--driver-popover-shadow) !important;
+  border: 1px solid rgba(0, 0, 0, 0.1) !important;
+  max-width: 400px !important;
+  pointer-events: auto !important;
+  z-index: 10000 !important;
+  position: fixed !important; /* ✅ CRITICAL: Changed from absolute to fixed */
+  /* ✅ CRITICAL: Ensure proper positioning */
+  transform-origin: center center !important;
+  will-change: transform, opacity !important;
+  /* ✅ NEW: Fix positioning calculation */
+  margin: 0 !important;
+  padding: 20px !important;
+  /* ✅ CRITICAL: Let driver.js calculate position */
+  transform: translate3d(var(--driver-popover-x, 0), var(--driver-popover-y, 0), 0) !important;
+}
+
+.driver-popover * {
+  pointer-events: auto !important;
+}
+
+.driver-popover.driverjs-theme {
+  animation: fadeIn 0.3s ease-in-out;
+  pointer-events: auto !important;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Title */
+.driver-popover-title {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--driver-popover-text-color);
+  margin-bottom: 0.75rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* Description */
+.driver-popover-description {
+  font-size: 0.9375rem;
+  line-height: 1.6;
+  color: var(--driver-popover-text-color);
+  opacity: 0.9;
+  margin-bottom: 1rem;
+}
+
+/* Progress text */
+.driver-popover-progress-text {
+  font-size: 0.875rem;
+  color: var(--driver-popover-text-color);
+  opacity: 0.7;
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+}
+
+/* Buttons */
+.driver-popover-footer {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  pointer-events: auto !important;
+}
+
+.driver-popover-footer * {
+  pointer-events: auto !important;
+}
+
+.driver-popover-btn {
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 0.5rem;
+  cursor: pointer !important;
+  transition: all 0.2s;
+  border: none;
+  outline: none;
+  pointer-events: auto !important;
+  position: relative !important;
+  z-index: 10 !important;
+  overflow: visible !important;
+}
+
+/* Button overlays - Simplified */
+.driver-button-overlay {
+  position: absolute !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  width: 100% !important;
+  height: 100% !important;
+  z-index: 999999999 !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  background: transparent !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  border: none !important;
+}
+
+.driver-popover-next-btn,
+.driver-popover-done-btn {
+  background: var(--driver-btn-bg-color) !important;
+  color: var(--driver-btn-text-color) !important;
+  cursor: pointer !important;
+  pointer-events: auto !important;
+  user-select: none !important;
+  touch-action: manipulation !important;
+  position: relative !important;
+}
+
+.driver-popover-next-btn:hover,
+.driver-popover-done-btn:hover {
+  background: var(--driver-btn-hover-bg-color) !important;
+  transform: translateY(-1px);
+  pointer-events: auto !important;
+}
+
+.driver-popover-next-btn:active,
+.driver-popover-done-btn:active {
+  transform: scale(0.98) !important;
+}
+
+.driver-popover-prev-btn {
+  background: transparent;
+  color: var(--driver-popover-text-color);
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  cursor: pointer !important;
+  position: relative !important;
+}
+
+.driver-popover-prev-btn:hover {
+  background: rgba(0, 0, 0, 0.05);
+}
+
+.driver-popover-close-btn {
+  position: absolute !important;
+  top: 0 !important;
+  right: 0 !important;
+  width: 32px !important;
+  height: 28px !important;
+  cursor: pointer !important;
+  font-size: 18px !important;
+  font-weight: 500 !important;
+  color: #d2d2d2 !important;
+  z-index: 1000000001 !important;
+  text-align: center !important;
+  pointer-events: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 0.375rem !important;
+  transition: all 0.2s !important;
+  /* CRITICAL overrides for clickability */
+  visibility: visible !important;
+  opacity: 1 !important;
+  user-select: none !important;
+  touch-action: manipulation !important;
+  overflow: visible !important;
+  border: none !important;
+  background: transparent !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.driver-popover-close-btn:hover,
+.driver-popover-close-btn:focus {
+  color: #2d2d2d !important;
+  background: rgba(0, 0, 0, 0.05) !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+.driver-popover-close-btn:active {
+  transform: scale(0.95) !important;
+  background: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Arrow - FIXED POSITIONING */
+.driver-popover-arrow {
+  border-color: var(--driver-popover-bg-color);
+  position: absolute !important;
+  z-index: -1 !important;
+}
+
+.driver-popover-arrow-side-top.driver-popover-arrow {
+  border-top-color: var(--driver-popover-bg-color) !important;
+  border-left-color: transparent !important;
+  border-right-color: transparent !important;
+  border-bottom-color: transparent !important;
+}
+
+.driver-popover-arrow-side-bottom.driver-popover-arrow {
+  border-bottom-color: var(--driver-popover-bg-color) !important;
+  border-left-color: transparent !important;
+  border-right-color: transparent !important;
+  border-top-color: transparent !important;
+}
+
+.driver-popover-arrow-side-left.driver-popover-arrow {
+  border-left-color: var(--driver-popover-bg-color) !important;
+  border-top-color: transparent !important;
+  border-right-color: transparent !important;
+  border-bottom-color: transparent !important;
+}
+
+.driver-popover-arrow-side-right.driver-popover-arrow {
+  border-right-color: var(--driver-popover-bg-color) !important;
+  border-left-color: transparent !important;
+  border-top-color: transparent !important;
+  border-bottom-color: transparent !important;
+}
+
+/* ========================================
+   HIGHLIGHTED ELEMENT - COMPLETE OVERRIDE
+   ======================================== */
+
+/* Main highlighted element */
+.driver-active-element {
+  z-index: 10001 !important;
+  position: relative !important;
+  transition: all 0.3s ease !important;
+  pointer-events: auto !important;
+  background-color: #ffffff !important;
+  border-radius: 8px !important;
+}
+
+/* Force white background on ALL descendants EXCEPT buttons */
+.driver-active-element,
+.driver-active-element > div,
+.driver-active-element .space-y-2,
+.driver-active-element .relative {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Only force white on container divs, not all elements */
+.driver-active-element > div,
+.driver-active-element .space-y-2 {
+  background-color: #ffffff !important;
+}
+
+/* Keep actual highlighted element visible */
+.driver-active-element {
+  opacity: 1 !important;
+  visibility: visible !important;
+}
+
+/* Specific input styling */
+.driver-active-element input[type="email"],
+.driver-active-element input[type="password"],
+.driver-active-element input[type="text"],
+.driver-active-element textarea,
+.driver-active-element select {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-color: #d1d5db !important;
+  opacity: 1 !important;
+}
+
+/* Labels stay visible */
+.driver-active-element label {
+  background-color: transparent !important;
+  opacity: 1 !important;
+}
+
+/* Buttons KEEP their original colors */
+.driver-active-element button,
+.driver-active-element button[type="submit"],
+.driver-active-element button[type="button"] {
+  opacity: 1 !important;
+  visibility: visible !important;
+  /* DO NOT override background - let button keep its color */
+}
+
+/* Only ghost/icon buttons need transparent */
+.driver-active-element button[type="button"].absolute {
+  background-color: transparent !important;
+}
+
+/* Icons slightly muted */
+.driver-active-element svg {
+  opacity: 0.6 !important;
+}
+
+/* ========================================
+   DARK MODE OVERRIDE - NUCLEAR OPTION
+   ======================================== */
+
+/* Override ALL dark mode selectors for INPUTS only */
+.dark .driver-active-element input,
+.dark .driver-active-element textarea,
+html.dark .driver-active-element input {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* Keep divs white */
+.dark .driver-active-element > div,
+.dark .driver-active-element .space-y-2 {
+  background-color: #ffffff !important;
+}
+
+/* Target specific Tailwind dark: utility classes */
+.dark .driver-active-element input.dark\:bg-gray-700,
+.dark .driver-active-element .dark\:bg-gray-700,
+.dark .driver-active-element input.dark\:text-white {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* Ultra-specific selectors for #email and #password */
+input#email.driver-active-element,
+input#password.driver-active-element,
+.dark input#email,
+.dark input#password,
+html.dark input#email.driver-active-element,
+html.dark input#password.driver-active-element {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-color: #d1d5db !important;
+}
+
+/* ✅ CRITICAL: Login button must keep its blue background */
+button#login-submit-button.driver-active-element,
+.driver-active-element button#login-submit-button,
+button[type="submit"].driver-active-element,
+#login-submit-button {
+  /* Force blue button visible */
+  background-color: #2563eb !important; /* blue-600 */
+  color: #ffffff !important;
+  opacity: 1 !important;
+  visibility: visible !important;
+  border-color: transparent !important;
+}
+
+/* Placeholder text */
+.driver-active-element input::placeholder,
+.dark .driver-active-element input::placeholder {
+  color: #9ca3af !important;
+  opacity: 0.7 !important;
+}
+
+/* Stage/Highlight - Clear visibility like Driver.js example */
+.driver-stage {
+  position: fixed !important;
+  z-index: 10000 !important;
+  pointer-events: none !important;
+  transition: all 0.3s ease !important;
+  transform: translate3d(0, 0, 0) !important;
+  /* ✅ Transparent to show element clearly */
+  background-color: transparent !important;
+  /* ✅ Clear border for emphasis */
+  box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.8),
+              0 0 0 5px rgba(0, 0, 0, 0.3) !important;
+  border-radius: 8px !important;
+}
+
+/* Overlay - Lighter background like Driver.js example */
+.driver-overlay {
+  transition: all 0.3s ease !important;
+  pointer-events: auto !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 9997 !important;
+}
+
+/* ========================================
+   DARK MODE SPECIFIC OVERRIDES - CLEANED UP
+   ======================================== */
+
+/* Remove duplicate rules - already covered above */
+
+/* Container for proper positioning context */
+.driver-container {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  pointer-events: none !important;
+  z-index: 9998 !important;
+}
+
+/* Ensure all driver elements have correct pointer events */
+.driver-active .driver-popover,
+.driver-active .driver-popover *,
+.driver-active .driver-popover-close-btn {
+  pointer-events: auto !important;
+}
+
+/* Responsive styles */
+@media (max-width: 768px) {
+  .driver-popover {
+    max-width: 90vw;
+    margin: 1rem;
+  }
+
+  .driver-popover-title {
+    font-size: 1rem;
+  }
+
+  .driver-popover-description {
+    font-size: 0.875rem;
+  }
+
+  .driver-popover-footer {
+    flex-direction: column-reverse;
+  }
+
+  .driver-popover-btn {
+    width: 100%;
+  }
+}
+
+/* Special effects for important steps */
+.driver-popover.highlight-important {
+  border: 2px solid #3b82f6;
+  box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.2), var(--driver-popover-shadow);
+}
+
+/* ========================================
+   FINAL NUCLEAR OPTION - ABSOLUTE OVERRIDE
+   ======================================== */
+
+/* When driver is active, FORCE white on highlighted input regardless of dark mode */
+body.driver-active-item #email,
+body.driver-active-item #password,
+.driver-active #email,
+.driver-active #password {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+}
+
+/* Override Tailwind dark mode on inputs during tour */
+.dark body.driver-active-item input,
+.dark .driver-active input[type="email"],
+.dark .driver-active input[type="password"] {
+  background-color: #ffffff !important;
+  color: #000000 !important;
+  border-color: #d1d5db !important;
+}

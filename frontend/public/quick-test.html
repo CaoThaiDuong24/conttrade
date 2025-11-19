@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Quick Driver.js Test</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.3.6/dist/driver.css">
+  <style>
+    body { padding: 40px; font-family: Arial; }
+    #test { padding: 40px; background: #f0f0f0; margin: 20px; }
+  </style>
+</head>
+<body>
+  <h1>Quick Test - Click Close Button</h1>
+  <div id="test">Test Element</div>
+  <button onclick="runTest()">START TEST</button>
+  
+  <script src="https://cdn.jsdelivr.net/npm/driver.js@1.3.6/dist/driver.iife.js"></script>
+  <script>
+    function runTest() {
+      console.clear();
+      console.log('🚀 Starting test...');
+      
+      const driverObj = window.driver({
+        showProgress: false,
+        allowClose: true,
+        steps: [{
+          element: '#test',
+          popover: { title: 'Test', description: 'Click X button now!' }
+        }]
+      });
+      
+      driverObj.drive();
+      
+      // Wait for popover to render
+      setTimeout(() => {
+        const closeBtn = document.querySelector('.driver-popover-close-btn');
+        console.log('Close button found:', !!closeBtn);
+        
+        if (closeBtn) {
+          console.log('Button element:', closeBtn);
+          console.log('Computed style:', {
+            display: getComputedStyle(closeBtn).display,
+            pointerEvents: getComputedStyle(closeBtn).pointerEvents,
+            visibility: getComputedStyle(closeBtn).visibility,
+            zIndex: getComputedStyle(closeBtn).zIndex
+          });
+          
+          // Test 1: Add listener
+          closeBtn.addEventListener('click', (e) => {
+            console.log('✅ CLICK EVENT FIRED!', e);
+            alert('Close button clicked!');
+          }, { capture: true });
+          
+          // Test 2: Simulate click
+          console.log('Simulating click...');
+          closeBtn.click();
+        }
+      }, 300);
+    }
+  </script>
+</body>
+</html>

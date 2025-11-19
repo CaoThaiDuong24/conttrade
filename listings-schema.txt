@@ -1,0 +1,76 @@
+﻿                                           Table "public.listings"
+          Column          |              Type              | Collation | Nullable |         Default          
+--------------------------+--------------------------------+-----------+----------+--------------------------
+ id                       | text                           |           | not null | 
+ container_id             | text                           |           |          | 
+ seller_user_id           | text                           |           | not null | 
+ org_id                   | text                           |           |          | 
+ deal_type                | "DealType"                     |           | not null | 
+ price_currency           | text                           |           | not null | 'VND'::text
+ price_amount             | numeric(65,30)                 |           | not null | 
+ rental_unit              | text                           |           |          | 
+ location_depot_id        | text                           |           |          | 
+ status                   | "ListingStatus"                |           | not null | 'DRAFT'::"ListingStatus"
+ title                    | text                           |           | not null | 
+ description              | text                           |           |          | 
+ features                 | jsonb                          |           |          | 
+ specifications           | jsonb                          |           |          | 
+ view_count               | integer                        |           | not null | 0
+ favorite_count           | integer                        |           | not null | 0
+ published_at             | timestamp(3) without time zone |           |          | 
+ expires_at               | timestamp(3) without time zone |           |          | 
+ created_at               | timestamp(3) without time zone |           | not null | CURRENT_TIMESTAMP
+ updated_at               | timestamp(3) without time zone |           | not null | 
+ deleted_at               | timestamp(3) without time zone |           |          | 
+ rejection_reason         | text                           |           |          | 
+ admin_reviewed_by        | character varying(255)         |           |          | 
+ admin_reviewed_at        | timestamp without time zone    |           |          | 
+ total_quantity           | integer                        |           |          | 1
+ available_quantity       | integer                        |           |          | 1
+ rented_quantity          | integer                        |           |          | 0
+ reserved_quantity        | integer                        |           |          | 0
+ maintenance_quantity     | integer                        |           |          | 0
+ min_rental_duration      | integer                        |           |          | 
+ max_rental_duration      | integer                        |           |          | 
+ deposit_required         | boolean                        |           |          | false
+ deposit_amount           | numeric(15,2)                  |           |          | 
+ deposit_currency         | character varying(3)           |           |          | 
+ late_return_fee_amount   | numeric(15,2)                  |           |          | 
+ late_return_fee_unit     | character varying(20)          |           |          | 
+ earliest_available_date  | timestamp without time zone    |           |          | 
+ latest_return_date       | timestamp without time zone    |           |          | 
+ auto_renewal_enabled     | boolean                        |           |          | false
+ renewal_notice_days      | integer                        |           |          | 7
+ renewal_price_adjustment | numeric(5,2)                   |           |          | 0.00
+ last_rented_at           | timestamp without time zone    |           |          | 
+ total_rental_count       | integer                        |           |          | 0
+Indexes:
+    "listings_pkey" PRIMARY KEY, btree (id)
+Check constraints:
+    "check_available_quantity_non_negative" CHECK (available_quantity >= 0)
+    "check_deposit_amount_positive" CHECK (deposit_amount IS NULL OR deposit_amount > 0::numeric)
+    "check_deposit_currency_when_required" CHECK (NOT deposit_required OR deposit_amount IS NOT NULL AND deposit_amount > 0::numeric AND deposit_currency IS NOT NULL)
+    "check_late_fee_amount_positive" CHECK (late_return_fee_amount IS NULL OR late_return_fee_amount > 0::numeric)
+    "check_maintenance_quantity_non_negative" CHECK (maintenance_quantity >= 0)
+    "check_quantity_balance" CHECK ((available_quantity + rented_quantity + reserved_quantity + maintenance_quantity) = total_quantity)
+    "check_renewal_notice_days_positive" CHECK (renewal_notice_days > 0)
+    "check_rental_duration_logical" CHECK ((min_rental_duration IS NULL OR min_rental_duration > 0) AND (max_rental_duration IS NULL OR max_rental_duration > 0) AND (min_rental_duration IS NULL OR max_rental_duration IS NULL OR min_rental_duration <= max_rental_duration))
+    "check_rented_quantity_non_negative" CHECK (rented_quantity >= 0)
+    "check_reserved_quantity_non_negative" CHECK (reserved_quantity >= 0)
+    "check_return_date_after_available" CHECK (earliest_available_date IS NULL OR latest_return_date IS NULL OR earliest_available_date < latest_return_date)
+    "check_total_quantity_positive" CHECK (total_quantity >= 1)
+    "check_total_rental_count_non_negative" CHECK (total_rental_count >= 0)
+Foreign-key constraints:
+    "listings_container_id_fkey" FOREIGN KEY (container_id) REFERENCES containers(id) ON UPDATE CASCADE ON DELETE SET NULL
+    "listings_location_depot_id_fkey" FOREIGN KEY (location_depot_id) REFERENCES depots(id) ON UPDATE CASCADE ON DELETE SET NULL
+    "listings_org_id_fkey" FOREIGN KEY (org_id) REFERENCES orgs(id) ON UPDATE CASCADE ON DELETE SET NULL
+    "listings_seller_user_id_fkey" FOREIGN KEY (seller_user_id) REFERENCES users(id) ON UPDATE CASCADE ON DELETE RESTRICT
+Referenced by:
+    TABLE "conversations" CONSTRAINT "conversations_listing_id_fkey" FOREIGN KEY (listing_id) REFERENCES listings(id) ON UPDATE CASCADE ON DELETE CASCADE
+    TABLE "favorites" CONSTRAINT "favorites_listing_id_fkey" FOREIGN KEY (listing_id) REFERENCES listings(id) ON UPDATE CASCADE ON DELETE CASCADE
+    TABLE "inspections" CONSTRAINT "inspections_listing_id_fkey" FOREIGN KEY (listing_id) REFERENCES listings(id) ON UPDATE CASCADE ON DELETE SET NULL
+    TABLE "listing_facets" CONSTRAINT "listing_facets_listing_id_fkey" FOREIGN KEY (listing_id) REFERENCES listings(id) ON UPDATE CASCADE ON DELETE CASCADE
+    TABLE "listing_media" CONSTRAINT "listing_media_listing_id_fkey" FOREIGN KEY (listing_id) REFERENCES listings(id) ON UPDATE CASCADE ON DELETE CASCADE
+    TABLE "orders" CONSTRAINT "orders_listing_id_fkey" FOREIGN KEY (listing_id) REFERENCES listings(id) ON UPDATE CASCADE ON DELETE SET NULL
+    TABLE "rfqs" CONSTRAINT "rfqs_listing_id_fkey" FOREIGN KEY (listing_id) REFERENCES listings(id) ON UPDATE CASCADE ON DELETE SET NULL
+

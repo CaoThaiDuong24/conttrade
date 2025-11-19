@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clear Browser Storage</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            text-align: center;
+        }
+        .btn {
+            background: #0070f3;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            cursor: pointer;
+            border-radius: 5px;
+            margin: 10px;
+        }
+        .btn:hover {
+            background: #0051cc;
+        }
+        .success {
+            color: green;
+            margin-top: 20px;
+            font-weight: bold;
+        }
+        .info {
+            background: #f0f0f0;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            text-align: left;
+        }
+    </style>
+</head>
+<body>
+    <h1>🧹 Clear Browser Storage</h1>
+    <p>Click button below to clear all cached data (localStorage, sessionStorage, cookies)</p>
+    
+    <div class="info">
+        <strong>Current Storage:</strong>
+        <pre id="storage-info">Loading...</pre>
+    </div>
+    
+    <button class="btn" onclick="clearAll()">Clear All Storage</button>
+    <button class="btn" onclick="location.reload()" style="background: #666;">Refresh Page</button>
+    
+    <div id="result"></div>
+    
+    <script>
+        function showStorageInfo() {
+            const info = {
+                localStorage: Object.keys(localStorage).length + ' items',
+                sessionStorage: Object.keys(sessionStorage).length + ' items',
+                cookies: document.cookie.split(';').length + ' cookies'
+            };
+            
+            document.getElementById('storage-info').textContent = JSON.stringify(info, null, 2);
+        }
+        
+        function clearAll() {
+            // Clear localStorage
+            localStorage.clear();
+            
+            // Clear sessionStorage
+            sessionStorage.clear();
+            
+            // Clear all cookies
+            const cookies = document.cookie.split(';');
+            for (let cookie of cookies) {
+                const name = cookie.split('=')[0].trim();
+                document.cookie = name + '=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
+            }
+            
+            document.getElementById('result').innerHTML = '<div class="success">✅ All storage cleared! Please refresh or go to login page.</div>';
+            
+            setTimeout(() => {
+                showStorageInfo();
+            }, 500);
+        }
+        
+        // Show initial storage info
+        showStorageInfo();
+    </script>
+</body>
+</html>

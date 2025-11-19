@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Force Logout & Refresh Token - Buyer Account</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.2);
+        }
+        h1 {
+            color: #333;
+            border-bottom: 3px solid #667eea;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        .info-box {
+            background: #f0f4ff;
+            border-left: 4px solid #667eea;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .warning-box {
+            background: #fff3cd;
+            border-left: 4px solid #ffc107;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .success-box {
+            background: #d4edda;
+            border-left: 4px solid #28a745;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 5px;
+            display: none;
+        }
+        button {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            font-size: 16px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin: 10px 5px;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        button:active {
+            transform: translateY(0);
+        }
+        .danger-btn {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        pre {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            overflow-x: auto;
+            border: 1px solid #dee2e6;
+        }
+        .step {
+            background: #fff;
+            border: 2px solid #667eea;
+            padding: 15px;
+            margin: 15px 0;
+            border-radius: 8px;
+        }
+        .step-number {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            text-align: center;
+            line-height: 30px;
+            margin-right: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🔄 Force Logout & Refresh Token - Buyer Account</h1>
+        
+        <div class="info-box">
+            <strong>📋 Mục đích:</strong><br>
+            Tool này giúp buyer đăng xuất và xóa token cũ, sau đó đăng nhập lại để nhận token mới với quyền CREATE_LISTING (<strong>PM-010</strong>)
+        </div>
+
+        <div class="warning-box">
+            <strong>⚠️ Lưu ý quan trọng:</strong><br>
+            - Sau khi fix code, bạn PHẢI đăng xuất và đăng nhập lại<br>
+            - Token cũ vẫn chứa permissions cũ (không có PM-010)<br>
+            - Token mới sẽ chứa permission code: <strong>PM-010</strong> (CREATE_LISTING)
+        </div>
+
+        <div class="step">
+            <span class="step-number">1</span>
+            <strong>Kiểm tra token hiện tại</strong>
+            <button onclick="checkCurrentToken()">🔍 Xem Token Hiện Tại</button>
+        </div>
+
+        <div id="tokenInfo" style="display: none;">
+            <pre id="tokenContent"></pre>
+        </div>
+
+        <div class="step">
+            <span class="step-number">2</span>
+            <strong>Clear localStorage & Logout</strong>
+            <button class="danger-btn" onclick="forceLogout()">🗑️ Force Logout & Clear Cache</button>
+        </div>
+
+        <div id="successBox" class="success-box">
+            <strong>✅ Đã logout thành công!</strong><br>
+            Bây giờ hãy đăng nhập lại với tài khoản buyer để nhận token mới.
+        </div>
+
+        <div class="step">
+            <span class="step-number">3</span>
+            <strong>Đăng nhập lại</strong>
+            <button onclick="goToLogin()">🔐 Đi đến trang Login</button>
+        </div>
+
+        <div class="step">
+            <span class="step-number">4</span>
+            <strong>Sau khi đăng nhập, kiểm tra lại</strong>
+            <button onclick="checkNewToken()">✅ Kiểm tra Token Mới</button>
+        </div>
+
+        <div class="info-box" style="margin-top: 30px;">
+            <strong>🔧 Chi tiết kỹ thuật đã fix:</strong><br>
+            <ul>
+                <li><strong>Backend:</strong> Sửa check từ <code>userPermissions.includes('CREATE_LISTING')</code> → <code>userPermissions.includes('PM-010')</code></li>
+                <li><strong>Frontend:</strong> Sửa check từ <code>userPermissions.includes('CREATE_LISTING')</code> → <code>userPermissions.includes('PM-010')</code></li>
+                <li><strong>JWT Token:</strong> Lưu permission codes (PM-001, PM-010...) thay vì names</li>
+                <li><strong>Database:</strong> Buyer role ĐÃ CÓ permission PM-010 (CREATE_LISTING)</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        function parseJwt(token) {
+            try {
+                const base64Url = token.split('.')[1];
+                const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+                const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+                    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+                }).join(''));
+                return JSON.parse(jsonPayload);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        function checkCurrentToken() {
+            const token = localStorage.getItem('accessToken');
+            const tokenInfo = document.getElementById('tokenInfo');
+            const tokenContent = document.getElementById('tokenContent');
+            
+            if (!token) {
+                tokenContent.textContent = '❌ Không tìm thấy token. Bạn chưa đăng nhập.';
+                tokenInfo.style.display = 'block';
+                return;
+            }
+
+            const decoded = parseJwt(token);
+            if (decoded) {
+                tokenContent.textContent = JSON.stringify({
+                    userId: decoded.userId,
+                    email: decoded.email,
+                    roles: decoded.roles,
+                    permissions: decoded.permissions,
+                    exp: new Date(decoded.exp * 1000).toLocaleString('vi-VN')
+                }, null, 2);
+                
+                console.log('📊 Current Token:', decoded);
+                console.log('🔑 Permissions:', decoded.permissions);
+                
+                if (decoded.permissions && decoded.permissions.includes('PM-010')) {
+                    tokenContent.textContent += '\n\n✅ Token ĐÃ CÓ permission PM-010 (CREATE_LISTING)';
+                } else {
+                    tokenContent.textContent += '\n\n❌ Token CHƯA CÓ permission PM-010 - CẦN ĐĂNG NHẬP LẠI!';
+                }
+            } else {
+                tokenContent.textContent = '❌ Token không hợp lệ';
+            }
+            
+            tokenInfo.style.display = 'block';
+        }
+
+        function forceLogout() {
+            // Clear all auth data
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('user');
+            sessionStorage.clear();
+            
+            // Clear cookies
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            
+            console.log('✅ Cleared all auth data');
+            
+            // Show success
+            document.getElementById('successBox').style.display = 'block';
+            
+            // Optional: call backend logout
+            fetch('http://localhost:3006/api/v1/auth/logout', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                }
+            }).catch(err => console.log('Logout API call (optional):', err));
+        }
+
+        function goToLogin() {
+            window.location.href = 'http://localhost:3000/vi/auth/login';
+        }
+
+        function checkNewToken() {
+            const token = localStorage.getItem('accessToken');
+            if (!token) {
+                alert('❌ Bạn chưa đăng nhập lại. Vui lòng đăng nhập trước.');
+                return;
+            }
+
+            const decoded = parseJwt(token);
+            if (decoded && decoded.permissions && decoded.permissions.includes('PM-010')) {
+                alert('✅ THÀNH CÔNG! Token mới đã có permission PM-010.\n\nBây giờ bạn có thể:\n- Thấy menu "Bán hàng"\n- Đăng tin mới');
+                console.log('✅ New token permissions:', decoded.permissions);
+            } else {
+                alert('❌ Token vẫn chưa có PM-010.\n\nVui lòng kiểm tra:\n1. Buyer role đã được gán permission PM-010 chưa?\n2. Database có permission PM-010 chưa?');
+                console.log('❌ Token permissions:', decoded ? decoded.permissions : 'No token');
+            }
+        }
+
+        // Auto-check on load
+        window.addEventListener('load', function() {
+            console.log('%c🔧 Force Logout Tool Loaded', 'color: #667eea; font-size: 16px; font-weight: bold;');
+            console.log('Use buttons above to check and refresh token');
+        });
+    </script>
+</body>
+</html>

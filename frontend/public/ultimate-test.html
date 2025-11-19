@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Driver.js Button Debug - Ultimate Test</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/driver.js@1.3.6/dist/driver.css">
+  <style>
+    body { padding: 40px; font-family: monospace; }
+    #test { padding: 40px; background: #e0e0e0; margin: 20px; }
+    .log { background: #000; color: #0f0; padding: 10px; margin: 10px 0; max-height: 400px; overflow-y: auto; }
+    button { margin: 5px; padding: 10px 20px; }
+  </style>
+</head>
+<body>
+  <h1>Driver.js Ultimate Button Debug</h1>
+  <div id="test">Test Element - Hover vào đây để start tour</div>
+  
+  <button onclick="startTour()">1. Start Tour</button>
+  <button onclick="checkButtons()">2. Check Buttons</button>
+  <button onclick="testClicks()">3. Test Clicks</button>
+  <button onclick="addOverlays()">4. Add Overlays</button>
+  <button onclick="forceClose()">5. Force Close</button>
+  
+  <div class="log" id="log"></div>
+  
+  <script src="https://cdn.jsdelivr.net/npm/driver.js@1.3.6/dist/driver.iife.js"></script>
+  <script>
+    let driverObj = null;
+    const log = (msg, color = '#0f0') => {
+      const div = document.getElementById('log');
+      const line = document.createElement('div');
+      line.style.color = color;
+      line.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+      div.appendChild(line);
+      div.scrollTop = div.scrollHeight;
+      console.log(msg);
+    };
+
+    function startTour() {
+      log('🚀 Starting tour...', '#ff0');
+      
+      driverObj = window.driver({
+        showProgress: true,
+        showButtons: ['next', 'previous', 'close'],
+        nextBtnText: 'Next',
+        prevBtnText: 'Prev',
+        doneBtnText: 'Done',
+        allowClose: true,
+        onPopoverRender: (popover) => {
+          log('📦 onPopoverRender called', '#0ff');
+          setTimeout(() => {
+            const wrapper = popover.wrapper;
+            const closeBtn = wrapper.querySelector('.driver-popover-close-btn');
+            const nextBtn = wrapper.querySelector('.driver-popover-next-btn');
+            
+            log(`Found buttons: close=${!!closeBtn}, next=${!!nextBtn}`, '#0ff');
+            
+            if (closeBtn) {
+              const rect = closeBtn.getBoundingClientRect();
+              log(`Close btn position: x=${rect.x}, y=${rect.y}, w=${rect.width}, h=${rect.height}`, '#0ff');
+              
+              const styles = window.getComputedStyle(closeBtn);
+              log(`Close btn styles: display=${styles.display}, pointerEvents=${styles.pointerEvents}, zIndex=${styles.zIndex}`, '#0ff');
+            }
+          }, 100);
+        },
+        onNextClick: () => { log('➡️ onNextClick callback', '#f0f'); },
+        onPrevClick: () => { log('⬅️ onPrevClick callback', '#f0f'); },
+        onCloseClick: () => { log('❌ onCloseClick callback', '#f0f'); },
+      });
+      
+      driverObj.setSteps([
+        { element: '#test', popover: { title: 'Step 1', description: 'Click X or Next' } },
+        { element: '#test', popover: { title: 'Step 2', description: 'Click X or Done' } },
+      ]);
+      
+      driverObj.drive();
+      log('✅ Tour started', '#0f0');
+    }
+
+    function checkButtons() {
+      log('🔍 Checking buttons...', '#ff0');
+      
+      const closeBtn = document.querySelector('.driver-popover-close-btn');
+      const nextBtn = document.querySelector('.driver-popover-next-btn');
+      const doneBtn = document.querySelector('.driver-popover-done-btn');
+      const prevBtn = document.querySelector('.driver-popover-prev-btn');
+      
+      log(`Close: ${!!closeBtn}`, closeBtn ? '#0f0' : '#f00');
+      log(`Next: ${!!nextBtn}`, nextBtn ? '#0f0' : '#f00');
+      log(`Done: ${!!doneBtn}`, doneBtn ? '#0f0' : '#f00');
+      log(`Prev: ${!!prevBtn}`, prevBtn ? '#0f0' : '#f00');
+      
+      if (closeBtn) {
+        const listeners = getEventListeners(closeBtn);
+        log(`Close button listeners: ${JSON.stringify(Object.keys(listeners))}`, '#0ff');
+        
+        // Test if element is clickable
+        const rect = closeBtn.getBoundingClientRect();
+        const elemAtPoint = document.elementFromPoint(rect.x + rect.width/2, rect.y + rect.height/2);
+        log(`Element at close button center: ${elemAtPoint?.className}`, elemAtPoint === closeBtn ? '#0f0' : '#f00');
+      }
+    }
+
+    function testClicks() {
+      log('🖱️ Testing programmatic clicks...', '#ff0');
+      
+      const closeBtn = document.querySelector('.driver-popover-close-btn');
+      if (closeBtn) {
+        log('Clicking close button...', '#ff0');
+        closeBtn.click();
+        
+        setTimeout(() => {
+          log('Dispatching MouseEvent...', '#ff0');
+          closeBtn.dispatchEvent(new MouseEvent('click', {
+            bubbles: true,
+            cancelable: true,
+            view: window
+          }));
+        }, 500);
+      } else {
+        log('❌ Close button not found', '#f00');
+      }
+    }
+
+    function addOverlays() {
+      log('🎨 Adding click overlays...', '#ff0');
+      
+      const popover = document.querySelector('.driver-popover');
+      if (!popover) {
+        log('❌ Popover not found', '#f00');
+        return;
+      }
+      
+      const buttons = popover.querySelectorAll('button');
+      log(`Found ${buttons.length} buttons`, '#0ff');
+      
+      buttons.forEach((btn, i) => {
+        const overlay = document.createElement('div');
+        overlay.style.cssText = `
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: rgba(255, 0, 0, 0.2);
+          z-index: 999999;
+          cursor: pointer;
+        `;
+        
+        overlay.addEventListener('click', (e) => {
+          log(`🎯 Overlay ${i} clicked on ${btn.className}`, '#0f0');
+          e.preventDefault();
+          e.stopPropagation();
+          
+          if (btn.classList.contains('driver-popover-close-btn') || 
+              btn.classList.contains('driver-popover-done-btn')) {
+            driverObj?.destroy();
+          } else if (btn.classList.contains('driver-popover-next-btn')) {
+            driverObj?.moveNext();
+          } else if (btn.classList.contains('driver-popover-prev-btn')) {
+            driverObj?.movePrevious();
+          }
+        }, { capture: true });
+        
+        btn.style.position = 'relative';
+        btn.appendChild(overlay);
+        
+        log(`✅ Overlay added to button ${i} (${btn.className})`, '#0f0');
+      });
+    }
+
+    function forceClose() {
+      log('💥 Force closing...', '#f00');
+      driverObj?.destroy();
+      document.querySelector('.driver-overlay')?.remove();
+      document.querySelector('.driver-popover')?.remove();
+      log('✅ Closed', '#0f0');
+    }
+
+    log('✅ Test page ready', '#0f0');
+    log('Click "1. Start Tour" to begin', '#ff0');
+  </script>
+</body>
+</html>

@@ -1,0 +1,578 @@
+{
+  "common": {
+    "loading": "Đang tải...",
+    "error": "Có lỗi xảy ra",
+    "success": "Thành công",
+    "cancel": "Hủy",
+    "save": "Lưu",
+    "edit": "Chỉnh sửa",
+    "delete": "Xóa",
+    "confirm": "Xác nhận",
+    "back": "Quay lại",
+    "next": "Tiếp theo",
+    "previous": "Trước",
+    "search": "Tìm kiếm",
+    "filter": "Lọc",
+    "sort": "Sắp xếp",
+    "view": "Xem",
+    "create": "Tạo mới",
+    "update": "Cập nhật",
+    "submit": "Gửi",
+    "close": "Đóng",
+    "yes": "Có",
+    "no": "Không",
+    "ok": "OK",
+    "adminDashboard": "Bảng điều khiển Admin",
+    "usersAndRoles": "Người dùng & Vai trò",
+    "listingModeration": "Kiểm duyệt Tin đăng",
+    "disputeManagement": "Quản lý Tranh chấp",
+    "configurationSettings": "Cấu hình Hệ thống",
+    "templates": "Mẫu thông báo",
+    "auditLogs": "Nhật ký kiểm toán"
+  },
+  "auth": {
+    "login": "Đăng nhập",
+    "register": "Đăng ký",
+    "logout": "Đăng xuất",
+    "forgotPassword": "Quên mật khẩu",
+    "resetPassword": "Đặt lại mật khẩu",
+    "email": "Email",
+    "phone": "Số điện thoại",
+    "password": "Mật khẩu",
+    "confirmPassword": "Xác nhận mật khẩu",
+    "rememberMe": "Ghi nhớ đăng nhập",
+    "loginWithGoogle": "Đăng nhập với Google",
+    "loginWithFacebook": "Đăng nhập với Facebook",
+    "dontHaveAccount": "Chưa có tài khoản?",
+    "alreadyHaveAccount": "Đã có tài khoản?",
+    "signUpHere": "Đăng ký tại đây",
+    "signInHere": "Đăng nhập tại đây",
+    "accountType": "Loại tài khoản",
+    "individual": "Cá nhân",
+    "business": "Doanh nghiệp",
+    "verifyOtp": "Xác minh OTP",
+    "otp": "Mã OTP",
+    "loggingIn": "Đang đăng nhập...",
+    "creatingAccount": "Đang tạo tài khoản...",
+    "loginSuccess": "Đăng nhập thành công! Đang chuyển hướng...",
+    "registerSuccess": "Đăng ký thành công! Đang chuyển hướng...",
+    "loginError": "Tên đăng nhập hoặc mật khẩu không đúng",
+    "registerError": "Đăng ký thất bại. Vui lòng thử lại.",
+    "loginErrorGeneral": "Có lỗi xảy ra khi đăng nhập. Vui lòng thử lại.",
+    "registerErrorGeneral": "Có lỗi xảy ra. Vui lòng thử lại sau.",
+    "validation": {
+      "requiredFields": "Vui lòng nhập đầy đủ thông tin"
+    }
+  },
+  "navigation": {
+    "home": "Trang chủ",
+    "listings": "Tin đăng",
+    "rfq": "Yêu cầu báo giá",
+    "orders": "Đơn hàng",
+    "delivery": "Vận chuyển",
+    "reviews": "Đánh giá",
+    "disputes": "Tranh chấp",
+    "admin": "Quản trị",
+    "help": "Trợ giúp",
+    "legal": "Pháp lý",
+    "profile": "Hồ sơ",
+    "settings": "Cài đặt"
+  },
+  "home": {
+    "title": "Nền tảng Giao dịch Container Tích hợp",
+    "subtitle": "Kết nối mua bán, cho thuê container với dịch vụ giám định, sửa chữa và vận chuyển chuyên nghiệp",
+    "searchPlaceholder": "Tìm kiếm container...",
+    "featuredListings": "Tin đăng nổi bật",
+    "recentListings": "Tin đăng mới nhất",
+    "trustHub": "Trung tâm Đảm bảo Niềm tin",
+    "trustHubDescription": "Giám định chất lượng, thanh toán an toàn, dịch vụ chuyên nghiệp",
+    "getStarted": "Bắt đầu ngay",
+    "learnMore": "Tìm hiểu thêm"
+  },
+  "listings": {
+    "title": "Danh sách Container",
+    "createListing": "Đăng tin mới",
+    "myListings": "Tin đăng của tôi",
+    "searchResults": "Kết quả tìm kiếm",
+    "noResults": "Không tìm thấy kết quả",
+    "filters": {
+      "dealType": "Loại giao dịch",
+      "size": "Kích thước",
+      "standard": "Tiêu chuẩn",
+      "condition": "Tình trạng",
+      "depot": "Depot",
+      "priceRange": "Khoảng giá",
+      "location": "Vị trí"
+    },
+    "sortBy": {
+      "newest": "Mới nhất",
+      "oldest": "Cũ nhất",
+      "priceLow": "Giá thấp",
+      "priceHigh": "Giá cao",
+      "relevance": "Độ liên quan"
+    },
+    "status": {
+      "draft": "Nháp",
+      "pending": "Chờ duyệt",
+      "active": "Đang hoạt động",
+      "paused": "Tạm dừng",
+      "sold": "Đã bán",
+      "rented": "Đã cho thuê",
+      "archived": "Lưu trữ",
+      "rejected": "Từ chối"
+    }
+  },
+  "listingDetail": {
+    "title": "Chi tiết Container",
+    "specifications": "Thông số kỹ thuật",
+    "description": "Mô tả",
+    "location": "Vị trí",
+    "seller": "Người bán",
+    "contactSeller": "Liên hệ người bán",
+    "requestQuote": "Yêu cầu báo giá",
+    "requestInspection": "Yêu cầu giám định",
+    "addToFavorites": "Thêm vào yêu thích",
+    "share": "Chia sẻ",
+    "report": "Báo cáo",
+    "price": "Giá",
+    "currency": "VND",
+    "rentalUnit": "Đơn vị thuê",
+    "available": "Có sẵn",
+    "notAvailable": "Không có sẵn"
+  },
+  "rfq": {
+    "title": "Yêu cầu Báo giá",
+    "createRfq": "Tạo yêu cầu báo giá",
+    "myRfqs": "RFQ của tôi",
+    "receivedRfqs": "RFQ nhận được",
+    "purpose": "Mục đích",
+    "quantity": "Số lượng",
+    "needBy": "Cần trước ngày",
+    "services": "Dịch vụ kèm theo",
+    "inspection": "Giám định",
+    "repair": "Sửa chữa",
+    "storage": "Lưu kho",
+    "delivery": "Vận chuyển",
+    "insurance": "Bảo hiểm",
+    "status": {
+      "submitted": "Đã gửi",
+      "quoted": "Đã báo giá",
+      "expired": "Hết hạn",
+      "accepted": "Đã chấp nhận",
+      "declined": "Từ chối"
+    }
+  },
+  "quotes": {
+    "title": "Báo giá",
+    "myQuotes": "Báo giá của tôi",
+    "receivedQuotes": "Báo giá nhận được",
+    "createQuote": "Tạo báo giá",
+    "items": "Danh mục",
+    "fees": "Phí",
+    "total": "Tổng cộng",
+    "validUntil": "Có hiệu lực đến",
+    "accept": "Chấp nhận",
+    "decline": "Từ chối",
+    "negotiate": "Thương lượng"
+  },
+  "orders": {
+    "title": "Đơn hàng",
+    "myOrders": "Đơn hàng của tôi",
+    "orderHistory": "Lịch sử đơn hàng",
+    "orderDetails": "Chi tiết đơn hàng",
+    "orderNumber": "Số đơn hàng",
+    "orderDate": "Ngày đặt",
+    "totalAmount": "Tổng tiền",
+    "status": {
+      "created": "Đã tạo",
+      "pendingPayment": "Chờ thanh toán",
+      "awaitingFunds": "Chờ thanh toán",
+      "escrowFunded": "Đã ký quỹ",
+      "preparingDelivery": "Chuẩn bị giao hàng",
+      "documentsReady": "Chứng từ sẵn sàng",
+      "transportationBooked": "Đã đặt vận chuyển",
+      "inTransit": "Đang vận chuyển",
+      "preparing": "Chuẩn bị",
+      "delivering": "Đang giao",
+      "delivered": "Đã giao",
+      "completed": "Hoàn thành",
+      "paymentReleased": "Đã giải ngân",
+      "cancelled": "Đã hủy",
+      "disputed": "Tranh chấp"
+    },
+    "timeline": "Lịch trình",
+    "documents": "Tài liệu",
+    "payment": "Thanh toán",
+    "delivery": "Giao hàng"
+  },
+  "delivery": {
+    "title": "Vận chuyển",
+    "requestDelivery": "Yêu cầu vận chuyển",
+    "trackDelivery": "Theo dõi giao hàng",
+    "deliveryHistory": "Lịch sử giao hàng",
+    "pickupAddress": "Địa chỉ lấy hàng",
+    "deliveryAddress": "Địa chỉ giao hàng",
+    "scheduleDate": "Ngày hẹn",
+    "requirements": "Yêu cầu đặc biệt",
+    "craneRequired": "Cần cẩu",
+    "trackingNumber": "Mã theo dõi",
+    "driver": "Tài xế",
+    "vehicle": "Phương tiện",
+    "eta": "Dự kiến đến",
+    "prepareDelivery": "Chuẩn bị giao hàng",
+    "bookTransportation": "Sắp xếp vận chuyển",
+    "processDocuments": "Xử lý chứng từ",
+    "releaseEscrow": "Giải ngân escrow",
+    "status": {
+      "requested": "Đã yêu cầu",
+      "booked": "Đã đặt",
+      "inTransit": "Đang vận chuyển",
+      "delivered": "Đã giao",
+      "failed": "Thất bại"
+    }
+  },
+  "reviews": {
+    "title": "Đánh giá",
+    "writeReview": "Viết đánh giá",
+    "myReviews": "Đánh giá của tôi",
+    "receivedReviews": "Đánh giá nhận được",
+    "rating": "Đánh giá",
+    "comment": "Bình luận",
+    "submit": "Gửi đánh giá",
+    "overall": "Tổng thể",
+    "quality": "Chất lượng",
+    "communication": "Giao tiếp",
+    "delivery": "Giao hàng",
+    "value": "Giá trị"
+  },
+  "workflow": {
+    "title": "Quy trình giao dịch",
+    "prepareDelivery": {
+      "title": "Chuẩn bị giao hàng Container",
+      "description": "Hoàn tất các bước chuẩn bị để giao container cho người mua",
+      "checklist": {
+        "title": "Checklist chuẩn bị bắt buộc",
+        "containerChecked": "Container đã được kiểm tra và sẵn sàng",
+        "documentsPrepared": "Chứng từ đã được chuẩn bị đầy đủ",
+        "logisticsArranged": "Hậu cần đã được sắp xếp"
+      },
+      "deliveryMethod": {
+        "title": "Phương thức giao hàng",
+        "depotPickup": "Người mua đến lấy tại depot",
+        "directDelivery": "Giao hàng trực tiếp",
+        "thirdParty": "Giao hàng qua bên thứ 3"
+      },
+      "deliveryInfo": {
+        "title": "Thông tin giao hàng",
+        "depotLocation": "Địa điểm Depot",
+        "deliveryAddress": "Địa chỉ giao hàng",
+        "deliveryContact": "Người nhận",
+        "deliveryPhone": "Số điện thoại",
+        "deliveryDate": "Ngày giao hàng",
+        "deliveryTime": "Giờ giao hàng"
+      },
+      "driverInfo": {
+        "title": "Thông tin tài xế",
+        "driverName": "Tên tài xế",
+        "driverPhone": "Số điện thoại tài xế",
+        "vehicleNumber": "Biển số xe"
+      },
+      "documents": {
+        "title": "Chứng từ",
+        "deliveryOrder": "D/O (Delivery Order)",
+        "inspectionReport": "Báo cáo kiểm tra"
+      },
+      "specialInstructions": "Hướng dẫn đặc biệt",
+      "notes": "Ghi chú bổ sung",
+      "submit": "Xác nhận chuẩn bị giao hàng"
+    },
+    "transportationBooking": {
+      "title": "Sắp xếp vận chuyển Container",
+      "description": "Đặt dịch vụ vận chuyển để nhận container tại địa chỉ của bạn",
+      "deliveryInfo": {
+        "title": "Thông tin giao hàng",
+        "deliveryAddress": "Địa chỉ giao hàng",
+        "deliveryContact": "Người nhận",
+        "deliveryPhone": "Số điện thoại"
+      },
+      "schedule": {
+        "title": "Lịch giao hàng",
+        "deliveryDate": "Ngày giao hàng",
+        "deliveryTime": "Giờ giao hàng"
+      },
+      "requirements": {
+        "title": "Yêu cầu đặc biệt",
+        "needsCrane": "Cần cẩu để bốc xếp container",
+        "specialInstructions": "Hướng dẫn đặc biệt"
+      },
+      "feeCalculation": {
+        "title": "Phí vận chuyển",
+        "baseFee": "Phí cơ bản",
+        "craneFee": "Phí cẩu",
+        "transportationFee": "Phí vận chuyển",
+        "total": "Tổng cộng"
+      },
+      "submit": "Xác nhận đặt vận chuyển"
+    },
+    "documents": {
+      "title": "Chứng từ giao hàng",
+      "edoGenerated": "EDO đã được tạo",
+      "pickupCode": "Mã nhận hàng",
+      "validUntil": "Có hiệu lực đến",
+      "download": "Tải xuống"
+    },
+    "messages": {
+      "prepareDeliverySuccess": "Chuẩn bị giao hàng thành công!",
+      "transportationBookedSuccess": "Đặt vận chuyển thành công!",
+      "documentsProcessedSuccess": "Xử lý chứng từ thành công!",
+      "escrowReleasedSuccess": "Giải ngân escrow thành công!",
+      "errorOccurred": "Có lỗi xảy ra, vui lòng thử lại"
+    }
+  },
+  "disputes": {
+    "title": "Tranh chấp",
+    "createDispute": "Tạo tranh chấp",
+    "myDisputes": "Tranh chấp của tôi",
+    "disputeDetails": "Chi tiết tranh chấp",
+    "reason": "Lý do",
+    "evidence": "Bằng chứng",
+    "resolution": "Giải quyết",
+    "status": {
+      "open": "Mở",
+      "investigating": "Đang điều tra",
+      "resolvedRefund": "Giải quyết hoàn tiền",
+      "resolvedPayout": "Giải quyết thanh toán",
+      "partial": "Một phần",
+      "closed": "Đã đóng"
+    }
+  },
+  "admin": {
+    "title": "Quản trị",
+    "dashboard": "Bảng điều khiển",
+    "users": "Người dùng",
+    "listings": "Tin đăng",
+    "orders": "Đơn hàng",
+    "disputes": "Tranh chấp",
+    "settings": "Cài đặt",
+    "reports": "Báo cáo",
+    "analytics": "Phân tích",
+    "moderation": "Kiểm duyệt",
+    "configuration": "Cấu hình"
+  },
+  "profile": {
+    "title": "Hồ sơ cá nhân",
+    "personalInfo": "Thông tin cá nhân",
+    "businessInfo": "Thông tin doanh nghiệp",
+    "verification": "Xác thực",
+    "kyc": "Xác thực danh tính",
+    "kyb": "Xác thực doanh nghiệp",
+    "documents": "Tài liệu",
+    "address": "Địa chỉ",
+    "contact": "Liên hệ",
+    "preferences": "Tùy chọn",
+    "notifications": "Thông báo",
+    "privacy": "Quyền riêng tư"
+  },
+  "help": {
+    "title": "Trung tâm Trợ giúp",
+    "faq": "Câu hỏi thường gặp",
+    "contact": "Liên hệ hỗ trợ",
+    "guides": "Hướng dẫn",
+    "tutorials": "Hướng dẫn sử dụng",
+    "support": "Hỗ trợ kỹ thuật"
+  },
+  "legal": {
+    "title": "Pháp lý",
+    "terms": "Điều khoản sử dụng",
+    "privacy": "Chính sách bảo mật",
+    "cookies": "Chính sách cookie",
+    "disclaimer": "Tuyên bố miễn trừ",
+    "copyright": "Bản quyền"
+  },
+  "rentalManagement": {
+    "title": "Quản lý Cho thuê Container",
+    "subtitle": "Quản lý container cho thuê của bạn",
+    "nav": {
+      "dashboard": "Tổng quan",
+      "dashboardDesc": "Tổng quan và thống kê",
+      "containers": "Container",
+      "containersDesc": "Quản lý kho container cho thuê",
+      "contracts": "Hợp đồng",
+      "contractsDesc": "Hợp đồng hiện tại và quá khứ",
+      "maintenance": "Bảo dưỡng",
+      "maintenanceDesc": "Lên lịch và theo dõi bảo dưỡng",
+      "finance": "Tài chính",
+      "financeDesc": "Doanh thu và thanh toán",
+      "reports": "Báo cáo",
+      "reportsDesc": "Phân tích và thống kê"
+    },
+    "dashboard": {
+      "title": "Tổng quan",
+      "stats": {
+        "totalContainers": "Tổng số Container",
+        "rented": "Đang cho thuê",
+        "available": "Còn trống",
+        "maintenance": "Đang bảo dưỡng",
+        "activeContracts": "Hợp đồng đang hoạt động",
+        "monthlyRevenue": "Doanh thu tháng",
+        "totalRevenue": "Tổng doanh thu"
+      },
+      "alerts": {
+        "title": "Thông báo & Cảnh báo",
+        "description": "Các vấn đề cần chú ý",
+        "expiringContracts": "Hợp đồng sắp hết hạn",
+        "overduePayments": "Thanh toán quá hạn",
+        "maintenancePending": "Bảo dưỡng chờ xử lý"
+      },
+      "activity": {
+        "title": "Hoạt động gần đây",
+        "description": "Cập nhật và sự kiện mới nhất",
+        "empty": "Chưa có hoạt động nào"
+      }
+    },
+    "containers": {
+      "title": "Container",
+      "subtitle": "Quản lý danh sách container cho thuê",
+      "add": "Thêm Container",
+      "edit": "Chỉnh sửa Container",
+      "delete": "Xóa Container",
+      "status": {
+        "available": "Còn trống",
+        "rented": "Đang cho thuê",
+        "maintenance": "Đang bảo dưỡng",
+        "reserved": "Đã đặt trước"
+      },
+      "details": {
+        "containerNumber": "Số container",
+        "type": "Loại",
+        "size": "Kích thước",
+        "condition": "Tình trạng",
+        "location": "Vị trí",
+        "rentalRate": "Giá thuê",
+        "manufacturedYear": "Năm sản xuất",
+        "lastInspection": "Kiểm tra gần nhất",
+        "currentRental": "Đang cho thuê",
+        "maintenanceScheduled": "Bảo dưỡng đã lên lịch"
+      }
+    },
+    "contracts": {
+      "title": "Hợp đồng",
+      "subtitle": "Quản lý hợp đồng cho thuê",
+      "add": "Tạo hợp đồng",
+      "view": "Xem hợp đồng",
+      "edit": "Chỉnh sửa hợp đồng",
+      "renew": "Gia hạn hợp đồng",
+      "terminate": "Chấm dứt hợp đồng",
+      "status": {
+        "draft": "Nháp",
+        "active": "Đang hoạt động",
+        "expiring": "Sắp hết hạn",
+        "expired": "Đã hết hạn",
+        "completed": "Hoàn thành",
+        "cancelled": "Đã hủy"
+      },
+      "details": {
+        "contractNumber": "Số hợp đồng",
+        "customer": "Khách hàng",
+        "container": "Container",
+        "startDate": "Ngày bắt đầu",
+        "endDate": "Ngày kết thúc",
+        "duration": "Thời hạn",
+        "monthlyRate": "Giá thuê/tháng",
+        "deposit": "Đặt cọc",
+        "totalAmount": "Tổng tiền",
+        "paymentStatus": "Trạng thái thanh toán",
+        "notes": "Ghi chú"
+      }
+    },
+    "maintenance": {
+      "title": "Bảo dưỡng",
+      "subtitle": "Lịch trình bảo dưỡng container",
+      "schedule": "Lên lịch bảo dưỡng",
+      "history": "Lịch sử bảo dưỡng",
+      "pending": "Chờ xử lý",
+      "inProgress": "Đang thực hiện",
+      "completed": "Hoàn thành",
+      "type": {
+        "routine": "Bảo dưỡng định kỳ",
+        "repair": "Sửa chữa",
+        "inspection": "Kiểm tra",
+        "cleaning": "Vệ sinh"
+      },
+      "details": {
+        "maintenanceType": "Loại bảo dưỡng",
+        "scheduledDate": "Ngày lên lịch",
+        "completedDate": "Ngày hoàn thành",
+        "cost": "Chi phí",
+        "technician": "Kỹ thuật viên",
+        "description": "Mô tả",
+        "notes": "Ghi chú"
+      }
+    },
+    "finance": {
+      "title": "Tài chính",
+      "subtitle": "Theo dõi doanh thu và chi phí",
+      "revenue": "Doanh thu",
+      "expenses": "Chi phí",
+      "profit": "Lợi nhuận",
+      "invoices": "Hóa đơn",
+      "payments": "Thanh toán",
+      "details": {
+        "invoiceNumber": "Số hóa đơn",
+        "customer": "Khách hàng",
+        "amount": "Số tiền",
+        "dueDate": "Ngày đến hạn",
+        "paidDate": "Ngày thanh toán",
+        "status": "Trạng thái",
+        "method": "Phương thức"
+      }
+    },
+    "reports": {
+      "title": "Báo cáo",
+      "subtitle": "Phân tích và báo cáo chi tiết",
+      "generate": "Tạo báo cáo",
+      "exportReport": "Xuất báo cáo",
+      "types": {
+        "utilization": "Báo cáo Tỷ lệ Sử dụng Container",
+        "utilizationDesc": "Phân tích mức độ sử dụng và tỷ lệ lấp đầy container",
+        "revenue": "Phân tích Doanh thu",
+        "revenueDesc": "Chi tiết doanh thu theo giai đoạn và loại container",
+        "maintenance": "Báo cáo Chi phí Bảo dưỡng",
+        "maintenanceDesc": "Theo dõi chi phí bảo dưỡng và tần suất",
+        "customers": "Mô hình Thuê của Khách hàng",
+        "customersDesc": "Hiểu hành vi và mức độ trung thành của khách hàng"
+      },
+      "configuration": {
+        "title": "Cấu hình Báo cáo",
+        "description": "Tùy chỉnh các tham số báo cáo",
+        "reportType": "Loại báo cáo",
+        "dateRange": "Khoảng thời gian",
+        "startDate": "Ngày bắt đầu",
+        "endDate": "Ngày kết thúc"
+      },
+      "dateRanges": {
+        "week": "Tuần trước",
+        "month": "Tháng trước",
+        "quarter": "Quý trước",
+        "year": "Năm trước",
+        "custom": "Tùy chỉnh"
+      },
+      "preview": {
+        "title": "Xem trước Báo cáo",
+        "description": "Trực quan hóa dữ liệu mẫu",
+        "selectParameters": "Chọn tham số và tạo báo cáo",
+        "reportWillAppear": "Báo cáo của bạn sẽ xuất hiện ở đây với biểu đồ và phân tích chi tiết"
+      },
+      "export": {
+        "pdf": "Xuất PDF",
+        "excel": "Xuất Excel"
+      },
+      "quickStats": {
+        "avgUtilization": "Tỷ lệ SD Trung bình",
+        "monthlyRevenue": "Doanh thu Tháng",
+        "maintenanceCost": "Chi phí Bảo dưỡng",
+        "activeCustomers": "Khách hàng Hoạt động"
+      }
+    }
+  }
+}

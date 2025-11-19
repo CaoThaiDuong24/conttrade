@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Kiểm Tra User Hiện Tại - Chi Tiết</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      max-width: 1200px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    .container {
+      background: white;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #2c3e50;
+      border-bottom: 3px solid #3498db;
+      padding-bottom: 10px;
+    }
+    button {
+      background: #3498db;
+      color: white;
+      padding: 12px 24px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 16px;
+      margin: 5px;
+    }
+    button:hover {
+      background: #2980b9;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      background: #2c3e50;
+      color: #ecf0f1;
+      border-radius: 5px;
+      font-family: 'Courier New', monospace;
+      overflow-x: auto;
+      white-space: pre-wrap;
+      word-wrap: break-word;
+    }
+    .error {
+      background: #e74c3c;
+      color: white;
+    }
+    .success {
+      background: #27ae60;
+      color: white;
+    }
+    .info {
+      background: #3498db;
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      margin: 10px 0;
+    }
+    .warning {
+      background: #f39c12;
+      color: white;
+      padding: 10px;
+      border-radius: 5px;
+      margin: 10px 0;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 20px 0;
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 12px;
+      text-align: left;
+    }
+    th {
+      background-color: #3498db;
+      color: white;
+    }
+    tr:nth-child(even) {
+      background-color: #f2f2f2;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🔍 Kiểm Tra User Hiện Tại - Chi Tiết</h1>
+    
+    <div class="info">
+      <strong>📌 Mục đích:</strong> Xác định user nào đang login và có bao nhiêu listings
+    </div>
+
+    <div style="margin: 20px 0;">
+      <button onclick="checkCurrentUser()">1️⃣ Kiểm tra User hiện tại</button>
+      <button onclick="checkUserListings()">2️⃣ Kiểm tra Listings của User</button>
+      <button onclick="checkUserRFQs()">3️⃣ Kiểm tra RFQs received</button>
+      <button onclick="clearResults()">🗑️ Xóa kết quả</button>
+    </div>
+
+    <div id="results"></div>
+  </div>
+
+  <script>
+    const resultsDiv = document.getElementById('results');
+
+    function log(message, type = 'info') {
+      const resultDiv = document.createElement('div');
+      resultDiv.className = `result ${type}`;
+      if (typeof message === 'object') {
+        resultDiv.textContent = JSON.stringify(message, null, 2);
+      } else {
+        resultDiv.textContent = message;
+      }
+      resultsDiv.appendChild(resultDiv);
+    }
+
+    function clearResults() {
+      resultsDiv.innerHTML = '';
+    }
+
+    function getCookie(name) {
+      const value = `; ${document.cookie}`;
+      const parts = value.split(`; ${name}=`);
+      if (parts.length === 2) return parts.pop().split(';').shift();
+      return null;
+    }
+
+    function getToken() {
+      return getCookie('accessToken') || localStorage.getItem('token') || localStorage.getItem('accessToken');
+    }
+
+    async function checkCurrentUser() {
+      clearResults();
+      log('🔍 Đang kiểm tra user hiện tại...', 'info');
+      
+      const token = getToken();
+      if (!token) {
+        log('❌ Không tìm thấy token! Vui lòng đăng nhập trước.', 'error');
+        return;
+      }
+      
+      log(`✅ Token: ${token.substring(0, 30)}...`, 'success');
+      
+      // Decode JWT to see user info
+      try {
+        const base64Url = token.split('.')[1];
+        const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+        const jsonPayload = decodeURIComponent(atob(base64).split('').map(function(c) {
+          return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+        }).join(''));
+        
+        const decoded = JSON.parse(jsonPayload);
+        log('\n✅ Token Decoded:', 'success');
+        log(decoded, 'info');
+        
+        if (decoded.userId) {
+          log(`\n👤 User ID: ${decoded.userId}`, 'success');
+          log(`📧 Email: ${decoded.email || 'N/A'}`, 'info');
+          log(`🎭 Roles: ${JSON.stringify(decoded.roles || [])}`, 'info');
+          log(`🔑 Permissions: ${JSON.stringify(decoded.permissions || []).substring(0, 200)}...`, 'info');
+        }
+        
+      } catch (e) {
+        log('❌ Không thể decode token: ' + e.message, 'error');
+      }
+      
+      // Call API to get current user
+      try {
+        const response = await fetch('/api/v1/users/me', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          log('\n✅ API /api/v1/users/me SUCCESS:', 'success');
+          log(data, 'info');
+        } else {
+          const error = await response.text();
+          log('\n❌ API /api/v1/users/me FAILED:', 'error');
+          log(`Status: ${response.status}`, 'error');
+          log(error, 'error');
+        }
+      } catch (e) {
+        log('\n❌ Error calling API: ' + e.message, 'error');
+      }
+    }
+
+    async function checkUserListings() {
+      clearResults();
+      log('🔍 Đang kiểm tra listings của user...', 'info');
+      
+      const token = getToken();
+      if (!token) {
+        log('❌ Không tìm thấy token!', 'error');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/v1/listings?seller=me', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          log('✅ Listings của bạn:', 'success');
+          log(`\n📦 Tổng số listings: ${data.data?.length || 0}`, 'success');
+          
+          if (data.data && data.data.length > 0) {
+            log('\n📋 Chi tiết listings:', 'info');
+            data.data.slice(0, 5).forEach((listing, idx) => {
+              log(`\n${idx + 1}. ${listing.title}`, 'info');
+              log(`   ID: ${listing.id}`, 'info');
+              log(`   Status: ${listing.status}`, 'info');
+            });
+            
+            if (data.data.length > 5) {
+              log(`\n... và ${data.data.length - 5} listings khác`, 'info');
+            }
+          }
+        } else {
+          log('❌ Không thể lấy listings:', 'error');
+          log(await response.text(), 'error');
+        }
+      } catch (e) {
+        log('❌ Error: ' + e.message, 'error');
+      }
+    }
+
+    async function checkUserRFQs() {
+      clearResults();
+      log('🔍 Đang kiểm tra RFQs received...', 'info');
+      
+      const token = getToken();
+      if (!token) {
+        log('❌ Không tìm thấy token!', 'error');
+        return;
+      }
+      
+      try {
+        const response = await fetch('/api/v1/rfqs?view=received', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        
+        log(`📊 Response Status: ${response.status}`, response.ok ? 'success' : 'error');
+        
+        if (response.ok) {
+          const data = await response.json();
+          log('\n✅ RFQs received:', 'success');
+          log(`\n📦 Tổng số RFQs: ${data.data?.length || 0}`, 'success');
+          
+          if (data.data && data.data.length > 0) {
+            log('\n📋 Chi tiết RFQs (5 đầu tiên):', 'info');
+            
+            data.data.slice(0, 5).forEach((rfq, idx) => {
+              log(`\n${idx + 1}. RFQ ID: ${rfq.id.substring(0, 8)}...`, 'info');
+              log(`   Status: ${rfq.status}`, 'info');
+              log(`   Listing: ${rfq.listings?.title || 'N/A'}`, 'info');
+              log(`   Buyer ID: ${rfq.buyer_id}`, 'info');
+              
+              if (rfq.users) {
+                log(`   ✅ Buyer: ${rfq.users.display_name || rfq.users.email}`, 'success');
+              } else {
+                log(`   ❌ Buyer: NULL (không có thông tin)`, 'error');
+              }
+              
+              log(`   Purpose: ${rfq.purpose || 'N/A'}`, 'info');
+              log(`   Quantity: ${rfq.quantity || 'N/A'}`, 'info');
+            });
+            
+            if (data.data.length > 5) {
+              log(`\n... và ${data.data.length - 5} RFQs khác`, 'info');
+            }
+            
+            // Check if any RFQ has missing user data
+            const missingUsers = data.data.filter(rfq => !rfq.users);
+            if (missingUsers.length > 0) {
+              log(`\n⚠️ CẢNH BÁO: ${missingUsers.length} RFQs không có thông tin buyer!`, 'warning');
+            }
+          } else {
+            log('\n📭 Không có RFQs nào', 'warning');
+          }
+          
+          // Show full response
+          log('\n📄 Full Response:', 'info');
+          log(JSON.stringify(data, null, 2), 'info');
+          
+        } else {
+          log('❌ Không thể lấy RFQs:', 'error');
+          log(await response.text(), 'error');
+        }
+      } catch (e) {
+        log('❌ Error: ' + e.message, 'error');
+      }
+    }
+  </script>
+</body>
+</html>
